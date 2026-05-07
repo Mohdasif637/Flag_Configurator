@@ -164,9 +164,6 @@ const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'
 dom.arContainer.appendChild(arButton);
 syncARButtonLabel();
 
-const arButtonLabelObserver = new MutationObserver(syncARButtonLabel);
-arButtonLabelObserver.observe(arButton, { childList: true, characterData: true, subtree: true });
-
 bindUploadInputs();
 bindTransformInputs();
 bindUIEvents();
@@ -370,12 +367,27 @@ function closePocketColorPicker() {
 }
 
 function positionPocketColorPicker() {
-    const panelRect = dom.uiPanel.getBoundingClientRect();
+    const triggerRect = dom.pocketColorTrigger.getBoundingClientRect();
+    const padding = 10;
+    const availableWidth = window.innerWidth - padding * 2;
+    const availableHeight = window.innerHeight - padding * 2;
+    const desiredWidth = Math.min(320, availableWidth);
+    const desiredHeight = Math.min(420, availableHeight);
 
-    dom.pocketColorPopover.style.setProperty('--picker-panel-top', `${panelRect.top}px`);
-    dom.pocketColorPopover.style.setProperty('--picker-panel-left', `${panelRect.left}px`);
-    dom.pocketColorPopover.style.setProperty('--picker-panel-width', `${panelRect.width}px`);
-    dom.pocketColorPopover.style.setProperty('--picker-panel-height', `${panelRect.height}px`);
+    const spaceBelow = window.innerHeight - triggerRect.bottom - padding;
+    const spaceAbove = triggerRect.top - padding;
+    const openBelow = spaceBelow >= desiredHeight || spaceBelow >= spaceAbove;
+    const height = openBelow ? Math.min(desiredHeight, spaceBelow) : Math.min(desiredHeight, spaceAbove);
+
+    let top = openBelow ? triggerRect.bottom + 8 : triggerRect.top - height - 8;
+    top = Math.max(padding, Math.min(top, window.innerHeight - height - padding));
+
+    let left = Math.min(Math.max(triggerRect.left, padding), window.innerWidth - desiredWidth - padding);
+
+    dom.pocketColorPopover.style.setProperty('--picker-panel-top', `${top}px`);
+    dom.pocketColorPopover.style.setProperty('--picker-panel-left', `${left}px`);
+    dom.pocketColorPopover.style.setProperty('--picker-panel-width', `${desiredWidth}px`);
+    dom.pocketColorPopover.style.setProperty('--picker-panel-height', `${height}px`);
 }
 
 function updatePocketColorFromSurface(event) {
@@ -630,10 +642,16 @@ function syncARButtonLabel() {
         return;
     }
 
-    if (arButton.textContent.trim() !== 'AR') {
-        arButton.textContent = 'AR';
-    }
+    const iconMarkup = `
+        <svg class="ar-button-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 7v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7" />
+            <path d="M9 7l3-3 3 3" />
+            <path d="M12 16v-6" />
+        </svg>
+        <span class="ar-button-label">Start AR</span>
+    `;
 
+    arButton.innerHTML = iconMarkup;
     arButton.setAttribute('aria-label', 'Start AR');
     arButton.title = 'Start AR';
 }
@@ -688,7 +706,6 @@ function markARUnsupported() {
 
     state.arUnsupported = true;
     arButton.disabled = true;
-    arButtonLabelObserver.disconnect();
 
     if (arButton.isConnected) {
         arButton.remove();
