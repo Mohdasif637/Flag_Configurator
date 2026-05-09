@@ -13,18 +13,14 @@ const dom = {
     doubleSided: document.getElementById('double-sided'),
     pocketColor: document.getElementById('pocket-color'),
     pocketColorTrigger: document.getElementById('pocket-color-trigger'),
-    pocketColorPopover: document.getElementById('pocket-color-popover'),
-    pocketColorSurface: document.getElementById('pocket-color-surface'),
-    pocketColorCursor: document.getElementById('pocket-color-cursor'),
-    pocketColorHue: document.getElementById('pocket-color-hue'),
-    pocketColorHex: document.getElementById('pocket-color-hex'),
     pocketColorValue: document.getElementById('pocket-color-value'),
     pocketColorSwatch: document.getElementById('pocket-color-swatch'),
-    pocketColorClose: document.getElementById('pocket-color-close'),
     playPause: document.getElementById('play-pause'),
     generatePdf: document.getElementById('generate-pdf'),
     backArtworkGroup: document.getElementById('back-artwork-group'),
     cameraWrapper: document.getElementById('camera-wrapper'),
+    cameraActions: document.getElementById('camera-actions'),
+    turntableToggle: document.getElementById('turntable-toggle'),
     envToggle: document.getElementById('env-toggle'),
     envPanel: document.getElementById('env-panel'),
     envExposure: document.getElementById('env-exposure'),
@@ -89,11 +85,48 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1;
 renderer.xr.enabled = true;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 dom.canvasContainer.appendChild(renderer.domElement);
 
 const sceneRoot = new THREE.Group();
 scene.add(sceneRoot);
 
+const lightingGroup = new THREE.Group();
+scene.add(lightingGroup);
+
+const overheadLight = new THREE.DirectionalLight(0xffffff, 0.6); 
+overheadLight.position.set(10, 10, 2); 
+overheadLight.castShadow = true;
+
+overheadLight.shadow.mapSize.width = 2048;
+overheadLight.shadow.mapSize.height = 2048;
+
+
+const d = 3.5; 
+overheadLight.shadow.camera.left = -d;
+overheadLight.shadow.camera.right = d;
+overheadLight.shadow.camera.top = d;
+overheadLight.shadow.camera.bottom = -d;
+overheadLight.shadow.camera.near = 0.5;
+overheadLight.shadow.camera.far = 25;
+
+overheadLight.shadow.bias = -0.0001; 
+overheadLight.shadow.normalBias = 0.05;
+
+overheadLight.shadow.radius = 10;
+overheadLight.shadow.blurSamples = 20;
+
+lightingGroup.add(overheadLight);
+
+const shadowGeometry = new THREE.PlaneGeometry(100, 100);
+const shadowMaterial = new THREE.ShadowMaterial({ opacity: 0.4 }); 
+const shadowCatcher = new THREE.Mesh(shadowGeometry, shadowMaterial);
+shadowCatcher.rotation.x = -Math.PI / 2;
+shadowCatcher.position.y = 0; 
+shadowCatcher.receiveShadow = true;
+
+sceneRoot.add(shadowCatcher);
 const reticle = createReticle();
 scene.add(reticle);
 
@@ -104,6 +137,7 @@ scene.add(arController);
 const targetCenter = new THREE.Vector3(0, 1.8, 0);
 const cameraHome = new THREE.Vector3(2, 2, 6);
 const cameraDistance = 5.5;
+const turntableSpeed = THREE.MathUtils.degToRad(26);
 const cameraTargets = {
     home: cameraHome.clone(),
     front: new THREE.Vector3(0, targetCenter.y, cameraDistance),
@@ -115,9 +149,24 @@ const exportRenderSize = 2048;
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+// controls.enablePan = false;
 controls.target.copy(targetCenter);
 camera.position.copy(cameraHome);
 controls.update();
+controls.saveState();
+const defaultPreviewState = {
+    activeView: 'home',
+    turntableEnabled: true,
+    cameraPosition: camera.position.clone(),
+    cameraQuaternion: camera.quaternion.clone(),
+    cameraZoom: camera.zoom,
+    cameraFov: camera.fov,
+    cameraNear: camera.near,
+    cameraFar: camera.far,
+    controlsTarget: controls.target.clone(),
+    sceneRootPosition: sceneRoot.position.clone(),
+    sceneRootRotation: sceneRoot.rotation.clone()
+};
 
 const clock = new THREE.Clock();
 const textureLoader = new THREE.TextureLoader();
@@ -130,21 +179,17 @@ let environmentTexture = null;
 let mixer = null;
 let action = null;
 let isPlaying = true;
+let pocketColorPickr = null;
 let exportRenderer = null;
 let exportCamera = null;
 let hitTestSource = null;
 let hitTestSourceRequested = false;
-let arStatusTag = null;
 let envPanelHideTimer = null;
 let envPanelShouldBeOpen = false;
+let postArRestoreTimer = null;
+let previewStateBeforeAR = null;
 
 const activeToasts = [];
-
-const pocketColorState = {
-    hue: 0,
-    saturation: 100,
-    value: 0
-};
 
 const state = {
     modelLoaded: false,
@@ -154,15 +199,31 @@ const state = {
     ready: false,
     isExporting: false,
     isInAR: false,
-    arUnsupported: false
+    turntableEnabled: true,
+    arUnsupported: false,
+    arSupportResolved: false,
+    arSupported: false,
+    arUnsupportedToastShown: false
 };
 
 const pdfButtonMarkup = dom.generatePdf.innerHTML;
 const pdfLibraryAvailable = typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF === 'function';
+const mobileViewportMediaQuery = window.matchMedia('(max-width: 768px)');
+const pocketColorPickrLayoutState = {
+    restoreStyleText: null
+};
+const arButtonIconMarkup = `
+    <img src="Icons/ar.svg" alt="" aria-hidden="true" data-ar-icon="true" class="control-icon">
+`;
 
 const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
+arButton.hidden = true;
+dom.arContainer.hidden = true;
 dom.arContainer.appendChild(arButton);
 syncARButtonLabel();
+
+const arButtonLabelObserver = new MutationObserver(syncARButtonLabel);
+arButtonLabelObserver.observe(arButton, { childList: true, characterData: true, subtree: true });
 
 bindUploadInputs();
 bindTransformInputs();
@@ -171,6 +232,7 @@ initializePocketColorPicker();
 syncControlAvailability();
 setLoadingState(true, 'Loading 3D assets...');
 setActiveCameraView('home');
+syncPlayPauseButton();
 
 initializeARSupport();
 loadEnvironment();
@@ -208,34 +270,39 @@ function setLoadingState(visible, message) {
 }
 
 function showToast(title, message, tone = 'info', duration = 3200) {
-    while (activeToasts.length >= 2) {
-        dismissToast(activeToasts[0]);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast is-${tone}`;
-
-    const titleNode = document.createElement('span');
-    titleNode.className = 'toast-title';
-    titleNode.textContent = title;
-
-    const messageNode = document.createElement('span');
-    messageNode.className = 'toast-copy';
-    messageNode.textContent = message;
-
-    toast.append(titleNode, messageNode);
-    dom.toastRegion.appendChild(toast);
-    activeToasts.push(toast);
-
-    window.requestAnimationFrame(() => {
-        if (toast.dataset.dismissed !== 'true') {
-            toast.classList.add('is-visible');
+    return new Promise((resolve) => {
+        while (activeToasts.length >= 2) {
+            dismissToast(activeToasts[0]);
         }
-    });
 
-    toast.hideTimer = window.setTimeout(() => {
-        dismissToast(toast);
-    }, duration);
+        const toast = document.createElement('div');
+        toast.className = `toast is-${tone}`;
+
+        const titleNode = document.createElement('span');
+        titleNode.className = 'toast-title';
+        titleNode.textContent = title;
+
+        const messageNode = document.createElement('span');
+        messageNode.className = 'toast-copy';
+        messageNode.textContent = message;
+
+        toast.append(titleNode, messageNode);
+        
+        toast.resolvePromise = resolve;
+
+        dom.toastRegion.appendChild(toast);
+        activeToasts.push(toast);
+
+        window.requestAnimationFrame(() => {
+            if (toast.dataset.dismissed !== 'true') {
+                toast.classList.add('is-visible');
+            }
+        });
+
+        toast.hideTimer = window.setTimeout(() => {
+            dismissToast(toast);
+        }, duration);
+    });
 }
 
 function dismissToast(toast) {
@@ -253,183 +320,174 @@ function dismissToast(toast) {
 
     toast.classList.remove('is-visible');
     toast.classList.add('is-hiding');
-    window.setTimeout(() => toast.remove(), 360);
+    
+    window.setTimeout(() => {
+        toast.remove();
+        if (toast.resolvePromise) {
+            toast.resolvePromise();
+        }
+    }, 360);
 }
 
 function initializePocketColorPicker() {
-    setPocketColorFromHex(dom.pocketColor.value);
+    syncPocketColorUi(dom.pocketColor.value);
 
-    dom.pocketColorTrigger.addEventListener('click', () => {
-        if (dom.pocketColorTrigger.disabled) {
-            return;
-        }
-
-        if (dom.pocketColorPopover.hidden) {
-            openPocketColorPicker();
-            return;
-        }
-
-        closePocketColorPicker();
-    });
-
-    dom.pocketColorClose.addEventListener('click', closePocketColorPicker);
-    dom.pocketColorPopover.addEventListener('click', (event) => {
-        if (event.target === dom.pocketColorPopover) {
-            closePocketColorPicker();
-        }
-    });
-
-    dom.pocketColorHue.addEventListener('input', (event) => {
-        pocketColorState.hue = Number.parseFloat(event.target.value);
-        applyPocketColorState();
-    });
-
-    dom.pocketColorSurface.addEventListener('pointerdown', (event) => {
-        if (dom.pocketColorTrigger.disabled) {
-            return;
-        }
-
-        event.preventDefault();
-        updatePocketColorFromSurface(event);
-        const activePointerId = event.pointerId;
-
-        try {
-            dom.pocketColorSurface.setPointerCapture(activePointerId);
-        } catch {
-            // Some mobile browsers reject pointer capture during native range interactions.
-        }
-
-        const handleMove = (moveEvent) => {
-            if (moveEvent.pointerId !== activePointerId) {
-                return;
-            }
-
-            moveEvent.preventDefault();
-            updatePocketColorFromSurface(moveEvent);
-        };
-
-        const handleEnd = (endEvent) => {
-            if (endEvent.pointerId !== activePointerId) {
-                return;
-            }
-
-            try {
-                dom.pocketColorSurface.releasePointerCapture(activePointerId);
-            } catch {
-                // Capture may already be released if the pointer leaves the surface.
-            }
-
-            window.removeEventListener('pointermove', handleMove);
-            window.removeEventListener('pointerup', handleEnd);
-            window.removeEventListener('pointercancel', handleEnd);
-        };
-
-        window.addEventListener('pointermove', handleMove, { passive: false });
-        window.addEventListener('pointerup', handleEnd);
-        window.addEventListener('pointercancel', handleEnd);
-    });
-
-    dom.pocketColorHex.addEventListener('change', () => {
-        if (!setPocketColorFromHex(dom.pocketColorHex.value)) {
-            dom.pocketColorHex.value = dom.pocketColor.value.toUpperCase();
-        }
-    });
-
-    dom.pocketColorHex.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-
-            if (!setPocketColorFromHex(dom.pocketColorHex.value)) {
-                dom.pocketColorHex.value = dom.pocketColor.value.toUpperCase();
-            }
-
-            closePocketColorPicker();
-        }
-    });
-}
-
-function openPocketColorPicker() {
-    positionPocketColorPicker();
-    dom.pocketColorPopover.hidden = false;
-    dom.uiPanel.classList.add('is-picker-open');
-    dom.pocketColorTrigger.setAttribute('aria-expanded', 'true');
-    dom.pocketColorHex.value = dom.pocketColor.value.toUpperCase();
-}
-
-function closePocketColorPicker() {
-    if (dom.pocketColorPopover.hidden) {
+    if (!window.Pickr) {
+        dom.pocketColorTrigger.disabled = true;
+        console.error('Pickr failed to load.');
         return;
     }
 
-    dom.pocketColorPopover.hidden = true;
-    dom.uiPanel.classList.remove('is-picker-open');
-    dom.pocketColorTrigger.setAttribute('aria-expanded', 'false');
+    pocketColorPickr = window.Pickr.create({
+        el: dom.pocketColorTrigger,
+        container: 'body',
+        theme: 'monolith',
+        default: dom.pocketColor.value,
+        useAsButton: true,
+        autoReposition: true,
+        position: 'bottom-middle',
+        closeOnScroll: true,
+        components: {
+            preview: true,
+            opacity: false,
+            hue: true,
+            interaction: {
+                hex: true,
+                input: true,
+                save: true
+            }
+        }
+    });
+
+    pocketColorPickr
+        .on('show', () => {
+            dom.pocketColorTrigger.setAttribute('aria-expanded', 'true');
+            if (mobileViewportMediaQuery.matches) {
+                queuePocketColorPickerLayout();
+            } else {
+                restorePocketColorPickerNativeLayout();
+            }
+        })
+        .on('hide', () => {
+            dom.pocketColorTrigger.setAttribute('aria-expanded', 'false');
+            if (!mobileViewportMediaQuery.matches) {
+                restorePocketColorPickerNativeLayout();
+            }
+        })
+        .on('change', (color) => {
+            const hex = pickrColorToHex(color);
+            if (hex) {
+                syncPocketColorUi(hex);
+            }
+        })
+        .on('save', (color, pickr) => {
+            const hex = pickrColorToHex(color);
+            if (hex) {
+                syncPocketColorUi(hex);
+            }
+            pickr.hide();
+        });
 }
 
-function positionPocketColorPicker() {
-    const triggerRect = dom.pocketColorTrigger.getBoundingClientRect();
-    const padding = 10;
-    const availableWidth = window.innerWidth - padding * 2;
-    const availableHeight = window.innerHeight - padding * 2;
-    const desiredWidth = Math.min(320, availableWidth);
-    const desiredHeight = Math.min(420, availableHeight);
-
-    const spaceBelow = window.innerHeight - triggerRect.bottom - padding;
-    const spaceAbove = triggerRect.top - padding;
-    const openBelow = spaceBelow >= desiredHeight || spaceBelow >= spaceAbove;
-    const height = openBelow ? Math.min(desiredHeight, spaceBelow) : Math.min(desiredHeight, spaceAbove);
-
-    let top = openBelow ? triggerRect.bottom + 8 : triggerRect.top - height - 8;
-    top = Math.max(padding, Math.min(top, window.innerHeight - height - padding));
-
-    let left = Math.min(Math.max(triggerRect.left, padding), window.innerWidth - desiredWidth - padding);
-
-    dom.pocketColorPopover.style.setProperty('--picker-panel-top', `${top}px`);
-    dom.pocketColorPopover.style.setProperty('--picker-panel-left', `${left}px`);
-    dom.pocketColorPopover.style.setProperty('--picker-panel-width', `${desiredWidth}px`);
-    dom.pocketColorPopover.style.setProperty('--picker-panel-height', `${height}px`);
+function queuePocketColorPickerLayout() {
+    window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+            syncPocketColorPickerLayout();
+        });
+    });
 }
 
-function updatePocketColorFromSurface(event) {
-    const rect = dom.pocketColorSurface.getBoundingClientRect();
-    const x = THREE.MathUtils.clamp((event.clientX - rect.left) / rect.width, 0, 1);
-    const y = THREE.MathUtils.clamp((event.clientY - rect.top) / rect.height, 0, 1);
-
-    pocketColorState.saturation = x * 100;
-    pocketColorState.value = (1 - y) * 100;
-    applyPocketColorState();
-}
-
-function applyPocketColorState() {
-    const hex = hsvToHex(pocketColorState.hue, pocketColorState.saturation, pocketColorState.value);
-    syncPocketColorUi(hex);
-}
-
-function setPocketColorFromHex(value) {
-    const normalizedHex = normalizeHex(value);
-    if (!normalizedHex) {
-        return false;
+function syncPocketColorPickerLayout() {
+    if (!pocketColorPickr) {
+        return;
     }
 
-    const hsv = hexToHsv(normalizedHex);
-    pocketColorState.hue = hsv.hue;
-    pocketColorState.saturation = hsv.saturation;
-    pocketColorState.value = hsv.value;
-    syncPocketColorUi(normalizedHex);
-    return true;
+    const pickrRoot = pocketColorPickr.getRoot();
+    const app = pickrRoot?.app;
+    if (!app || !pocketColorPickr.isOpen()) {
+        return;
+    }
+
+    if (!mobileViewportMediaQuery.matches) {
+        return;
+    }
+
+    if (!app.classList.contains('is-bottom-sheet')) {
+        pocketColorPickrLayoutState.restoreStyleText = app.getAttribute('style');
+    }
+
+    const panelRect = dom.uiPanel.getBoundingClientRect();
+    const viewportPadding = 12;
+    const availableWidth = Math.max(Math.min(panelRect.width - 24, window.innerWidth - (viewportPadding * 2)), 1);
+    const availableHeight = Math.max(panelRect.height - 24, 1);
+    const width = Math.min(320, availableWidth);
+    const naturalWidth = Math.max(app.offsetWidth || width, 1);
+    const naturalHeight = Math.max(app.offsetHeight || 1, 1);
+    const scale = THREE.MathUtils.clamp(
+        Math.min(
+            1,
+            availableWidth / naturalWidth,
+            availableHeight / naturalHeight
+        ),
+        0.68,
+        1
+    );
+    const centerX = panelRect.left + (panelRect.width / 2);
+    const centerY = panelRect.top + (panelRect.height / 2);
+
+    app.classList.add('is-bottom-sheet');
+    app.style.left = `${centerX}px`;
+    app.style.top = `${centerY}px`;
+    app.style.right = 'auto';
+    app.style.bottom = 'auto';
+    app.style.width = `${width}px`;
+    app.style.maxWidth = `${availableWidth}px`;
+    app.style.maxHeight = `${Math.max(availableHeight / scale, 180)}px`;
+    app.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+}
+
+function restorePocketColorPickerNativeLayout() {
+    if (!pocketColorPickr) {
+        return;
+    }
+
+    const pickrRoot = pocketColorPickr.getRoot();
+    const app = pickrRoot?.app;
+    if (!app || !app.classList.contains('is-bottom-sheet')) {
+        return;
+    }
+
+    app.classList.remove('is-bottom-sheet');
+
+    if (pocketColorPickrLayoutState.restoreStyleText) {
+        app.setAttribute('style', pocketColorPickrLayoutState.restoreStyleText);
+    } else {
+        app.removeAttribute('style');
+    }
+
+    pocketColorPickrLayoutState.restoreStyleText = null;
+}
+
+function pickrColorToHex(color) {
+    if (!color) {
+        return null;
+    }
+
+    const [red, green, blue] = color.toHEXA();
+    return normalizeHex(`#${[red, green, blue]
+        .map((channel) => channel.toString(16).padStart(2, '0'))
+        .join('')}`);
 }
 
 function syncPocketColorUi(hex) {
-    const normalizedHex = hex.toUpperCase();
+    const normalizedHex = normalizeHex(hex);
+    if (!normalizedHex) {
+        return;
+    }
 
     dom.pocketColor.value = normalizedHex;
     dom.pocketColorValue.textContent = normalizedHex;
-    dom.pocketColorHex.value = normalizedHex;
     dom.pocketColorSwatch.style.background = normalizedHex;
-    dom.pocketColorSurface.style.setProperty('--picker-hue-color', `hsl(${pocketColorState.hue}, 100%, 50%)`);
-    dom.pocketColorHue.value = String(Math.round(pocketColorState.hue));
-    dom.pocketColorCursor.style.left = `${pocketColorState.saturation}%`;
-    dom.pocketColorCursor.style.top = `${100 - pocketColorState.value}%`;
 
     if (pocketMaterial) {
         pocketMaterial.color.set(normalizedHex);
@@ -459,100 +517,7 @@ function normalizeHex(value) {
     return `#${expanded}`.toUpperCase();
 }
 
-function hexToHsv(hex) {
-    const rgb = hexToRgb(hex);
-    const r = rgb.r / 255;
-    const g = rgb.g / 255;
-    const b = rgb.b / 255;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-
-    let hue = 0;
-
-    if (delta !== 0) {
-        if (max === r) {
-            hue = 60 * (((g - b) / delta) % 6);
-        } else if (max === g) {
-            hue = 60 * (((b - r) / delta) + 2);
-        } else {
-            hue = 60 * (((r - g) / delta) + 4);
-        }
-    }
-
-    if (hue < 0) {
-        hue += 360;
-    }
-
-    const saturation = max === 0 ? 0 : (delta / max) * 100;
-    const value = max * 100;
-
-    return { hue, saturation, value };
-}
-
-function hsvToHex(hue, saturation, value) {
-    const rgb = hsvToRgb(hue, saturation, value);
-    return rgbToHex(rgb.r, rgb.g, rgb.b);
-}
-
-function hsvToRgb(hue, saturation, value) {
-    const s = saturation / 100;
-    const v = value / 100;
-    const chroma = v * s;
-    const huePrime = hue / 60;
-    const x = chroma * (1 - Math.abs((huePrime % 2) - 1));
-
-    let red = 0;
-    let green = 0;
-    let blue = 0;
-
-    if (huePrime >= 0 && huePrime < 1) {
-        red = chroma;
-        green = x;
-    } else if (huePrime < 2) {
-        red = x;
-        green = chroma;
-    } else if (huePrime < 3) {
-        green = chroma;
-        blue = x;
-    } else if (huePrime < 4) {
-        green = x;
-        blue = chroma;
-    } else if (huePrime < 5) {
-        red = x;
-        blue = chroma;
-    } else {
-        red = chroma;
-        blue = x;
-    }
-
-    const match = v - chroma;
-
-    return {
-        r: Math.round((red + match) * 255),
-        g: Math.round((green + match) * 255),
-        b: Math.round((blue + match) * 255)
-    };
-}
-
-function hexToRgb(hex) {
-    const normalizedHex = normalizeHex(hex);
-    const hexValue = normalizedHex.slice(1);
-
-    return {
-        r: Number.parseInt(hexValue.slice(0, 2), 16),
-        g: Number.parseInt(hexValue.slice(2, 4), 16),
-        b: Number.parseInt(hexValue.slice(4, 6), 16)
-    };
-}
-
-function rgbToHex(red, green, blue) {
-    return `#${[red, green, blue]
-        .map((channel) => channel.toString(16).padStart(2, '0'))
-        .join('')}`.toUpperCase();
-}
-
-function syncReadyState() {
+async function syncReadyState() {
     if (state.modelFailed || state.ready) {
         syncControlAvailability();
         return;
@@ -566,13 +531,18 @@ function syncReadyState() {
     state.ready = true;
     setLoadingState(false, '');
     syncControlAvailability();
+    syncARVisibility();
 
     if (!pdfLibraryAvailable) {
-        showToast('Preview ready', 'Artwork tools are ready, but PDF export is currently unavailable.', 'info', 4000);
-        return;
+        await showToast('Preview ready', 'Artwork tools are ready, but PDF export is currently unavailable.', 'info', 4000);
+    } else {
+        await showToast('Preview ready', 'You can now upload artwork, tune the preview, and export a proof.', 'success');
     }
 
-    showToast('Preview ready', 'You can now upload artwork, tune the preview, and export a proof.', 'success');
+    if (state.arUnsupported && !state.arUnsupportedToastShown) {
+        state.arUnsupportedToastShown = true;
+        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
+    }
 }
 
 function syncControlAvailability() {
@@ -588,6 +558,7 @@ function syncControlAvailability() {
     dom.cameraButtons.forEach((button) => {
         button.disabled = !baseEnabled;
     });
+    dom.turntableToggle.disabled = !baseEnabled;
 
     const environmentEnabled = baseEnabled && state.environmentLoaded;
     dom.envToggle.disabled = !environmentEnabled;
@@ -600,14 +571,17 @@ function syncControlAvailability() {
         setEnvPanelOpen(false);
     }
 
-    if (!baseEnabled) {
-        closePocketColorPicker();
+    if (pocketColorPickr) {
+        if (baseEnabled) {
+            pocketColorPickr.enable();
+        } else {
+            pocketColorPickr.hide();
+            pocketColorPickr.disable();
+        }
     }
 
-    if (!state.isInAR && !state.arUnsupported) {
-        arButton.disabled = !state.ready || state.modelFailed || state.isExporting;
-        syncARButtonLabel();
-    }
+    syncARVisibility();
+    syncTurntableButton();
 
     updateBackArtworkVisibility();
     syncSideUi('front');
@@ -642,18 +616,84 @@ function syncARButtonLabel() {
         return;
     }
 
-    const iconMarkup = `
-        <svg class="ar-button-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M4 7v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7" />
-            <path d="M9 7l3-3 3 3" />
-            <path d="M12 16v-6" />
-        </svg>
-        <span class="ar-button-label">Start AR</span>
-    `;
+    if (!arButton.querySelector('[data-ar-icon="true"]')) {
+        arButton.innerHTML = arButtonIconMarkup;
+    }
 
-    arButton.innerHTML = iconMarkup;
     arButton.setAttribute('aria-label', 'Start AR');
     arButton.title = 'Start AR';
+}
+
+function syncARVisibility() {
+    const canShowAR = state.ready && state.arSupportResolved && state.arSupported && !state.arUnsupported && arButton.isConnected;
+    dom.arContainer.hidden = !canShowAR;
+    arButton.hidden = !canShowAR;
+
+    if (!canShowAR) {
+        return;
+    }
+
+    arButton.disabled = state.modelFailed || state.isExporting || state.isInAR;
+    syncARButtonLabel();
+}
+
+function syncTurntableButton() {
+    dom.turntableToggle.classList.toggle('is-active', state.turntableEnabled);
+    dom.turntableToggle.setAttribute('aria-pressed', String(state.turntableEnabled));
+    dom.turntableToggle.title = state.turntableEnabled ? 'Stop Turntable' : 'Start Turntable';
+}
+
+function stopTurntableRotation() {
+    if (!state.turntableEnabled) {
+        return;
+    }
+
+    state.turntableEnabled = false;
+    syncTurntableButton();
+}
+
+function getNormalizedRotationAngle(angle) {
+    return THREE.MathUtils.euclideanModulo(angle + Math.PI, Math.PI * 2) - Math.PI;
+}
+
+function capturePreviewState() {
+    const activeViewButton = dom.cameraButtons.find((button) => button.classList.contains('is-active'));
+
+    return {
+        activeView: activeViewButton?.dataset.view ?? 'home',
+        turntableEnabled: state.turntableEnabled,
+        cameraPosition: camera.position.clone(),
+        cameraQuaternion: camera.quaternion.clone(),
+        cameraZoom: camera.zoom,
+        cameraFov: camera.fov,
+        cameraNear: camera.near,
+        cameraFar: camera.far,
+        controlsTarget: controls.target.clone(),
+        sceneRootPosition: sceneRoot.position.clone(),
+        sceneRootRotation: sceneRoot.rotation.clone()
+    };
+}
+
+function restorePreviewState(previewState = null) {
+    const snapshot = previewState ?? defaultPreviewState;
+
+    TWEEN.removeAll();
+    sceneRoot.visible = true;
+    sceneRoot.position.copy(snapshot.sceneRootPosition);
+    sceneRoot.rotation.copy(snapshot.sceneRootRotation);
+    camera.position.copy(snapshot.cameraPosition);
+    camera.quaternion.copy(snapshot.cameraQuaternion);
+    camera.zoom = snapshot.cameraZoom;
+    camera.fov = snapshot.cameraFov;
+    camera.near = snapshot.cameraNear;
+    camera.far = snapshot.cameraFar;
+    camera.updateProjectionMatrix();
+    controls.target.copy(snapshot.controlsTarget);
+    controls.update();
+    controls.saveState();
+    state.turntableEnabled = snapshot.turntableEnabled;
+    syncTurntableButton();
+    setActiveCameraView(snapshot.activeView);
 }
 
 function isEnvPanelOpen() {
@@ -690,7 +730,11 @@ function initializeARSupport() {
 
     navigator.xr.isSessionSupported('immersive-ar')
         .then((supported) => {
-            if (!supported) {
+            state.arSupportResolved = true;
+            if (supported) {
+                state.arSupported = true;
+                syncARVisibility();
+            } else {
                 markARUnsupported();
             }
         })
@@ -705,31 +749,20 @@ function markARUnsupported() {
     }
 
     state.arUnsupported = true;
-    arButton.disabled = true;
+    state.arSupportResolved = true;
+    state.arSupported = false;
+    arButtonLabelObserver.disconnect();
 
     if (arButton.isConnected) {
         arButton.remove();
     }
 
-    arStatusTag = document.createElement('div');
-    arStatusTag.className = 'ar-status-tag';
-    arStatusTag.textContent = 'AR Not Supported';
-    dom.arContainer.appendChild(arStatusTag);
+    dom.arContainer.hidden = true;
 
-    window.setTimeout(() => {
-        if (!arStatusTag) {
-            return;
-        }
-
-        arStatusTag.classList.add('is-fading');
-
-        window.setTimeout(() => {
-            if (arStatusTag) {
-                arStatusTag.remove();
-                arStatusTag = null;
-            }
-        }, 800);
-    }, 5000);
+    if (state.ready && !state.arUnsupportedToastShown) {
+        state.arUnsupportedToastShown = true;
+        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
+    }
 }
 
 function loadEnvironment() {
@@ -766,6 +799,8 @@ function loadModel() {
                 if (!child.isMesh) {
                     return;
                 }
+                child.castShadow = true;
+                child.receiveShadow = true;
 
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
                 materials.forEach((material) => {
@@ -891,14 +926,11 @@ function bindUIEvents() {
 
     dom.playPause.addEventListener('click', toggleAnimation);
     dom.generatePdf.addEventListener('click', generatePdfProof);
+    dom.turntableToggle.addEventListener('click', toggleTurntable);
 
     window.addEventListener('keydown', (event) => {
         const activeTag = document.activeElement?.tagName;
         const isInteractiveFocus = activeTag === 'INPUT' || activeTag === 'BUTTON' || document.activeElement?.classList.contains('upload-card');
-
-        if (event.key === 'Escape' && !dom.pocketColorPopover.hidden) {
-            closePocketColorPicker();
-        }
 
         if (event.code === 'Space' && !isInteractiveFocus) {
             event.preventDefault();
@@ -917,14 +949,6 @@ function bindUIEvents() {
         if (!dom.cameraWrapper.contains(event.target) && isEnvPanelOpen()) {
             setEnvPanelOpen(false);
         }
-
-        if (
-            !dom.pocketColorPopover.hidden &&
-            !dom.pocketColorPopover.contains(event.target) &&
-            !dom.pocketColorTrigger.contains(event.target)
-        ) {
-            closePocketColorPicker();
-        }
     });
 
     dom.envExposure.addEventListener('input', (event) => {
@@ -939,6 +963,7 @@ function bindUIEvents() {
         const radians = Number.parseFloat(event.target.value);
         scene.environmentRotation.y = radians;
         scene.backgroundRotation.y = radians;
+        lightingGroup.rotation.y = radians;
     });
 
     dom.envBackground.addEventListener('change', () => {
@@ -952,12 +977,14 @@ function bindUIEvents() {
         renderer.toneMappingExposure = 1;
         scene.environmentRotation.y = 0;
         scene.backgroundRotation.y = 0;
+        lightingGroup.rotation.y = 0;
         syncEnvironmentBackground();
     });
 
     dom.cameraButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const view = button.dataset.view;
+            stopTurntableRotation();
             focusCameraView(view);
         });
     });
@@ -1115,7 +1142,13 @@ function toggleAnimation() {
 
     isPlaying = !isPlaying;
     action.paused = !isPlaying;
-    dom.playPause.textContent = isPlaying ? 'Pause Animation' : 'Play Animation';
+
+    if (!isPlaying && state.turntableEnabled) {
+        state.turntableEnabled = false;
+        syncTurntableButton();
+    }
+
+    syncPlayPauseButton();
 }
 
 async function generatePdfProof() {
@@ -1131,7 +1164,10 @@ async function generatePdfProof() {
     state.isExporting = true;
     syncControlAvailability();
     dom.generatePdf.textContent = 'Generating...';
-    showToast('Generating proof', 'Capturing clean front and back views for the PDF.', 'info', 2000);
+
+    const slowGenerationTimer = setTimeout(() => {
+        showToast('Generating proof', 'Capturing clean front and back views for the PDF.', 'info', 3000);
+    }, 3000);
 
     await new Promise((resolve) => window.requestAnimationFrame(resolve));
 
@@ -1147,6 +1183,7 @@ async function generatePdfProof() {
         doc.text('Probo Configurator - Client Proof', 20, 20);
         doc.setFontSize(12);
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 28);
+        doc.text(`Pocket color: ${normalizeHex(dom.pocketColor.value) || dom.pocketColor.value}`, 20, 36);
 
         doc.setFontSize(14);
         doc.text('Front Layout', 20, 45);
@@ -1161,6 +1198,8 @@ async function generatePdfProof() {
         console.error(error);
         showToast('PDF export failed', 'Unable to generate the proof. Please try again.', 'error', 4200);
     } finally {
+        clearTimeout(slowGenerationTimer);
+        
         dom.generatePdf.innerHTML = pdfButtonMarkup;
         state.isExporting = false;
         syncControlAvailability();
@@ -1178,6 +1217,9 @@ function getExportRenderer() {
         exportRenderer.setPixelRatio(1);
         exportRenderer.outputColorSpace = THREE.SRGBColorSpace;
         exportRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+        exportRenderer.shadowMap.enabled = true;
+        exportRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
         exportCamera = new THREE.PerspectiveCamera(45, 1, 0.6, 1000);
     }
 
@@ -1205,6 +1247,42 @@ function syncEnvironmentBackground() {
     scene.backgroundBlurriness = 0;
 }
 
+function toggleTurntable() {
+    if (dom.turntableToggle.disabled) {
+        return;
+    }
+
+    state.turntableEnabled = !state.turntableEnabled;
+    syncTurntableButton();
+}
+
+function syncPlayPauseButton() {
+    dom.playPause.classList.toggle('is-paused', !isPlaying);
+    dom.playPause.title = isPlaying ? 'Pause Animation' : 'Play Animation';
+    dom.playPause.setAttribute('aria-label', isPlaying ? 'Pause Animation' : 'Play Animation');
+}
+
+function resetDesktopPreviewState() {
+    restorePreviewState();
+}
+
+function schedulePostARRestore() {
+    const restorePreview = () => {
+        handleResize();
+        restorePreviewState(previewStateBeforeAR);
+    };
+
+    window.clearTimeout(postArRestoreTimer);
+    restorePreview();
+
+    window.requestAnimationFrame(() => {
+        restorePreview();
+        postArRestoreTimer = window.setTimeout(() => {
+            restorePreview();
+        }, mobileViewportMediaQuery.matches ? 320 : 140);
+    });
+}
+
 function transitionCamera(targetPosition) {
     if (state.isInAR) {
         return;
@@ -1217,6 +1295,10 @@ function transitionCamera(targetPosition) {
     const endTarget = targetCenter.clone();
     const startSpherical = new THREE.Spherical().setFromVector3(camera.position.clone().sub(startTarget));
     const endSpherical = new THREE.Spherical().setFromVector3(endPosition.clone().sub(endTarget));
+    const startRotationY = getNormalizedRotationAngle(sceneRoot.rotation.y);
+    const endRotationY = 0;
+
+    sceneRoot.rotation.y = startRotationY;
 
     while (endSpherical.theta - startSpherical.theta > Math.PI) {
         endSpherical.theta -= Math.PI * 2;
@@ -1236,6 +1318,7 @@ function transitionCamera(targetPosition) {
             const phi = THREE.MathUtils.lerp(startSpherical.phi, endSpherical.phi, progress);
             const theta = THREE.MathUtils.lerp(startSpherical.theta, endSpherical.theta, progress);
 
+            sceneRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, endRotationY, progress);
             camera.position.setFromSpherical(new THREE.Spherical(radius, phi, theta)).add(controls.target);
             controls.update();
         })
@@ -1262,6 +1345,8 @@ function onARSessionStart() {
     state.isInAR = true;
     controls.enabled = false;
     reticle.visible = false;
+    window.clearTimeout(postArRestoreTimer);
+    previewStateBeforeAR = capturePreviewState();
 
     if (modelRoot) {
         sceneRoot.visible = false;
@@ -1277,10 +1362,7 @@ function onARSessionEnd() {
     reticle.visible = false;
     resetHitTestState();
 
-    sceneRoot.visible = true;
-    sceneRoot.position.set(0, 0, 0);
-    sceneRoot.rotation.set(0, 0, 0);
-    focusCameraView('home');
+    schedulePostARRestore();
     syncControlAvailability();
 }
 
@@ -1358,8 +1440,10 @@ function handleResize() {
     renderer.setPixelRatio(getClampedPixelRatio());
     renderer.setSize(width, height);
 
-    if (!dom.pocketColorPopover.hidden) {
-        positionPocketColorPicker();
+    if (pocketColorPickr?.isOpen()) {
+        queuePocketColorPickerLayout();
+    } else if (!mobileViewportMediaQuery.matches) {
+        restorePocketColorPickerNativeLayout();
     }
 }
 
@@ -1371,6 +1455,10 @@ function renderFrame(_, frame) {
     }
 
     const delta = clock.getDelta();
+    if (state.turntableEnabled && !state.isInAR) {
+        sceneRoot.rotation.y += turntableSpeed * delta;
+    }
+
     if (mixer) {
         mixer.update(delta);
     }

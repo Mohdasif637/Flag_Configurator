@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Flag Configurator</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/monolith.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -103,7 +104,7 @@
             </div>
             <input type="hidden" id="pocket-color" value="#000000">
             <div class="color-picker-shell">
-                <button type="button" id="pocket-color-trigger" class="color-picker-trigger" aria-expanded="false" aria-controls="pocket-color-popover">
+                <button type="button" id="pocket-color-trigger" class="color-picker-trigger" aria-expanded="false">
                     <span id="pocket-color-swatch" class="color-picker-swatch" aria-hidden="true"></span>
                     <span class="color-picker-text">
                         <span class="color-picker-title">Choose pocket color</span>
@@ -114,7 +115,6 @@
         </div>
 
         <div class="action-stack">
-            <button type="button" id="play-pause" title="Shortcut: Press Spacebar">Pause Animation</button>
             <button type="button" id="generate-pdf" class="primary-btn">
                 <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
@@ -125,33 +125,9 @@
                 Generate PDF Proof
             </button>
         </div>
-
-        <div id="pocket-color-popover" class="color-picker-popover" hidden>
-            <div class="color-picker-dialog" role="dialog" aria-modal="false" aria-labelledby="pocket-color-dialog-title">
-                <div class="color-picker-dialog-header">
-                    <span id="pocket-color-dialog-title">Pocket Color</span>
-                </div>
-
-                <div id="pocket-color-surface" class="color-picker-surface" aria-label="Pocket color saturation and shade selector">
-                    <span id="pocket-color-cursor" class="color-picker-cursor" aria-hidden="true"></span>
-                </div>
-
-                <label class="color-picker-slider" for="pocket-color-hue">
-                    Hue
-                    <input type="range" id="pocket-color-hue" min="0" max="360" step="1" value="0">
-                </label>
-
-                <div class="color-picker-footer">
-                    <input type="text" id="pocket-color-hex" class="color-picker-hex" value="#000000" maxlength="7" spellcheck="false" autocapitalize="characters">
-                    <button type="button" id="pocket-color-close" class="color-picker-close">Done</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div id="camera-wrapper">
-        <div id="ar-container"></div>
-
         <div id="camera-controls">
             <button type="button" id="cam-back" data-view="back" title="Back View">Back</button>
             <button type="button" id="cam-left" data-view="left" title="Left View">Left</button>
@@ -165,25 +141,44 @@
             <button type="button" id="cam-front" data-view="front" title="Front View">Front</button>
         </div>
 
-        <button type="button" id="env-toggle" title="HDRI Settings">
-            <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-.33-1 1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1-.33H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1-.33 1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .33-1V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .33 1 1.65 1.65 0 0 0 1 .6 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .39.14.76.4 1 .24.26.61.4 1 .4H21a2 2 0 1 1 0 4h-.09c-.39 0-.76.14-1 .4z"></path>
-            </svg>
-            Env Settings
-        </button>
+        <div id="camera-actions">
+            <div id="ar-container" hidden></div>
 
-        <div id="env-panel" hidden>
-            <div class="env-header">
-                <span>Environment</span>
-                <button type="button" id="env-reset" title="Reset Environment">Reset</button>
+            <button type="button" id="turntable-toggle" title="Toggle Turntable" aria-label="Toggle Turntable">
+                <img class="control-icon" src="Icons/rotate.svg" alt="" aria-hidden="true">
+            </button>
+
+            <button type="button" id="play-pause" title="Shortcut: Press Spacebar" aria-label="Toggle Play Animation">
+                <span class="camera-action-icon is-pause" aria-hidden="true">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                        <rect x="6" y="5" width="4" height="14" rx="1.6" fill="currentColor"></rect>
+                        <rect x="14" y="5" width="4" height="14" rx="1.6" fill="currentColor"></rect>
+                    </svg>
+                </span>
+                <span class="camera-action-icon is-play" aria-hidden="true">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                        <path d="M8 6v12l10-6z" fill="currentColor"></path>
+                    </svg>
+                </span>
+            </button>
+
+            <button type="button" id="env-toggle" title="Environment Settings" aria-label="Environment Settings">
+                <img class="control-icon" src="Icons/env.svg" alt="" aria-hidden="true">
+            </button>
+
+            <div id="env-panel" hidden>
+                <div class="env-header">
+                    <span>Environment</span>
+                    <button type="button" id="env-reset" title="Reset Environment">Reset</button>
+                </div>
+                <label>Exposure <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
+                <label>Rotate Light <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0"></label>
+                <label class="env-checkbox">
+                    Show Studio Bg <input type="checkbox" id="env-bg">
+                </label>
             </div>
-            <label>Exposure <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
-            <label>Rotate Light <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0"></label>
-            <label class="env-checkbox">
-                Show Studio Bg <input type="checkbox" id="env-bg">
-            </label>
         </div>
+
     </div>
 
     <div id="toast-region" aria-live="polite" aria-atomic="true"></div>
@@ -191,11 +186,12 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
+                "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
     <script type="module" src="main.js"></script>
 </body>
 </html>
