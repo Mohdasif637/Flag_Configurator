@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Flag Configurator</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/monolith.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -18,112 +18,116 @@
         </div>
     </div>
 
-    <div id="ui-panel">
-        <div id="ui-header-wrapper">
-            <h2>Flag Configurator</h2>
-            <p class="panel-copy">Upload artwork, tune the preview, and export a clean client proof.</p>
-        </div>
-
-        <a href="Template.pdf" download="Template.pdf" class="guide-btn">
-            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Graphic Template
-        </a>
-
-        <div class="control-group">
-            <div class="control-heading">
-                <label for="front-upload">Front Artwork</label>
-                <span class="control-hint">PNG or JPG</span>
+    <div id="ui-container">
+        <div id="ui-bg"></div>
+        <div id="ui-shell">
+            <div id="ui-header-wrapper">
+                <h2>Flag Configurator</h2>
+                <p class="panel-copy">Upload artwork, tune the preview, and export a clean client proof.</p>
             </div>
+            <div id="ui-panel">
+                <a href="Template.pdf" download="Template.pdf" class="guide-btn">
+                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Graphic Template
+                </a>
 
-            <label id="front-dropzone" class="upload-card" for="front-upload" tabindex="0">
-                <input type="file" id="front-upload" class="visually-hidden" accept="image/png, image/jpeg">
-                <div class="upload-card-copy">
-                    <span class="upload-title">Drop artwork here</span>
-                    <span class="upload-subtitle">or click to browse your files</span>
+                <div class="control-group">
+                    <div class="control-heading">
+                        <label for="front-upload">Front Artwork</label>
+                        <span class="control-hint">PNG or JPG</span>
+                    </div>
+
+                    <label id="front-dropzone" class="upload-card" for="front-upload" tabindex="0">
+                        <input type="file" id="front-upload" class="visually-hidden" accept="image/png, image/jpeg">
+                        <div class="upload-card-copy">
+                            <span class="upload-title">Drop artwork here</span>
+                            <span class="upload-subtitle">or click to browse your files</span>
+                        </div>
+                        <div id="front-thumb-frame" class="upload-thumb-frame" hidden>
+                            <img id="front-thumb" class="upload-thumb" alt="Front artwork preview">
+                        </div>
+                    </label>
+
+                    <div id="front-actions" class="upload-actions" hidden>
+                        <button type="button" id="reset-front-tex" class="secondary-btn" title="Reset artwork transforms" disabled hidden>Reset</button>
+                        <button type="button" id="clear-front" class="danger-btn" title="Remove artwork" disabled hidden>Remove</button>
+                    </div>
+
+                    <div id="front-transforms" class="transform-controls" hidden>
+                        <label>Scale <input type="range" id="front-scale" min="0.1" max="3" step="0.01" value="1"></label>
+                        <label>Pan X <input type="range" id="front-x" min="-1" max="1" step="0.01" value="0"></label>
+                        <label>Pan Y <input type="range" id="front-y" min="-1" max="1" step="0.01" value="0"></label>
+                    </div>
                 </div>
-                <div id="front-thumb-frame" class="upload-thumb-frame" hidden>
-                    <img id="front-thumb" class="upload-thumb" alt="Front artwork preview">
+
+                <div class="control-group option-group">
+                    <label class="toggle-row">
+                        <input type="checkbox" id="double-sided" checked>
+                        Print Double-Sided
+                    </label>
                 </div>
-            </label>
 
-            <div id="front-actions" class="upload-actions" hidden>
-                <button type="button" id="reset-front-tex" class="secondary-btn" title="Reset artwork transforms" disabled hidden>Reset</button>
-                <button type="button" id="clear-front" class="danger-btn" title="Remove artwork" disabled hidden>Remove</button>
-            </div>
+                <div id="back-artwork-group" class="control-group">
+                    <div class="control-heading">
+                        <label for="back-upload">Back Artwork</label>
+                        <span class="control-hint">PNG or JPG</span>
+                    </div>
 
-            <div id="front-transforms" class="transform-controls" hidden>
-                <label>Scale <input type="range" id="front-scale" min="0.1" max="3" step="0.01" value="1"></label>
-                <label>Pan X <input type="range" id="front-x" min="-1" max="1" step="0.01" value="0"></label>
-                <label>Pan Y <input type="range" id="front-y" min="-1" max="1" step="0.01" value="0"></label>
-            </div>
-        </div>
+                    <label id="back-dropzone" class="upload-card" for="back-upload" tabindex="0">
+                        <input type="file" id="back-upload" class="visually-hidden" accept="image/png, image/jpeg">
+                        <div class="upload-card-copy">
+                            <span class="upload-title">Drop artwork here</span>
+                            <span class="upload-subtitle">or click to browse your files</span>
+                        </div>
+                        <div id="back-thumb-frame" class="upload-thumb-frame" hidden>
+                            <img id="back-thumb" class="upload-thumb" alt="Back artwork preview">
+                        </div>
+                    </label>
 
-        <div class="control-group option-group">
-            <label class="toggle-row">
-                <input type="checkbox" id="double-sided" checked>
-                Print Double-Sided
-            </label>
-        </div>
+                    <div id="back-actions" class="upload-actions" hidden>
+                        <button type="button" id="reset-back-tex" class="secondary-btn" title="Reset artwork transforms" disabled hidden>Reset</button>
+                        <button type="button" id="clear-back" class="danger-btn" title="Remove artwork" disabled hidden>Remove</button>
+                    </div>
 
-        <div id="back-artwork-group" class="control-group">
-            <div class="control-heading">
-                <label for="back-upload">Back Artwork</label>
-                <span class="control-hint">PNG or JPG</span>
-            </div>
-
-            <label id="back-dropzone" class="upload-card" for="back-upload" tabindex="0">
-                <input type="file" id="back-upload" class="visually-hidden" accept="image/png, image/jpeg">
-                <div class="upload-card-copy">
-                    <span class="upload-title">Drop artwork here</span>
-                    <span class="upload-subtitle">or click to browse your files</span>
+                    <div id="back-transforms" class="transform-controls" hidden>
+                        <label>Scale <input type="range" id="back-scale" min="0.1" max="3" step="0.01" value="1"></label>
+                        <label>Pan X <input type="range" id="back-x" min="-1" max="1" step="0.01" value="0"></label>
+                        <label>Pan Y <input type="range" id="back-y" min="-1" max="1" step="0.01" value="0"></label>
+                    </div>
                 </div>
-                <div id="back-thumb-frame" class="upload-thumb-frame" hidden>
-                    <img id="back-thumb" class="upload-thumb" alt="Back artwork preview">
+
+                <div class="control-group">
+                    <div class="control-heading">
+                        <label for="pocket-color-trigger">Pocket Color</label>
+                    </div>
+                    <input type="hidden" id="pocket-color" value="#000000">
+                    <div class="color-picker-shell">
+                        <button type="button" id="pocket-color-trigger" class="color-picker-trigger" aria-expanded="false">
+                            <span id="pocket-color-swatch" class="color-picker-swatch" aria-hidden="true"></span>
+                            <span class="color-picker-text">
+                                <span class="color-picker-title">Choose pocket color</span>
+                                <span id="pocket-color-value" class="color-picker-value">#000000</span>
+                            </span>
+                        </button>
+                    </div>
                 </div>
-            </label>
 
-            <div id="back-actions" class="upload-actions" hidden>
-                <button type="button" id="reset-back-tex" class="secondary-btn" title="Reset artwork transforms" disabled hidden>Reset</button>
-                <button type="button" id="clear-back" class="danger-btn" title="Remove artwork" disabled hidden>Remove</button>
+                <div class="action-stack">
+                    <button type="button" id="generate-pdf" class="primary-btn">
+                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                            <path d="M14 2v6h6"></path>
+                            <path d="M8 13h8"></path>
+                            <path d="M8 17h8"></path>
+                        </svg>
+                        Generate PDF Proof
+                    </button>
+                </div>
             </div>
-
-            <div id="back-transforms" class="transform-controls" hidden>
-                <label>Scale <input type="range" id="back-scale" min="0.1" max="3" step="0.01" value="1"></label>
-                <label>Pan X <input type="range" id="back-x" min="-1" max="1" step="0.01" value="0"></label>
-                <label>Pan Y <input type="range" id="back-y" min="-1" max="1" step="0.01" value="0"></label>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <div class="control-heading">
-                <label for="pocket-color-trigger">Pocket Color</label>
-            </div>
-            <input type="hidden" id="pocket-color" value="#000000">
-            <div class="color-picker-shell">
-                <button type="button" id="pocket-color-trigger" class="color-picker-trigger" aria-expanded="false">
-                    <span id="pocket-color-swatch" class="color-picker-swatch" aria-hidden="true"></span>
-                    <span class="color-picker-text">
-                        <span class="color-picker-title">Choose pocket color</span>
-                        <span id="pocket-color-value" class="color-picker-value">#000000</span>
-                    </span>
-                </button>
-            </div>
-        </div>
-
-        <div class="action-stack">
-            <button type="button" id="generate-pdf" class="primary-btn">
-                <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-                    <path d="M14 2v6h6"></path>
-                    <path d="M8 13h8"></path>
-                    <path d="M8 17h8"></path>
-                </svg>
-                Generate PDF Proof
-            </button>
         </div>
     </div>
 
@@ -173,9 +177,6 @@
                 </div>
                 <label>Exposure <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
                 <label>Rotate Light <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0"></label>
-                <label class="env-checkbox">
-                    Show Studio Bg <input type="checkbox" id="env-bg">
-                </label>
             </div>
         </div>
 

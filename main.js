@@ -25,7 +25,6 @@ const dom = {
     envPanel: document.getElementById('env-panel'),
     envExposure: document.getElementById('env-exposure'),
     envRotate: document.getElementById('env-rotate'),
-    envBackground: document.getElementById('env-bg'),
     envReset: document.getElementById('env-reset'),
     arContainer: document.getElementById('ar-container'),
     toastRegion: document.getElementById('toast-region'),
@@ -154,6 +153,20 @@ controls.target.copy(targetCenter);
 camera.position.copy(cameraHome);
 controls.update();
 controls.saveState();
+
+function bindOrbitPresetClearOnUserAdjust() {
+    const canvas = renderer.domElement;
+    const onUserAdjust = () => {
+        if (state.isInAR || !state.ready || state.isExporting) {
+            return;
+        }
+        setActiveCameraView(null);
+    };
+    controls.addEventListener('start', onUserAdjust);
+    canvas.addEventListener('wheel', onUserAdjust, { passive: true });
+}
+bindOrbitPresetClearOnUserAdjust();
+
 const defaultPreviewState = {
     activeView: 'home',
     turntableEnabled: true,
@@ -225,6 +238,8 @@ syncARButtonLabel();
 const arButtonLabelObserver = new MutationObserver(syncARButtonLabel);
 arButtonLabelObserver.observe(arButton, { childList: true, characterData: true, subtree: true });
 
+let arDisabledFallback = null;
+
 bindUploadInputs();
 bindTransformInputs();
 bindUIEvents();
@@ -275,6 +290,9 @@ function showToast(title, message, tone = 'info', duration = 3200) {
             dismissToast(activeToasts[0]);
         }
 
+        const priorNodes = Array.from(dom.toastRegion.children);
+        const priorRects = priorNodes.map((node) => node.getBoundingClientRect());
+
         const toast = document.createElement('div');
         toast.className = `toast is-${tone}`;
 
@@ -287,16 +305,36 @@ function showToast(title, message, tone = 'info', duration = 3200) {
         messageNode.textContent = message;
 
         toast.append(titleNode, messageNode);
-        
+
         toast.resolvePromise = resolve;
 
-        dom.toastRegion.appendChild(toast);
+        dom.toastRegion.insertBefore(toast, dom.toastRegion.firstChild);
         activeToasts.push(toast);
 
-        window.requestAnimationFrame(() => {
-            if (toast.dataset.dismissed !== 'true') {
-                toast.classList.add('is-visible');
+        priorNodes.forEach((node, index) => {
+            const before = priorRects[index];
+            const after = node.getBoundingClientRect();
+            const deltaY = before.top - after.top;
+            if (Math.abs(deltaY) < 0.5) {
+                return;
             }
+
+            node.style.transition = 'none';
+            node.style.transform = `translateY(${deltaY}px)`;
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    node.style.transition = '';
+                    node.style.transform = '';
+                });
+            });
+        });
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                if (toast.dataset.dismissed !== 'true') {
+                    toast.classList.add('is-visible');
+                }
+            });
         });
 
         toast.hideTimer = window.setTimeout(() => {
@@ -326,7 +364,7 @@ function dismissToast(toast) {
         if (toast.resolvePromise) {
             toast.resolvePromise();
         }
-    }, 360);
+    }, 400);
 }
 
 function initializePocketColorPicker() {
@@ -341,7 +379,7 @@ function initializePocketColorPicker() {
     pocketColorPickr = window.Pickr.create({
         el: dom.pocketColorTrigger,
         container: 'body',
-        theme: 'monolith',
+        theme: 'nano',
         default: dom.pocketColor.value,
         useAsButton: true,
         autoReposition: true,
@@ -564,7 +602,6 @@ function syncControlAvailability() {
     dom.envToggle.disabled = !environmentEnabled;
     dom.envExposure.disabled = !environmentEnabled;
     dom.envRotate.disabled = !environmentEnabled;
-    dom.envBackground.disabled = !environmentEnabled;
     dom.envReset.disabled = !environmentEnabled;
 
     if (!environmentEnabled) {
@@ -624,15 +661,51 @@ function syncARButtonLabel() {
     arButton.title = 'Start AR';
 }
 
-function syncARVisibility() {
-    const canShowAR = state.ready && state.arSupportResolved && state.arSupported && !state.arUnsupported && arButton.isConnected;
-    dom.arContainer.hidden = !canShowAR;
-    arButton.hidden = !canShowAR;
-
-    if (!canShowAR) {
+function ensureArDisabledFallback() {
+    if (arDisabledFallback?.isConnected) {
         return;
     }
 
+    arDisabledFallback = document.createElement('button');
+    arDisabledFallback.type = 'button';
+    arDisabledFallback.id = 'ARButton';
+    arDisabledFallback.className = 'is-ar-disabled';
+    arDisabledFallback.innerHTML = arButtonIconMarkup;
+    arDisabledFallback.setAttribute('aria-label', 'AR preview unavailable on this device');
+    arDisabledFallback.title = 'AR preview unavailable';
+    arDisabledFallback.addEventListener('click', (event) => {
+        event.preventDefault();
+        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
+    });
+    dom.arContainer.appendChild(arDisabledFallback);
+}
+
+function syncARVisibility() {
+    const showContainer = state.ready && state.arSupportResolved;
+    dom.arContainer.hidden = !showContainer;
+
+    if (!showContainer) {
+        return;
+    }
+
+    if (state.arUnsupported) {
+        if (arButton.isConnected) {
+            arButton.remove();
+        }
+        ensureArDisabledFallback();
+        return;
+    }
+
+    if (arDisabledFallback?.isConnected) {
+        arDisabledFallback.remove();
+        arDisabledFallback = null;
+    }
+
+    if (!arButton.isConnected) {
+        dom.arContainer.appendChild(arButton);
+    }
+
+    arButton.hidden = false;
     arButton.disabled = state.modelFailed || state.isExporting || state.isInAR;
     syncARButtonLabel();
 }
@@ -660,7 +733,7 @@ function capturePreviewState() {
     const activeViewButton = dom.cameraButtons.find((button) => button.classList.contains('is-active'));
 
     return {
-        activeView: activeViewButton?.dataset.view ?? 'home',
+        activeView: activeViewButton?.dataset.view ?? null,
         turntableEnabled: state.turntableEnabled,
         cameraPosition: camera.position.clone(),
         cameraQuaternion: camera.quaternion.clone(),
@@ -757,12 +830,14 @@ function markARUnsupported() {
         arButton.remove();
     }
 
-    dom.arContainer.hidden = true;
+    ensureArDisabledFallback();
 
     if (state.ready && !state.arUnsupportedToastShown) {
         state.arUnsupportedToastShown = true;
         showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
     }
+
+    syncARVisibility();
 }
 
 function loadEnvironment() {
@@ -822,6 +897,7 @@ function loadModel() {
                 });
             });
 
+            renderer.shadowMap.needsUpdate = true;
             if (gltf.animations && gltf.animations.length > 0) {
                 mixer = new THREE.AnimationMixer(modelRoot);
                 action = mixer.clipAction(gltf.animations[0]);
@@ -962,29 +1038,23 @@ function bindUIEvents() {
 
         const radians = Number.parseFloat(event.target.value);
         scene.environmentRotation.y = radians;
-        scene.backgroundRotation.y = radians;
         lightingGroup.rotation.y = radians;
-    });
-
-    dom.envBackground.addEventListener('change', () => {
-        syncEnvironmentBackground();
     });
 
     dom.envReset.addEventListener('click', () => {
         dom.envExposure.value = '1';
         dom.envRotate.value = '0';
-        dom.envBackground.checked = false;
         renderer.toneMappingExposure = 1;
         scene.environmentRotation.y = 0;
-        scene.backgroundRotation.y = 0;
         lightingGroup.rotation.y = 0;
-        syncEnvironmentBackground();
     });
 
     dom.cameraButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const view = button.dataset.view;
-            stopTurntableRotation();
+            if (view !== 'home') {
+                stopTurntableRotation();
+            }
             focusCameraView(view);
         });
     });
@@ -1235,18 +1305,6 @@ function captureProofView(position) {
     return exportContext.renderer.domElement.toDataURL('image/jpeg', 1.0);
 }
 
-function syncEnvironmentBackground() {
-    if (dom.envBackground.checked && environmentTexture) {
-        scene.background = environmentTexture;
-        scene.backgroundBlurriness = 0.2;
-        scene.backgroundRotation.y = scene.environmentRotation.y;
-        return;
-    }
-
-    scene.background = defaultBackground;
-    scene.backgroundBlurriness = 0;
-}
-
 function toggleTurntable() {
     if (dom.turntableToggle.disabled) {
         return;
@@ -1337,7 +1395,8 @@ function focusCameraView(view) {
 
 function setActiveCameraView(view) {
     dom.cameraButtons.forEach((button) => {
-        button.classList.toggle('is-active', button.dataset.view === view);
+        const matches = view != null && button.dataset.view === view;
+        button.classList.toggle('is-active', matches);
     });
 }
 
