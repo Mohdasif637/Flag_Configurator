@@ -2,7 +2,7 @@
     --bg: #e0e0e0;
     --panel-bg: rgba(252, 251, 247, 0.94);
     --panel-border: rgba(58, 76, 62, 0.14);
-    --panel-shadow: 0 24px 55px rgba(26, 38, 28, 0.16);
+    --panel-shadow: none;
     --text: #223127;
     --muted: #5f7165;
     --line: rgba(95, 113, 101, 0.2);
@@ -175,7 +175,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: var(--radius-lg);
     background: rgba(248, 246, 240, 0.92);
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
     text-align: center;
 }
 
@@ -218,7 +217,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border-radius: 26px;
     background: #fcfbf7;
     border: 1px solid var(--panel-border);
-    box-shadow: var(--panel-shadow);
     z-index: -1;
     pointer-events: none;
 }
@@ -293,7 +291,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     text-decoration: none;
     font-size: 13px;
     font-weight: 700;
-    box-shadow: 0 12px 24px rgba(32, 95, 75, 0.24);
 }
 
 .secondary-btn, .danger-btn, .primary-btn {
@@ -310,7 +307,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
 .primary-btn {
     background: linear-gradient(135deg, #1d6b52 0%, #2a8a68 100%);
     color: #fff;
-    box-shadow: 0 16px 28px rgba(29, 107, 82, 0.24);
 }
 
 .action-stack {
@@ -331,40 +327,92 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     grid-template-columns: 1fr auto;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3);
+    padding: 0 var(--space-2);
+    height: 66px;
+    box-sizing: border-box;
     border: 1px dashed rgba(34, 49, 39, 0.18);
     border-radius: var(--radius-md);
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(245, 242, 233, 0.9));
+    background: linear-gradient(145deg,#ffe6e6, #fff5f5);
     cursor: pointer;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-card.is-loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.upload-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: rgba(39, 174, 96, 0.2);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.upload-card.is-loading .upload-progress {
+    animation: upload-fill 3s ease-out forwards;
+}
+
+@keyframes upload-fill {
+    0% { width: 0%; opacity: 1; }
+    100% { width: 95%; opacity: 1; }
 }
 
 .upload-card.is-dragover {
     border-color: var(--primary);
     background: linear-gradient(145deg, rgba(235, 246, 239, 0.98), rgba(228, 241, 231, 0.95));
-    box-shadow: 0 0 0 4px var(--focus);
 }
 
-.upload-card-copy { display: flex; flex-direction: column; gap: 4px; }
-.upload-title { font-size: 14px; font-weight: 700; }
-.upload-subtitle { font-size: 12px; color: var(--muted); }
+.upload-card-copy { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.upload-title { font-size: 14px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.upload-subtitle { font-size: 12px; color: var(--muted); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 
 .upload-thumb-frame {
-    width: 72px;
-    height: 72px;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
     overflow: hidden;
-    border-radius: 14px;
+    border-radius: 10px;
     border: 1px solid rgba(34, 49, 39, 0.12);
     background: linear-gradient(145deg, #ffffff, #ece7dc);
-    box-shadow: 0 12px 24px rgba(27, 39, 30, 0.12);
 }
 
 .upload-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
-.upload-actions { display: flex; gap: 10px; margin-top: 12px; }
+
+.expandable-section {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    margin-top: 0;
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), margin-top 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+}
+
+.expandable-section.is-visible {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-top: 12px;
+}
+
+.expandable-content {
+    min-height: 0;
+    overflow: hidden;
+    transform: translateY(-10px);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.expandable-section.is-visible .expandable-content {
+    transform: translateY(0);
+}
+
+.upload-actions { display: flex; gap: 10px; }
 .upload-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
 .transform-controls {
-    margin-top: 12px;
     padding: 14px;
     border: 1px solid rgba(34, 49, 39, 0.09);
     border-radius: var(--radius-md);
@@ -415,7 +463,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border: 1px solid rgba(34, 49, 39, 0.12);
     border-radius: var(--radius-md);
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(245, 242, 233, 0.92));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
     color: var(--text);
 }
 
@@ -426,7 +473,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border-radius: 12px;
     border: 1px solid rgba(34, 49, 39, 0.1);
     background: #000;
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35);
 }
 
 .color-picker-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
@@ -439,7 +485,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     z-index: 35;
     border: 1px solid rgba(34, 49, 39, 0.12);
     border-radius: 18px;
-    box-shadow: 0 18px 38px rgba(20, 28, 22, 0.16);
     background: rgba(251, 249, 244, 0.98);
     backdrop-filter: blur(12px);
 }
@@ -525,7 +570,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 15px;
     color: #fff;
-    box-shadow: 0 14px 26px rgba(7, 12, 8, 0.2);
 }
 
 #camera-actions button {
@@ -542,7 +586,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
 #camera-controls button.is-active {
     background: linear-gradient(135deg, rgba(223, 141, 67, 0.95), rgba(190, 102, 39, 0.95));
     border-color: rgba(255, 255, 255, 0.34);
-    box-shadow: 0 16px 30px rgba(155, 86, 36, 0.34);
 }
 
 #ARButton {
@@ -563,7 +606,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     color: #fff !important;
     border: 1px solid rgba(255, 255, 255, 0.16) !important;
     border-radius: 15px !important;
-    box-shadow: 0 10px 18px rgba(15, 46, 36, 0.2) !important;
     
     -webkit-appearance: none !important;
     appearance: none !important;
@@ -575,7 +617,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     opacity: 0.34 !important;
     cursor: not-allowed !important;
     pointer-events: auto !important;
-    box-shadow: 0 6px 12px rgba(15, 46, 36, 0.12) !important;
     background: linear-gradient(145deg, rgba(39, 109, 88, 0.55) 0%, rgba(24, 72, 55, 0.5) 100%) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
@@ -618,7 +659,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border-radius: 14px;
     background: linear-gradient(145deg, rgba(15, 21, 18, 0.88), rgba(28, 38, 33, 0.84));
     border: 1px solid rgba(255, 255, 255, 0);
-    box-shadow: 0 16px 32px rgba(6, 9, 7, 0.22);
     color: #fff;
     backdrop-filter: blur(12px);
     opacity: 0;
@@ -690,7 +730,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border-radius: 10px;
     background: rgba(18, 27, 22, 0.5);
     color: #fff;
-    box-shadow: 0 20px 38px rgba(0, 0, 0, 0.24);
     border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(12px);
     opacity: 0;
@@ -768,6 +807,7 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     #ui-shell {
         direction: ltr;
         border-radius: 30px;
+        background-color: #fdfcf8;
     }
 
     #ui-header-wrapper {

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
+import { Timer } from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 
 const dom = {
@@ -10,14 +11,12 @@ const dom = {
     loadingOverlay: document.getElementById('loading-overlay'),
     loadingText: document.getElementById('loading-text'),
     uiPanel: document.getElementById('ui-panel'),
-    doubleSided: document.getElementById('double-sided'),
     pocketColor: document.getElementById('pocket-color'),
     pocketColorTrigger: document.getElementById('pocket-color-trigger'),
     pocketColorValue: document.getElementById('pocket-color-value'),
     pocketColorSwatch: document.getElementById('pocket-color-swatch'),
     playPause: document.getElementById('play-pause'),
     generatePdf: document.getElementById('generate-pdf'),
-    backArtworkGroup: document.getElementById('back-artwork-group'),
     cameraWrapper: document.getElementById('camera-wrapper'),
     cameraActions: document.getElementById('camera-actions'),
     turntableToggle: document.getElementById('turntable-toggle'),
@@ -32,43 +31,30 @@ const dom = {
 };
 
 const sideConfigs = {
-    front: {
-        label: 'Front',
-        input: document.getElementById('front-upload'),
-        dropzone: document.getElementById('front-dropzone'),
-        actions: document.getElementById('front-actions'),
-        transforms: document.getElementById('front-transforms'),
-        thumbFrame: document.getElementById('front-thumb-frame'),
-        thumb: document.getElementById('front-thumb'),
-        resetButton: document.getElementById('reset-front-tex'),
-        clearButton: document.getElementById('clear-front'),
-        scaleInput: document.getElementById('front-scale'),
-        xInput: document.getElementById('front-x'),
-        yInput: document.getElementById('front-y'),
-        materialName: 'Flag Cloth Front',
+    artwork: {
+        label: 'Artwork',
+        input: document.getElementById('artwork-upload'),
+        dropzone: document.getElementById('artwork-dropzone'),
+        titleElement: document.querySelector('#artwork-dropzone .upload-title'),
+        subtitleElement: document.querySelector('#artwork-dropzone .upload-subtitle'),
+        defaultTitle: 'Drop artwork here',
+        actionsWrapper: document.getElementById('artwork-actions-wrapper'),
+        actions: document.getElementById('artwork-actions'),
+        transformsWrapper: document.getElementById('artwork-transforms-wrapper'),
+        transforms: document.getElementById('artwork-transforms'),
+        thumbFrame: document.getElementById('artwork-thumb-frame'),
+        thumb: document.getElementById('artwork-thumb'),
+        resetButton: document.getElementById('reset-artwork-tex'),
+        clearButton: document.getElementById('clear-artwork'),
+        scaleInput: document.getElementById('artwork-scale'),
+        xInput: document.getElementById('artwork-x'),
+        yInput: document.getElementById('artwork-y'),
+        materialName: 'Graphic Shader',
         material: null,
         originalMap: null,
         uploadedTexture: null,
-        previewUrl: null
-    },
-    back: {
-        label: 'Back',
-        input: document.getElementById('back-upload'),
-        dropzone: document.getElementById('back-dropzone'),
-        actions: document.getElementById('back-actions'),
-        transforms: document.getElementById('back-transforms'),
-        thumbFrame: document.getElementById('back-thumb-frame'),
-        thumb: document.getElementById('back-thumb'),
-        resetButton: document.getElementById('reset-back-tex'),
-        clearButton: document.getElementById('clear-back'),
-        scaleInput: document.getElementById('back-scale'),
-        xInput: document.getElementById('back-x'),
-        yInput: document.getElementById('back-y'),
-        materialName: 'Flag Cloth Back',
-        material: null,
-        originalMap: null,
-        uploadedTexture: null,
-        previewUrl: null
+        previewUrl: null,
+        fileName: null
     }
 };
 
@@ -76,8 +62,8 @@ const scene = new THREE.Scene();
 const defaultBackground = new THREE.Color('#e0e0e0');
 scene.background = defaultBackground;
 
-const camera = new THREE.PerspectiveCamera(45, getViewportAspect(), 0.6, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+const camera = new THREE.PerspectiveCamera(45, getViewportAspect(), 0.01, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: true });
 renderer.setSize(dom.canvasContainer.clientWidth, dom.canvasContainer.clientHeight);
 renderer.setPixelRatio(getClampedPixelRatio());
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -85,7 +71,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1;
 renderer.xr.enabled = true;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 dom.canvasContainer.appendChild(renderer.domElement);
 
 const sceneRoot = new THREE.Group();
@@ -148,7 +134,11 @@ const exportRenderSize = 2048;
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-// controls.enablePan = false;
+controls.mouseButtons = {
+    LEFT: THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.PAN,
+    RIGHT: THREE.MOUSE.PAN
+};
 controls.target.copy(targetCenter);
 camera.position.copy(cameraHome);
 controls.update();
@@ -181,10 +171,10 @@ const defaultPreviewState = {
     sceneRootRotation: sceneRoot.rotation.clone()
 };
 
-const clock = new THREE.Clock();
+const timer = new Timer();
 const textureLoader = new THREE.TextureLoader();
 const modelLoader = new GLTFLoader();
-const environmentLoader = new RGBELoader();
+const environmentLoader = new HDRLoader();
 
 let pocketMaterial = null;
 let modelRoot = null;
@@ -587,7 +577,6 @@ function syncControlAvailability() {
     const baseEnabled = state.ready && !state.modelFailed && !state.isExporting && !state.isInAR;
 
     dom.uiPanel.classList.toggle('is-disabled', !baseEnabled);
-    dom.doubleSided.disabled = !baseEnabled;
     dom.pocketColor.disabled = !baseEnabled;
     dom.pocketColorTrigger.disabled = !baseEnabled;
     dom.playPause.disabled = !baseEnabled || !action;
@@ -620,29 +609,27 @@ function syncControlAvailability() {
     syncARVisibility();
     syncTurntableButton();
 
-    updateBackArtworkVisibility();
-    syncSideUi('front');
-    syncSideUi('back');
-}
-
-function updateBackArtworkVisibility() {
-    dom.backArtworkGroup.hidden = !dom.doubleSided.checked;
+    syncSideUi('artwork');
 }
 
 function syncSideUi(side) {
     const config = sideConfigs[side];
-    const isBackSideHidden = side === 'back' && !dom.doubleSided.checked;
-    const canInteract = state.ready && !state.modelFailed && !state.isExporting && !state.isInAR && !isBackSideHidden;
+    const canInteract = state.ready && !state.modelFailed && !state.isExporting && !state.isInAR;
     const hasUpload = Boolean(config.uploadedTexture);
 
     config.input.disabled = !canInteract;
     config.resetButton.disabled = !canInteract || !hasUpload;
     config.clearButton.disabled = !canInteract || !hasUpload;
-    config.actions.hidden = !hasUpload;
-    config.resetButton.hidden = !hasUpload;
-    config.clearButton.hidden = !hasUpload;
-    config.transforms.hidden = !hasUpload;
+    
+    if (config.actionsWrapper) {
+        config.actionsWrapper.classList.toggle('is-visible', hasUpload);
+    }
+    if (config.transformsWrapper) {
+        config.transformsWrapper.classList.toggle('is-visible', hasUpload);
+    }
+    
     config.thumbFrame.hidden = !config.previewUrl;
+    config.subtitleElement.hidden = hasUpload;
     config.dropzone.classList.toggle('is-disabled', !canInteract);
     config.dropzone.setAttribute('aria-disabled', String(!canInteract));
     config.dropzone.tabIndex = canInteract ? 0 : -1;
@@ -881,14 +868,9 @@ function loadModel() {
                 materials.forEach((material) => {
                     material.side = THREE.DoubleSide;
 
-                    if (material.name === sideConfigs.front.materialName) {
-                        sideConfigs.front.material = material;
-                        sideConfigs.front.originalMap = material.map;
-                    }
-
-                    if (material.name === sideConfigs.back.materialName) {
-                        sideConfigs.back.material = material;
-                        sideConfigs.back.originalMap = material.map;
+                    if (material.name === sideConfigs.artwork.materialName) {
+                        sideConfigs.artwork.material = material;
+                        sideConfigs.artwork.originalMap = material.map;
                     }
 
                     if (material.name === 'Cloth.001') {
@@ -905,7 +887,6 @@ function loadModel() {
             }
 
             syncPocketColorUi(dom.pocketColor.value);
-            applyBackMaterialState();
             state.modelLoaded = true;
             syncReadyState();
         },
@@ -990,16 +971,6 @@ function bindTransformInputs() {
 }
 
 function bindUIEvents() {
-    dom.doubleSided.addEventListener('change', () => {
-        applyBackMaterialState();
-        syncControlAvailability();
-        showToast(
-            'Print mode updated',
-            dom.doubleSided.checked ? 'Back artwork is enabled for double-sided proofs.' : 'Back artwork is hidden for single-sided proofs.',
-            'info'
-        );
-    });
-
     dom.playPause.addEventListener('click', toggleAnimation);
     dom.generatePdf.addEventListener('click', generatePdfProof);
     dom.turntableToggle.addEventListener('click', toggleTurntable);
@@ -1062,7 +1033,7 @@ function bindUIEvents() {
     window.addEventListener('resize', handleResize);
 }
 
-function handleArtworkFile(side, file) {
+async function handleArtworkFile(side, file) {
     const config = sideConfigs[side];
 
     if (!state.ready || !config.material) {
@@ -1070,8 +1041,66 @@ function handleArtworkFile(side, file) {
         return;
     }
 
-    if (!/^image\/(png|jpeg)$/.test(file.type)) {
-        showToast('Unsupported file', 'Please upload a PNG or JPG image.', 'error', 3800);
+    const wasPlaying = isPlaying;
+    if (isPlaying) {
+        isPlaying = false;
+        if (action) action.paused = true;
+        syncPlayPauseButton();
+    }
+    
+    if (state.turntableEnabled) {
+        stopTurntableRotation();
+    }
+
+    config.dropzone.classList.add('is-loading');
+    config.fileName = file.name;
+
+    const restoreAnimation = () => {
+        if (wasPlaying) {
+            isPlaying = true;
+            if (action) action.paused = false;
+            syncPlayPauseButton();
+        }
+    };
+
+    if (file.type === 'application/pdf') {
+        if (typeof pdfjsLib === 'undefined') {
+            config.dropzone.classList.remove('is-loading');
+            restoreAnimation();
+            showToast('PDF unavailable', 'The PDF processing library is not loaded right now.', 'error', 4200);
+            return;
+        }
+        showToast('Processing PDF', 'Converting the first page of the PDF to a high-quality image.', 'info', 3000);
+        
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1 });
+            
+            const scale = 2048 / Math.max(viewport.width, viewport.height);
+            const scaledViewport = page.getViewport({ scale });
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = scaledViewport.height;
+            canvas.width = scaledViewport.width;
+
+            await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
+            
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+            file = new File([blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' });
+        } catch (error) {
+            console.error('PDF conversion failed:', error);
+            config.dropzone.classList.remove('is-loading');
+            restoreAnimation();
+            showToast('PDF error', 'Failed to read or convert the PDF file.', 'error', 4200);
+            return;
+        }
+    } else if (!/^image\/(png|jpeg)$/.test(file.type)) {
+        config.dropzone.classList.remove('is-loading');
+        restoreAnimation();
+        showToast('Unsupported file', 'Please upload a PNG, JPG, or PDF file.', 'error', 3800);
         return;
     }
 
@@ -1109,12 +1138,12 @@ function handleArtworkFile(side, file) {
             resetTransformInputs(side);
             updateTextureTransforms(side);
             applySideMaterialMap(side);
+            config.dropzone.classList.remove('is-loading');
             syncSideUi(side);
+            config.titleElement.textContent = truncateFileName(config.fileName, config.titleElement);
             config.input.value = '';
 
-            if (side === 'back' && dom.doubleSided.checked && !state.isInAR) {
-                focusCameraView('back');
-            }
+            restoreAnimation();
 
             showToast('Artwork applied', `${config.label} artwork has been updated successfully.`, 'success');
         },
@@ -1122,6 +1151,8 @@ function handleArtworkFile(side, file) {
         () => {
             URL.revokeObjectURL(textureUrl);
             config.input.value = '';
+            config.dropzone.classList.remove('is-loading');
+            restoreAnimation();
             showToast('Upload failed', `The ${config.label.toLowerCase()} artwork could not be processed.`, 'error', 4200);
         }
     );
@@ -1133,23 +1164,7 @@ function applySideMaterialMap(side) {
         return;
     }
 
-    if (side === 'back') {
-        applyBackMaterialState();
-        return;
-    }
-
     config.material.map = config.uploadedTexture || config.originalMap;
-    config.material.color.setHex(0xffffff);
-    config.material.needsUpdate = true;
-}
-
-function applyBackMaterialState() {
-    const config = sideConfigs.back;
-    if (!config.material) {
-        return;
-    }
-
-    config.material.map = dom.doubleSided.checked ? (config.uploadedTexture || config.originalMap) : null;
     config.material.color.setHex(0xffffff);
     config.material.needsUpdate = true;
 }
@@ -1169,6 +1184,7 @@ function clearArtwork(side, announce = false) {
 
     config.thumb.removeAttribute('src');
     config.input.value = '';
+    config.titleElement.textContent = config.defaultTitle;
     resetTransformInputs(side);
     applySideMaterialMap(side);
     syncSideUi(side);
@@ -1245,8 +1261,24 @@ async function generatePdfProof() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape');
 
+        const savedRotation = sceneRoot.rotation.clone();
+        sceneRoot.rotation.set(0, 0, 0);
+
+        let savedMixerTime = 0;
+        if (mixer) {
+            savedMixerTime = mixer.time;
+            mixer.setTime(0);
+        }
+
+        scene.updateMatrixWorld(true);
+
         const frontImage = captureProofView(new THREE.Vector3(0, targetCenter.y, cameraDistance));
         const backImage = captureProofView(new THREE.Vector3(0, targetCenter.y, -cameraDistance));
+
+        sceneRoot.rotation.copy(savedRotation);
+        if (mixer) {
+            mixer.setTime(savedMixerTime);
+        }
 
         doc.setFontSize(22);
         doc.setTextColor(50, 50, 50);
@@ -1281,7 +1313,8 @@ function getExportRenderer() {
         exportRenderer = new THREE.WebGLRenderer({
             antialias: true,
             alpha: true,
-            preserveDrawingBuffer: true
+            preserveDrawingBuffer: true,
+            logarithmicDepthBuffer: true
         });
         exportRenderer.setSize(exportRenderSize, exportRenderSize, false);
         exportRenderer.setPixelRatio(1);
@@ -1290,7 +1323,7 @@ function getExportRenderer() {
         exportRenderer.shadowMap.enabled = true;
         exportRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
         
-        exportCamera = new THREE.PerspectiveCamera(45, 1, 0.6, 1000);
+        exportCamera = new THREE.PerspectiveCamera(45, 1, 0.05, 1000);
     }
 
     exportRenderer.toneMappingExposure = renderer.toneMappingExposure;
@@ -1382,7 +1415,7 @@ function transitionCamera(targetPosition) {
         })
         .start();
 }
-
+    
 function focusCameraView(view) {
     const targetPosition = cameraTargets[view];
     if (!targetPosition) {
@@ -1504,6 +1537,12 @@ function handleResize() {
     } else if (!mobileViewportMediaQuery.matches) {
         restorePocketColorPickerNativeLayout();
     }
+
+    Object.values(sideConfigs).forEach(config => {
+        if (config.fileName && config.titleElement) {
+            config.titleElement.textContent = truncateFileName(config.fileName, config.titleElement);
+        }
+    });
 }
 
 function renderFrame(_, frame) {
@@ -1513,7 +1552,8 @@ function renderFrame(_, frame) {
         updateARHitTesting(frame);
     }
 
-    const delta = clock.getDelta();
+    timer.update();
+    const delta = timer.getDelta();
     if (state.turntableEnabled && !state.isInAR) {
         sceneRoot.rotation.y += turntableSpeed * delta;
     }
@@ -1524,4 +1564,36 @@ function renderFrame(_, frame) {
 
     controls.update();
     renderer.render(scene, camera);
+}
+
+function truncateFileName(fileName, containerElement) {
+    const extIndex = fileName.lastIndexOf('.');
+    const ext = extIndex !== -1 ? fileName.substring(extIndex) : '';
+    const name = extIndex !== -1 ? fileName.substring(0, extIndex) : fileName;
+    
+    const endChars = 4;
+    if (name.length <= endChars + 5) return fileName;
+    
+    if (!containerElement) return fileName;
+
+    const canvas = truncateFileName.canvas || (truncateFileName.canvas = document.createElement('canvas'));
+    const context = canvas.getContext('2d');
+    const computedStyle = window.getComputedStyle(containerElement);
+    context.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+    
+    const availableWidth = Math.max(0, containerElement.clientWidth - 24);
+    
+    if (context.measureText(fileName).width <= availableWidth) {
+        return fileName;
+    }
+    
+    const endText = `.......${name.substring(name.length - endChars)}${ext}`;
+    const endWidth = context.measureText(endText).width;
+    
+    let startText = name.substring(0, name.length - endChars);
+    while (startText.length > 0 && (context.measureText(startText).width + endWidth > availableWidth)) {
+        startText = startText.substring(0, startText.length - 1);
+    }
+    
+    return `${startText}${endText}`;
 }

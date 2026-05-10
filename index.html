@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
 </head>
 <body>
     <div id="canvas-container">
@@ -37,66 +41,35 @@
 
                 <div class="control-group">
                     <div class="control-heading">
-                        <label for="front-upload">Front Artwork</label>
-                        <span class="control-hint">PNG or JPG</span>
+                        <label for="artwork-upload">Artwork</label>
+                        <span class="control-hint">PNG, JPG, or PDF</span>
                     </div>
 
-                    <label id="front-dropzone" class="upload-card" for="front-upload" tabindex="0">
-                        <input type="file" id="front-upload" class="visually-hidden" accept="image/png, image/jpeg">
+                    <label id="artwork-dropzone" class="upload-card" for="artwork-upload" tabindex="0">
+                        <div class="upload-progress"></div>
+                        <input type="file" id="artwork-upload" class="visually-hidden" accept="image/png, image/jpeg, application/pdf">
                         <div class="upload-card-copy">
                             <span class="upload-title">Drop artwork here</span>
                             <span class="upload-subtitle">or click to browse your files</span>
                         </div>
-                        <div id="front-thumb-frame" class="upload-thumb-frame" hidden>
-                            <img id="front-thumb" class="upload-thumb" alt="Front artwork preview">
+                        <div id="artwork-thumb-frame" class="upload-thumb-frame" hidden>
+                            <img id="artwork-thumb" class="upload-thumb" alt="Artwork preview">
                         </div>
                     </label>
 
-                    <div id="front-actions" class="upload-actions" hidden>
-                        <button type="button" id="reset-front-tex" class="secondary-btn" title="Reset artwork transforms" disabled hidden>Reset</button>
-                        <button type="button" id="clear-front" class="danger-btn" title="Remove artwork" disabled hidden>Remove</button>
-                    </div>
-
-                    <div id="front-transforms" class="transform-controls" hidden>
-                        <label>Scale <input type="range" id="front-scale" min="0.1" max="3" step="0.01" value="1"></label>
-                        <label>Pan X <input type="range" id="front-x" min="-1" max="1" step="0.01" value="0"></label>
-                        <label>Pan Y <input type="range" id="front-y" min="-1" max="1" step="0.01" value="0"></label>
-                    </div>
-                </div>
-
-                <div class="control-group option-group">
-                    <label class="toggle-row">
-                        <input type="checkbox" id="double-sided" checked>
-                        Print Double-Sided
-                    </label>
-                </div>
-
-                <div id="back-artwork-group" class="control-group">
-                    <div class="control-heading">
-                        <label for="back-upload">Back Artwork</label>
-                        <span class="control-hint">PNG or JPG</span>
-                    </div>
-
-                    <label id="back-dropzone" class="upload-card" for="back-upload" tabindex="0">
-                        <input type="file" id="back-upload" class="visually-hidden" accept="image/png, image/jpeg">
-                        <div class="upload-card-copy">
-                            <span class="upload-title">Drop artwork here</span>
-                            <span class="upload-subtitle">or click to browse your files</span>
+                    <div id="artwork-actions-wrapper" class="expandable-section">
+                        <div id="artwork-actions" class="upload-actions expandable-content">
+                            <button type="button" id="reset-artwork-tex" class="secondary-btn" title="Reset artwork transforms" disabled>Reset</button>
+                            <button type="button" id="clear-artwork" class="danger-btn" title="Remove artwork" disabled>Remove</button>
                         </div>
-                        <div id="back-thumb-frame" class="upload-thumb-frame" hidden>
-                            <img id="back-thumb" class="upload-thumb" alt="Back artwork preview">
-                        </div>
-                    </label>
-
-                    <div id="back-actions" class="upload-actions" hidden>
-                        <button type="button" id="reset-back-tex" class="secondary-btn" title="Reset artwork transforms" disabled hidden>Reset</button>
-                        <button type="button" id="clear-back" class="danger-btn" title="Remove artwork" disabled hidden>Remove</button>
                     </div>
 
-                    <div id="back-transforms" class="transform-controls" hidden>
-                        <label>Scale <input type="range" id="back-scale" min="0.1" max="3" step="0.01" value="1"></label>
-                        <label>Pan X <input type="range" id="back-x" min="-1" max="1" step="0.01" value="0"></label>
-                        <label>Pan Y <input type="range" id="back-y" min="-1" max="1" step="0.01" value="0"></label>
+                    <div id="artwork-transforms-wrapper" class="expandable-section">
+                        <div id="artwork-transforms" class="transform-controls expandable-content">
+                            <label>Scale <input type="range" id="artwork-scale" min="0.1" max="3" step="0.01" value="1"></label>
+                            <label>Pan X <input type="range" id="artwork-x" min="-1" max="1" step="0.01" value="0"></label>
+                            <label>Pan Y <input type="range" id="artwork-y" min="-1" max="1" step="0.01" value="0"></label>
+                        </div>
                     </div>
                 </div>
 
