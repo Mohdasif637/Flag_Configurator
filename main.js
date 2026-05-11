@@ -27,6 +27,8 @@ const dom = {
     envReset: document.getElementById('env-reset'),
     arContainer: document.getElementById('ar-container'),
     toastRegion: document.getElementById('toast-region'),
+    arOverlay: document.getElementById('ar-overlay'),
+    stopArBtn: document.getElementById('stop-ar-btn'),
     cameraButtons: Array.from(document.querySelectorAll('#camera-controls button'))
 };
 
@@ -157,6 +159,120 @@ function bindOrbitPresetClearOnUserAdjust() {
 }
 bindOrbitPresetClearOnUserAdjust();
 
+let lastTapTime = 0;
+let isZoomedIn = false;
+let preZoomState = null;
+const raycaster = new THREE.Raycaster();
+const raycastPointer = new THREE.Vector2();
+
+function handleDoubleTapZoom(event) {
+    if (state.isInAR || !state.ready || state.isExporting || !modelRoot) return;
+
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTapTime;
+    
+    if (tapLength < 300 && tapLength > 0) {
+        event.preventDefault();
+        
+        if (isZoomedIn) {
+            zoomOutSmoothly();
+        } else {
+            const canvas = renderer.domElement;
+            const rect = canvas.getBoundingClientRect();
+            let clientX = event.clientX;
+            let clientY = event.clientY;
+            
+            raycastPointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            raycastPointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(raycastPointer, camera);
+            const intersects = raycaster.intersectObject(modelRoot, true);
+            
+            if (intersects.length > 0) {
+                zoomInSmoothly(intersects[0].point);
+            }
+        }
+        lastTapTime = 0; 
+    } else {
+        lastTapTime = currentTime;
+    }
+}
+
+function zoomInSmoothly(hitPoint) {
+    isZoomedIn = true;
+    
+    preZoomState = {
+        cameraPosition: camera.position.clone(),
+        controlsTarget: controls.target.clone(),
+        activeView: dom.cameraButtons.find(b => b.classList.contains('is-active'))?.dataset.view
+    };
+    
+    const endTarget = hitPoint.clone();
+    
+    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+    const zoomDistance = 1.5; 
+    const endCameraPosition = hitPoint.clone().add(direction.multiplyScalar(zoomDistance));
+
+    const startTarget = controls.target.clone();
+    const startCameraPosition = camera.position.clone();
+
+    TWEEN.removeAll();
+    new TWEEN.Tween({ progress: 0 })
+        .to({ progress: 1 }, 600)
+        .easing(TWEEN.Easing.Cubic.Out)
+        .onUpdate(({ progress }) => {
+            controls.target.lerpVectors(startTarget, endTarget, progress);
+            camera.position.lerpVectors(startCameraPosition, endCameraPosition, progress);
+            controls.update();
+        })
+        .start();
+        
+    setActiveCameraView(null);
+    if (state.turntableEnabled) {
+        stopTurntableRotation();
+    }
+}
+
+function zoomOutSmoothly() {
+    isZoomedIn = false;
+    if (!preZoomState) return;
+    
+    const endTarget = preZoomState.controlsTarget;
+    const endCameraPosition = preZoomState.cameraPosition;
+    
+    const startTarget = controls.target.clone();
+    const startCameraPosition = camera.position.clone();
+
+    const startSpherical = new THREE.Spherical().setFromVector3(startCameraPosition.clone().sub(startTarget));
+    const endSpherical = new THREE.Spherical().setFromVector3(endCameraPosition.clone().sub(endTarget));
+    
+    while (endSpherical.theta - startSpherical.theta > Math.PI) endSpherical.theta -= Math.PI * 2;
+    while (endSpherical.theta - startSpherical.theta < -Math.PI) endSpherical.theta += Math.PI * 2;
+
+    TWEEN.removeAll();
+    new TWEEN.Tween({ progress: 0 })
+        .to({ progress: 1 }, 600)
+        .easing(TWEEN.Easing.Cubic.Out)
+        .onUpdate(({ progress }) => {
+            controls.target.lerpVectors(startTarget, endTarget, progress);
+            
+            const radius = THREE.MathUtils.lerp(startSpherical.radius, endSpherical.radius, progress);
+            const phi = THREE.MathUtils.lerp(startSpherical.phi, endSpherical.phi, progress);
+            const theta = THREE.MathUtils.lerp(startSpherical.theta, endSpherical.theta, progress);
+            
+            camera.position.setFromSpherical(new THREE.Spherical(radius, phi, theta)).add(controls.target);
+            controls.update();
+        })
+        .onComplete(() => {
+             setActiveCameraView(preZoomState.activeView);
+        })
+        .start();
+}
+
+renderer.domElement.addEventListener('pointerdown', handleDoubleTapZoom);
+
 const defaultPreviewState = {
     activeView: 'home',
     turntableEnabled: true,
@@ -219,11 +335,22 @@ const arButtonIconMarkup = `
     <img src="Icons/ar.svg" alt="" aria-hidden="true" data-ar-icon="true" class="control-icon">
 `;
 
-const arButton = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
+const arButton = ARButton.createButton(renderer, {
+    requiredFeatures: ['hit-test'],
+    optionalFeatures: ['dom-overlay'],
+    domOverlay: { root: dom.arOverlay }
+});
 arButton.hidden = true;
 dom.arContainer.hidden = true;
 dom.arContainer.appendChild(arButton);
 syncARButtonLabel();
+
+dom.stopArBtn.addEventListener('click', () => {
+    const session = renderer.xr.getSession();
+    if (session) {
+        session.end();
+    }
+});
 
 const arButtonLabelObserver = new MutationObserver(syncARButtonLabel);
 arButtonLabelObserver.observe(arButton, { childList: true, characterData: true, subtree: true });
@@ -1423,6 +1550,10 @@ function focusCameraView(view) {
         return;
     }
 
+    if (typeof isZoomedIn !== 'undefined') {
+        isZoomedIn = false;
+    }
+    
     transitionCamera(targetPosition);
     setActiveCameraView(view);
 }
@@ -1436,6 +1567,7 @@ function setActiveCameraView(view) {
 
 function onARSessionStart() {
     state.isInAR = true;
+    document.body.classList.add('is-in-ar');
     controls.enabled = false;
     reticle.visible = false;
     window.clearTimeout(postArRestoreTimer);
@@ -1446,11 +1578,12 @@ function onARSessionStart() {
     }
 
     syncControlAvailability();
-    showToast('AR mode active', 'Move your device to find a surface, then tap to place the flag.', 'info', 4200);
+    showToast('AR mode active', 'Move your device to find a surface, then tap to place. Drag to rotate.', 'info', 10000);
 }
 
 function onARSessionEnd() {
     state.isInAR = false;
+    document.body.classList.remove('is-in-ar');
     controls.enabled = true;
     reticle.visible = false;
     resetHitTestState();
@@ -1505,8 +1638,38 @@ function updateARHitTesting(frame) {
     reticle.matrix.fromArray(pose.transform.matrix);
 }
 
+let arTouchStartX = 0;
+let arTouchStartRotationY = 0;
+let arIsDragging = false;
+let arHasDragged = false;
+
+window.addEventListener('touchstart', (e) => {
+    if (!state.isInAR || !sceneRoot.visible || e.touches.length !== 1) return;
+    arTouchStartX = e.touches[0].clientX;
+    arTouchStartRotationY = sceneRoot.rotation.y;
+    arIsDragging = true;
+    arHasDragged = false;
+});
+
+window.addEventListener('touchmove', (e) => {
+    if (!arIsDragging || !state.isInAR || !sceneRoot.visible || e.touches.length !== 1) return;
+    const deltaX = e.touches[0].clientX - arTouchStartX;
+    if (Math.abs(deltaX) > 8) {
+        arHasDragged = true;
+    }
+    sceneRoot.rotation.y = arTouchStartRotationY + (deltaX * 0.015);
+});
+
+window.addEventListener('touchend', () => {
+    arIsDragging = false;
+});
+
+window.addEventListener('touchcancel', () => {
+    arIsDragging = false;
+});
+
 function placeModelFromReticle() {
-    if (!state.isInAR || !reticle.visible || !modelRoot) {
+    if (!state.isInAR || !reticle.visible || !modelRoot || arHasDragged) {
         return;
     }
 
