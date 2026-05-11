@@ -169,6 +169,7 @@ function handleDoubleTapZoom(event) {
     if (state.isInAR || !state.ready || state.isExporting || !modelRoot) return;
 
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (!event.isPrimary) return;
 
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTapTime;
