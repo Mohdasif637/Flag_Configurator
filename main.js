@@ -1144,6 +1144,7 @@ async function handleArtworkFile(side, file) {
             config.input.value = '';
 
             restoreAnimation();
+            focusCameraView('front');
 
             showToast('Artwork applied', `${config.label} artwork has been updated successfully.`, 'success');
         },

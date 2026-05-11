@@ -33,6 +33,7 @@ html, body {
     overflow: hidden;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     color: var(--text);
+    -webkit-tap-highlight-color: transparent;
     background:
         radial-gradient(circle at top left, rgba(223, 141, 67, 0.22), transparent 28%),
         radial-gradient(circle at top right, rgba(29, 107, 82, 0.14), transparent 34%),
