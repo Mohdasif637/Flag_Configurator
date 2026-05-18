@@ -1,3 +1,6 @@
+/* ---------------------------------
+   Imports & Dependencies
+--------------------------------- */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -6,6 +9,9 @@ import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { Timer } from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 
+/* ---------------------------------
+   DOM Elements & Caching
+--------------------------------- */
 const dom = {
     canvasContainer: document.getElementById('canvas-container'),
     loadingOverlay: document.getElementById('loading-overlay'),
@@ -32,6 +38,9 @@ const dom = {
     cameraButtons: Array.from(document.querySelectorAll('#camera-controls button'))
 };
 
+/* ---------------------------------
+   Configuration & Options
+--------------------------------- */
 const sideConfigs = {
     artwork: {
         label: 'Artwork',
@@ -60,6 +69,9 @@ const sideConfigs = {
     }
 };
 
+/* ---------------------------------
+   Three.js Core Setup
+--------------------------------- */
 const scene = new THREE.Scene();
 const defaultBackground = new THREE.Color('#e0e0e0');
 scene.background = defaultBackground;
@@ -85,10 +97,8 @@ scene.add(lightingGroup);
 const overheadLight = new THREE.DirectionalLight(0xffffff, 0.6); 
 overheadLight.position.set(10, 10, 2); 
 overheadLight.castShadow = true;
-
 overheadLight.shadow.mapSize.width = 2048;
 overheadLight.shadow.mapSize.height = 2048;
-
 
 const d = 3.5; 
 overheadLight.shadow.camera.left = -d;
@@ -97,10 +107,8 @@ overheadLight.shadow.camera.top = d;
 overheadLight.shadow.camera.bottom = -d;
 overheadLight.shadow.camera.near = 0.5;
 overheadLight.shadow.camera.far = 25;
-
 overheadLight.shadow.bias = -0.0001; 
 overheadLight.shadow.normalBias = 0.05;
-
 overheadLight.shadow.radius = 10;
 overheadLight.shadow.blurSamples = 20;
 
@@ -121,6 +129,9 @@ const arController = renderer.xr.getController(0);
 arController.addEventListener('select', placeModelFromReticle);
 scene.add(arController);
 
+/* ---------------------------------
+   Camera Controls & Interaction
+--------------------------------- */
 const targetCenter = new THREE.Vector3(0, 1.8, 0);
 const cameraHome = new THREE.Vector3(2, 2, 6);
 const cameraDistance = 5.5;
@@ -149,9 +160,7 @@ controls.saveState();
 function bindOrbitPresetClearOnUserAdjust() {
     const canvas = renderer.domElement;
     const onUserAdjust = () => {
-        if (state.isInAR || !state.ready || state.isExporting) {
-            return;
-        }
+        if (state.isInAR || !state.ready || state.isExporting) return;
         setActiveCameraView(null);
     };
     controls.addEventListener('start', onUserAdjust);
@@ -167,7 +176,6 @@ const raycastPointer = new THREE.Vector2();
 
 function handleDoubleTapZoom(event) {
     if (state.isInAR || !state.ready || state.isExporting || !modelRoot) return;
-
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     if (!event.isPrimary) return;
 
@@ -211,7 +219,6 @@ function zoomInSmoothly(hitPoint) {
     };
     
     const endTarget = hitPoint.clone();
-    
     const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
     const zoomDistance = 1.5; 
     const endCameraPosition = hitPoint.clone().add(direction.multiplyScalar(zoomDistance));
@@ -242,7 +249,6 @@ function zoomOutSmoothly() {
     
     const endTarget = preZoomState.controlsTarget;
     const endCameraPosition = preZoomState.cameraPosition;
-    
     const startTarget = controls.target.clone();
     const startCameraPosition = camera.position.clone();
 
@@ -274,6 +280,9 @@ function zoomOutSmoothly() {
 
 renderer.domElement.addEventListener('pointerdown', handleDoubleTapZoom);
 
+/* ---------------------------------
+   Global Variables & State
+--------------------------------- */
 const defaultPreviewState = {
     activeView: 'home',
     turntableEnabled: true,
@@ -329,13 +338,14 @@ const state = {
 const pdfButtonMarkup = dom.generatePdf.innerHTML;
 const pdfLibraryAvailable = typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF === 'function';
 const mobileViewportMediaQuery = window.matchMedia('(max-width: 768px)');
-const pocketColorPickrLayoutState = {
-    restoreStyleText: null
-};
+const pocketColorPickrLayoutState = { restoreStyleText: null };
 const arButtonIconMarkup = `
     <img src="Icons/ar.svg" alt="" aria-hidden="true" data-ar-icon="true" class="control-icon">
 `;
 
+/* ---------------------------------
+   AR Initialization
+--------------------------------- */
 const arButton = ARButton.createButton(renderer, {
     requiredFeatures: ['hit-test'],
     optionalFeatures: ['dom-overlay'],
@@ -348,9 +358,7 @@ syncARButtonLabel();
 
 dom.stopArBtn.addEventListener('click', () => {
     const session = renderer.xr.getSession();
-    if (session) {
-        session.end();
-    }
+    if (session) session.end();
 });
 
 const arButtonLabelObserver = new MutationObserver(syncARButtonLabel);
@@ -358,6 +366,9 @@ arButtonLabelObserver.observe(arButton, { childList: true, characterData: true, 
 
 let arDisabledFallback = null;
 
+/* ---------------------------------
+   Bootstrapping
+--------------------------------- */
 bindUploadInputs();
 bindTransformInputs();
 bindUIEvents();
@@ -374,6 +385,9 @@ renderer.xr.addEventListener('sessionstart', onARSessionStart);
 renderer.xr.addEventListener('sessionend', onARSessionEnd);
 renderer.setAnimationLoop(renderFrame);
 
+/* ---------------------------------
+   Utility Functions
+--------------------------------- */
 function getViewportAspect() {
     const width = dom.canvasContainer.clientWidth || window.innerWidth;
     const height = dom.canvasContainer.clientHeight || window.innerHeight;
@@ -402,11 +416,47 @@ function setLoadingState(visible, message) {
     dom.loadingOverlay.classList.toggle('is-visible', visible);
 }
 
+function getNormalizedRotationAngle(angle) {
+    return THREE.MathUtils.euclideanModulo(angle + Math.PI, Math.PI * 2) - Math.PI;
+}
+
+function truncateFileName(fileName, containerElement) {
+    const extIndex = fileName.lastIndexOf('.');
+    const ext = extIndex !== -1 ? fileName.substring(extIndex) : '';
+    const name = extIndex !== -1 ? fileName.substring(0, extIndex) : fileName;
+    
+    const endChars = 4;
+    if (name.length <= endChars + 5) return fileName;
+    if (!containerElement) return fileName;
+
+    const canvas = truncateFileName.canvas || (truncateFileName.canvas = document.createElement('canvas'));
+    const context = canvas.getContext('2d');
+    const computedStyle = window.getComputedStyle(containerElement);
+    context.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+    
+    const availableWidth = Math.max(0, containerElement.clientWidth - 24);
+    
+    if (context.measureText(fileName).width <= availableWidth) {
+        return fileName;
+    }
+    
+    const endText = `.......${name.substring(name.length - endChars)}${ext}`;
+    const endWidth = context.measureText(endText).width;
+    
+    let startText = name.substring(0, name.length - endChars);
+    while (startText.length > 0 && (context.measureText(startText).width + endWidth > availableWidth)) {
+        startText = startText.substring(0, startText.length - 1);
+    }
+    
+    return `${startText}${endText}`;
+}
+
+/* ---------------------------------
+   Toast System
+--------------------------------- */
 function showToast(title, message, tone = 'info', duration = 3200) {
     return new Promise((resolve) => {
-        while (activeToasts.length >= 2) {
-            dismissToast(activeToasts[0]);
-        }
+        while (activeToasts.length >= 2) dismissToast(activeToasts[0]);
 
         const priorNodes = Array.from(dom.toastRegion.children);
         const priorRects = priorNodes.map((node) => node.getBoundingClientRect());
@@ -423,7 +473,6 @@ function showToast(title, message, tone = 'info', duration = 3200) {
         messageNode.textContent = message;
 
         toast.append(titleNode, messageNode);
-
         toast.resolvePromise = resolve;
 
         dom.toastRegion.insertBefore(toast, dom.toastRegion.firstChild);
@@ -433,9 +482,7 @@ function showToast(title, message, tone = 'info', duration = 3200) {
             const before = priorRects[index];
             const after = node.getBoundingClientRect();
             const deltaY = before.top - after.top;
-            if (Math.abs(deltaY) < 0.5) {
-                return;
-            }
+            if (Math.abs(deltaY) < 0.5) return;
 
             node.style.transition = 'none';
             node.style.transform = `translateY(${deltaY}px)`;
@@ -449,42 +496,35 @@ function showToast(title, message, tone = 'info', duration = 3200) {
 
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => {
-                if (toast.dataset.dismissed !== 'true') {
-                    toast.classList.add('is-visible');
-                }
+                if (toast.dataset.dismissed !== 'true') toast.classList.add('is-visible');
             });
         });
 
-        toast.hideTimer = window.setTimeout(() => {
-            dismissToast(toast);
-        }, duration);
+        toast.hideTimer = window.setTimeout(() => dismissToast(toast), duration);
     });
 }
 
 function dismissToast(toast) {
-    if (!toast || toast.dataset.dismissed === 'true') {
-        return;
-    }
+    if (!toast || toast.dataset.dismissed === 'true') return;
 
     toast.dataset.dismissed = 'true';
     window.clearTimeout(toast.hideTimer);
 
     const toastIndex = activeToasts.indexOf(toast);
-    if (toastIndex !== -1) {
-        activeToasts.splice(toastIndex, 1);
-    }
+    if (toastIndex !== -1) activeToasts.splice(toastIndex, 1);
 
     toast.classList.remove('is-visible');
     toast.classList.add('is-hiding');
     
     window.setTimeout(() => {
         toast.remove();
-        if (toast.resolvePromise) {
-            toast.resolvePromise();
-        }
+        if (toast.resolvePromise) toast.resolvePromise();
     }, 400);
 }
 
+/* ---------------------------------
+   Color Picker
+--------------------------------- */
 function initializePocketColorPicker() {
     syncPocketColorUi(dom.pocketColor.value);
 
@@ -526,47 +566,31 @@ function initializePocketColorPicker() {
         })
         .on('hide', () => {
             dom.pocketColorTrigger.setAttribute('aria-expanded', 'false');
-            if (!mobileViewportMediaQuery.matches) {
-                restorePocketColorPickerNativeLayout();
-            }
+            if (!mobileViewportMediaQuery.matches) restorePocketColorPickerNativeLayout();
         })
         .on('change', (color) => {
             const hex = pickrColorToHex(color);
-            if (hex) {
-                syncPocketColorUi(hex);
-            }
+            if (hex) syncPocketColorUi(hex);
         })
         .on('save', (color, pickr) => {
             const hex = pickrColorToHex(color);
-            if (hex) {
-                syncPocketColorUi(hex);
-            }
+            if (hex) syncPocketColorUi(hex);
             pickr.hide();
         });
 }
 
 function queuePocketColorPickerLayout() {
     window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-            syncPocketColorPickerLayout();
-        });
+        window.requestAnimationFrame(() => syncPocketColorPickerLayout());
     });
 }
 
 function syncPocketColorPickerLayout() {
-    if (!pocketColorPickr) {
-        return;
-    }
-
+    if (!pocketColorPickr) return;
     const pickrRoot = pocketColorPickr.getRoot();
     const app = pickrRoot?.app;
-    if (!app || !pocketColorPickr.isOpen()) {
-        return;
-    }
-
-    if (!mobileViewportMediaQuery.matches) {
-        return;
-    }
+    if (!app || !pocketColorPickr.isOpen()) return;
+    if (!mobileViewportMediaQuery.matches) return;
 
     if (!app.classList.contains('is-bottom-sheet')) {
         pocketColorPickrLayoutState.restoreStyleText = app.getAttribute('style');
@@ -580,11 +604,7 @@ function syncPocketColorPickerLayout() {
     const naturalWidth = Math.max(app.offsetWidth || width, 1);
     const naturalHeight = Math.max(app.offsetHeight || 1, 1);
     const scale = THREE.MathUtils.clamp(
-        Math.min(
-            1,
-            availableWidth / naturalWidth,
-            availableHeight / naturalHeight
-        ),
+        Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight),
         0.68,
         1
     );
@@ -603,15 +623,10 @@ function syncPocketColorPickerLayout() {
 }
 
 function restorePocketColorPickerNativeLayout() {
-    if (!pocketColorPickr) {
-        return;
-    }
-
+    if (!pocketColorPickr) return;
     const pickrRoot = pocketColorPickr.getRoot();
     const app = pickrRoot?.app;
-    if (!app || !app.classList.contains('is-bottom-sheet')) {
-        return;
-    }
+    if (!app || !app.classList.contains('is-bottom-sheet')) return;
 
     app.classList.remove('is-bottom-sheet');
 
@@ -620,15 +635,11 @@ function restorePocketColorPickerNativeLayout() {
     } else {
         app.removeAttribute('style');
     }
-
     pocketColorPickrLayoutState.restoreStyleText = null;
 }
 
 function pickrColorToHex(color) {
-    if (!color) {
-        return null;
-    }
-
+    if (!color) return null;
     const [red, green, blue] = color.toHEXA();
     return normalizeHex(`#${[red, green, blue]
         .map((channel) => channel.toString(16).padStart(2, '0'))
@@ -637,9 +648,7 @@ function pickrColorToHex(color) {
 
 function syncPocketColorUi(hex) {
     const normalizedHex = normalizeHex(hex);
-    if (!normalizedHex) {
-        return;
-    }
+    if (!normalizedHex) return;
 
     dom.pocketColor.value = normalizedHex;
     dom.pocketColorValue.textContent = normalizedHex;
@@ -656,14 +665,10 @@ function normalizeHex(value) {
     const shortMatch = /^#([\da-fA-F]{3})$/;
     const fullMatch = /^#([\da-fA-F]{6})$/;
 
-    if (fullMatch.test(withHash)) {
-        return withHash.toUpperCase();
-    }
+    if (fullMatch.test(withHash)) return withHash.toUpperCase();
 
     const shortResult = withHash.match(shortMatch);
-    if (!shortResult) {
-        return null;
-    }
+    if (!shortResult) return null;
 
     const expanded = shortResult[1]
         .split('')
@@ -673,6 +678,9 @@ function normalizeHex(value) {
     return `#${expanded}`.toUpperCase();
 }
 
+/* ---------------------------------
+   State Management & Syncing
+--------------------------------- */
 async function syncReadyState() {
     if (state.modelFailed || state.ready) {
         syncControlAvailability();
@@ -721,9 +729,7 @@ function syncControlAvailability() {
     dom.envRotate.disabled = !environmentEnabled;
     dom.envReset.disabled = !environmentEnabled;
 
-    if (!environmentEnabled) {
-        setEnvPanelOpen(false);
-    }
+    if (!environmentEnabled) setEnvPanelOpen(false);
 
     if (pocketColorPickr) {
         if (baseEnabled) {
@@ -736,7 +742,6 @@ function syncControlAvailability() {
 
     syncARVisibility();
     syncTurntableButton();
-
     syncSideUi('artwork');
 }
 
@@ -749,12 +754,8 @@ function syncSideUi(side) {
     config.resetButton.disabled = !canInteract || !hasUpload;
     config.clearButton.disabled = !canInteract || !hasUpload;
     
-    if (config.actionsWrapper) {
-        config.actionsWrapper.classList.toggle('is-visible', hasUpload);
-    }
-    if (config.transformsWrapper) {
-        config.transformsWrapper.classList.toggle('is-visible', hasUpload);
-    }
+    if (config.actionsWrapper) config.actionsWrapper.classList.toggle('is-visible', hasUpload);
+    if (config.transformsWrapper) config.transformsWrapper.classList.toggle('is-visible', hasUpload);
     
     config.thumbFrame.hidden = !config.previewUrl;
     config.subtitleElement.hidden = hasUpload;
@@ -764,22 +765,14 @@ function syncSideUi(side) {
 }
 
 function syncARButtonLabel() {
-    if (state.arUnsupported || !arButton.isConnected) {
-        return;
-    }
-
-    if (!arButton.querySelector('[data-ar-icon="true"]')) {
-        arButton.innerHTML = arButtonIconMarkup;
-    }
-
+    if (state.arUnsupported || !arButton.isConnected) return;
+    if (!arButton.querySelector('[data-ar-icon="true"]')) arButton.innerHTML = arButtonIconMarkup;
     arButton.setAttribute('aria-label', 'Start AR');
     arButton.title = 'Start AR';
 }
 
 function ensureArDisabledFallback() {
-    if (arDisabledFallback?.isConnected) {
-        return;
-    }
+    if (arDisabledFallback?.isConnected) return;
 
     arDisabledFallback = document.createElement('button');
     arDisabledFallback.type = 'button';
@@ -798,15 +791,10 @@ function ensureArDisabledFallback() {
 function syncARVisibility() {
     const showContainer = state.ready && state.arSupportResolved;
     dom.arContainer.hidden = !showContainer;
-
-    if (!showContainer) {
-        return;
-    }
+    if (!showContainer) return;
 
     if (state.arUnsupported) {
-        if (arButton.isConnected) {
-            arButton.remove();
-        }
+        if (arButton.isConnected) arButton.remove();
         ensureArDisabledFallback();
         return;
     }
@@ -816,9 +804,7 @@ function syncARVisibility() {
         arDisabledFallback = null;
     }
 
-    if (!arButton.isConnected) {
-        dom.arContainer.appendChild(arButton);
-    }
+    if (!arButton.isConnected) dom.arContainer.appendChild(arButton);
 
     arButton.hidden = false;
     arButton.disabled = state.modelFailed || state.isExporting || state.isInAR;
@@ -832,21 +818,13 @@ function syncTurntableButton() {
 }
 
 function stopTurntableRotation() {
-    if (!state.turntableEnabled) {
-        return;
-    }
-
+    if (!state.turntableEnabled) return;
     state.turntableEnabled = false;
     syncTurntableButton();
 }
 
-function getNormalizedRotationAngle(angle) {
-    return THREE.MathUtils.euclideanModulo(angle + Math.PI, Math.PI * 2) - Math.PI;
-}
-
 function capturePreviewState() {
     const activeViewButton = dom.cameraButtons.find((button) => button.classList.contains('is-active'));
-
     return {
         activeView: activeViewButton?.dataset.view ?? null,
         turntableEnabled: state.turntableEnabled,
@@ -895,66 +873,20 @@ function setEnvPanelOpen(open) {
     if (open) {
         dom.envPanel.hidden = false;
         window.requestAnimationFrame(() => {
-            if (envPanelShouldBeOpen) {
-                dom.envPanel.classList.add('is-open');
-            }
+            if (envPanelShouldBeOpen) dom.envPanel.classList.add('is-open');
         });
         return;
     }
 
     dom.envPanel.classList.remove('is-open');
     envPanelHideTimer = window.setTimeout(() => {
-        if (!isEnvPanelOpen()) {
-            dom.envPanel.hidden = true;
-        }
+        if (!isEnvPanelOpen()) dom.envPanel.hidden = true;
     }, 340);
 }
 
-function initializeARSupport() {
-    if (!navigator.xr) {
-        markARUnsupported();
-        return;
-    }
-
-    navigator.xr.isSessionSupported('immersive-ar')
-        .then((supported) => {
-            state.arSupportResolved = true;
-            if (supported) {
-                state.arSupported = true;
-                syncARVisibility();
-            } else {
-                markARUnsupported();
-            }
-        })
-        .catch(() => {
-            markARUnsupported();
-        });
-}
-
-function markARUnsupported() {
-    if (state.arUnsupported) {
-        return;
-    }
-
-    state.arUnsupported = true;
-    state.arSupportResolved = true;
-    state.arSupported = false;
-    arButtonLabelObserver.disconnect();
-
-    if (arButton.isConnected) {
-        arButton.remove();
-    }
-
-    ensureArDisabledFallback();
-
-    if (state.ready && !state.arUnsupportedToastShown) {
-        state.arUnsupportedToastShown = true;
-        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
-    }
-
-    syncARVisibility();
-}
-
+/* ---------------------------------
+   Asset Loading
+--------------------------------- */
 function loadEnvironment() {
     environmentLoader.load(
         'studio.hdr',
@@ -986,9 +918,7 @@ function loadModel() {
             sceneRoot.visible = !state.isInAR;
 
             modelRoot.traverse((child) => {
-                if (!child.isMesh) {
-                    return;
-                }
+                if (!child.isMesh) return;
                 child.castShadow = true;
                 child.receiveShadow = true;
 
@@ -1028,20 +958,18 @@ function loadModel() {
     );
 }
 
+/* ---------------------------------
+   UI & Event Bindings
+--------------------------------- */
 function bindUploadInputs() {
     Object.entries(sideConfigs).forEach(([side, config]) => {
         config.input.addEventListener('change', (event) => {
             const [file] = event.target.files;
-            if (file) {
-                handleArtworkFile(side, file);
-            }
+            if (file) handleArtworkFile(side, file);
         });
 
         config.dropzone.addEventListener('keydown', (event) => {
-            if (config.input.disabled) {
-                return;
-            }
-
+            if (config.input.disabled) return;
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
                 config.input.click();
@@ -1051,9 +979,7 @@ function bindUploadInputs() {
         ['dragenter', 'dragover'].forEach((eventName) => {
             config.dropzone.addEventListener(eventName, (event) => {
                 event.preventDefault();
-                if (config.input.disabled) {
-                    return;
-                }
+                if (config.input.disabled) return;
                 config.dropzone.classList.add('is-dragover');
             });
         });
@@ -1067,33 +993,21 @@ function bindUploadInputs() {
         config.dropzone.addEventListener('drop', (event) => {
             event.preventDefault();
             config.dropzone.classList.remove('is-dragover');
-
-            if (config.input.disabled) {
-                return;
-            }
+            if (config.input.disabled) return;
 
             const [file] = event.dataTransfer.files;
-            if (file) {
-                handleArtworkFile(side, file);
-            }
+            if (file) handleArtworkFile(side, file);
         });
 
-        config.resetButton.addEventListener('click', () => {
-            resetTransforms(side);
-        });
-
-        config.clearButton.addEventListener('click', () => {
-            clearArtwork(side, true);
-        });
+        config.resetButton.addEventListener('click', () => resetTransforms(side));
+        config.clearButton.addEventListener('click', () => clearArtwork(side, true));
     });
 }
 
 function bindTransformInputs() {
     Object.entries(sideConfigs).forEach(([side, config]) => {
         [config.scaleInput, config.xInput, config.yInput].forEach((input) => {
-            input.addEventListener('input', () => {
-                updateTextureTransforms(side);
-            });
+            input.addEventListener('input', () => updateTextureTransforms(side));
         });
     });
 }
@@ -1114,9 +1028,7 @@ function bindUIEvents() {
     });
 
     dom.envToggle.addEventListener('click', () => {
-        if (dom.envToggle.disabled) {
-            return;
-        }
+        if (dom.envToggle.disabled) return;
         setEnvPanelOpen(!isEnvPanelOpen());
     });
 
@@ -1131,10 +1043,7 @@ function bindUIEvents() {
     });
 
     dom.envRotate.addEventListener('input', (event) => {
-        if (!environmentTexture) {
-            return;
-        }
-
+        if (!environmentTexture) return;
         const radians = Number.parseFloat(event.target.value);
         scene.environmentRotation.y = radians;
         lightingGroup.rotation.y = radians;
@@ -1151,9 +1060,7 @@ function bindUIEvents() {
     dom.cameraButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const view = button.dataset.view;
-            if (view !== 'home') {
-                stopTurntableRotation();
-            }
+            if (view !== 'home') stopTurntableRotation();
             focusCameraView(view);
         });
     });
@@ -1161,6 +1068,9 @@ function bindUIEvents() {
     window.addEventListener('resize', handleResize);
 }
 
+/* ---------------------------------
+   Artwork & Transform Handlers
+--------------------------------- */
 async function handleArtworkFile(side, file) {
     const config = sideConfigs[side];
 
@@ -1176,9 +1086,7 @@ async function handleArtworkFile(side, file) {
         syncPlayPauseButton();
     }
     
-    if (state.turntableEnabled) {
-        stopTurntableRotation();
-    }
+    if (state.turntableEnabled) stopTurntableRotation();
 
     config.dropzone.classList.add('is-loading');
     config.fileName = file.name;
@@ -1255,13 +1163,8 @@ async function handleArtworkFile(side, file) {
             config.previewUrl = URL.createObjectURL(file);
             config.thumb.src = config.previewUrl;
 
-            if (previousPreviewUrl) {
-                URL.revokeObjectURL(previousPreviewUrl);
-            }
-
-            if (previousTexture) {
-                previousTexture.dispose();
-            }
+            if (previousPreviewUrl) URL.revokeObjectURL(previousPreviewUrl);
+            if (previousTexture) previousTexture.dispose();
 
             resetTransformInputs(side);
             updateTextureTransforms(side);
@@ -1289,10 +1192,7 @@ async function handleArtworkFile(side, file) {
 
 function applySideMaterialMap(side) {
     const config = sideConfigs[side];
-    if (!config.material) {
-        return;
-    }
-
+    if (!config.material) return;
     config.material.map = config.uploadedTexture || config.originalMap;
     config.material.color.setHex(0xffffff);
     config.material.needsUpdate = true;
@@ -1337,9 +1237,7 @@ function resetTransforms(side) {
 
 function updateTextureTransforms(side) {
     const config = sideConfigs[side];
-    if (!config.uploadedTexture) {
-        return;
-    }
+    if (!config.uploadedTexture) return;
 
     const scale = Number.parseFloat(config.scaleInput.value);
     const panX = Number.parseFloat(config.xInput.value);
@@ -1350,10 +1248,11 @@ function updateTextureTransforms(side) {
     config.uploadedTexture.needsUpdate = true;
 }
 
+/* ---------------------------------
+   Actions & Exports
+--------------------------------- */
 function toggleAnimation() {
-    if (!action || dom.playPause.disabled) {
-        return;
-    }
+    if (!action || dom.playPause.disabled) return;
 
     isPlaying = !isPlaying;
     action.paused = !isPlaying;
@@ -1362,15 +1261,23 @@ function toggleAnimation() {
         state.turntableEnabled = false;
         syncTurntableButton();
     }
-
     syncPlayPauseButton();
 }
 
-async function generatePdfProof() {
-    if (!state.ready || state.isExporting) {
-        return;
-    }
+function toggleTurntable() {
+    if (dom.turntableToggle.disabled) return;
+    state.turntableEnabled = !state.turntableEnabled;
+    syncTurntableButton();
+}
 
+function syncPlayPauseButton() {
+    dom.playPause.classList.toggle('is-paused', !isPlaying);
+    dom.playPause.title = isPlaying ? 'Pause Animation' : 'Play Animation';
+    dom.playPause.setAttribute('aria-label', isPlaying ? 'Pause Animation' : 'Play Animation');
+}
+
+async function generatePdfProof() {
+    if (!state.ready || state.isExporting) return;
     if (!pdfLibraryAvailable) {
         showToast('PDF unavailable', 'The PDF export library is not loaded right now.', 'error', 4200);
         return;
@@ -1405,9 +1312,7 @@ async function generatePdfProof() {
         const backImage = captureProofView(new THREE.Vector3(0, targetCenter.y, -cameraDistance));
 
         sceneRoot.rotation.copy(savedRotation);
-        if (mixer) {
-            mixer.setTime(savedMixerTime);
-        }
+        if (mixer) mixer.setTime(savedMixerTime);
 
         doc.setFontSize(22);
         doc.setTextColor(50, 50, 50);
@@ -1430,7 +1335,6 @@ async function generatePdfProof() {
         showToast('PDF export failed', 'Unable to generate the proof. Please try again.', 'error', 4200);
     } finally {
         clearTimeout(slowGenerationTimer);
-        
         dom.generatePdf.innerHTML = pdfButtonMarkup;
         state.isExporting = false;
         syncControlAvailability();
@@ -1467,47 +1371,11 @@ function captureProofView(position) {
     return exportContext.renderer.domElement.toDataURL('image/jpeg', 1.0);
 }
 
-function toggleTurntable() {
-    if (dom.turntableToggle.disabled) {
-        return;
-    }
-
-    state.turntableEnabled = !state.turntableEnabled;
-    syncTurntableButton();
-}
-
-function syncPlayPauseButton() {
-    dom.playPause.classList.toggle('is-paused', !isPlaying);
-    dom.playPause.title = isPlaying ? 'Pause Animation' : 'Play Animation';
-    dom.playPause.setAttribute('aria-label', isPlaying ? 'Pause Animation' : 'Play Animation');
-}
-
-function resetDesktopPreviewState() {
-    restorePreviewState();
-}
-
-function schedulePostARRestore() {
-    const restorePreview = () => {
-        handleResize();
-        restorePreviewState(previewStateBeforeAR);
-    };
-
-    window.clearTimeout(postArRestoreTimer);
-    restorePreview();
-
-    window.requestAnimationFrame(() => {
-        restorePreview();
-        postArRestoreTimer = window.setTimeout(() => {
-            restorePreview();
-        }, mobileViewportMediaQuery.matches ? 320 : 140);
-    });
-}
-
+/* ---------------------------------
+   Camera Transitions
+--------------------------------- */
 function transitionCamera(targetPosition) {
-    if (state.isInAR) {
-        return;
-    }
-
+    if (state.isInAR) return;
     TWEEN.removeAll();
 
     const endPosition = targetPosition.clone();
@@ -1520,20 +1388,14 @@ function transitionCamera(targetPosition) {
 
     sceneRoot.rotation.y = startRotationY;
 
-    while (endSpherical.theta - startSpherical.theta > Math.PI) {
-        endSpherical.theta -= Math.PI * 2;
-    }
-
-    while (endSpherical.theta - startSpherical.theta < -Math.PI) {
-        endSpherical.theta += Math.PI * 2;
-    }
+    while (endSpherical.theta - startSpherical.theta > Math.PI) endSpherical.theta -= Math.PI * 2;
+    while (endSpherical.theta - startSpherical.theta < -Math.PI) endSpherical.theta += Math.PI * 2;
 
     new TWEEN.Tween({ progress: 0 })
         .to({ progress: 1 }, 800)
         .easing(TWEEN.Easing.Cubic.InOut)
         .onUpdate(({ progress }) => {
             controls.target.lerpVectors(startTarget, endTarget, progress);
-
             const radius = THREE.MathUtils.lerp(startSpherical.radius, endSpherical.radius, progress);
             const phi = THREE.MathUtils.lerp(startSpherical.phi, endSpherical.phi, progress);
             const theta = THREE.MathUtils.lerp(startSpherical.theta, endSpherical.theta, progress);
@@ -1547,13 +1409,8 @@ function transitionCamera(targetPosition) {
     
 function focusCameraView(view) {
     const targetPosition = cameraTargets[view];
-    if (!targetPosition) {
-        return;
-    }
-
-    if (typeof isZoomedIn !== 'undefined') {
-        isZoomedIn = false;
-    }
+    if (!targetPosition) return;
+    if (typeof isZoomedIn !== 'undefined') isZoomedIn = false;
     
     transitionCamera(targetPosition);
     setActiveCameraView(view);
@@ -1566,6 +1423,50 @@ function setActiveCameraView(view) {
     });
 }
 
+function resetDesktopPreviewState() {
+    restorePreviewState();
+}
+
+/* ---------------------------------
+   AR Mode Implementation
+--------------------------------- */
+function initializeARSupport() {
+    if (!navigator.xr) {
+        markARUnsupported();
+        return;
+    }
+
+    navigator.xr.isSessionSupported('immersive-ar')
+        .then((supported) => {
+            state.arSupportResolved = true;
+            if (supported) {
+                state.arSupported = true;
+                syncARVisibility();
+            } else {
+                markARUnsupported();
+            }
+        })
+        .catch(() => markARUnsupported());
+}
+
+function markARUnsupported() {
+    if (state.arUnsupported) return;
+
+    state.arUnsupported = true;
+    state.arSupportResolved = true;
+    state.arSupported = false;
+    arButtonLabelObserver.disconnect();
+
+    if (arButton.isConnected) arButton.remove();
+    ensureArDisabledFallback();
+
+    if (state.ready && !state.arUnsupportedToastShown) {
+        state.arUnsupportedToastShown = true;
+        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
+    }
+    syncARVisibility();
+}
+
 function onARSessionStart() {
     state.isInAR = true;
     document.body.classList.add('is-in-ar');
@@ -1574,10 +1475,7 @@ function onARSessionStart() {
     window.clearTimeout(postArRestoreTimer);
     previewStateBeforeAR = capturePreviewState();
 
-    if (modelRoot) {
-        sceneRoot.visible = false;
-    }
-
+    if (modelRoot) sceneRoot.visible = false;
     syncControlAvailability();
     showToast('AR mode active', 'Move your device to find a surface, then tap to place. Drag to rotate.', 'info', 10000);
 }
@@ -1603,28 +1501,19 @@ function resetHitTestState() {
 
 function updateARHitTesting(frame) {
     const session = renderer.xr.getSession();
-
-    if (!session || !frame) {
-        return;
-    }
+    if (!session || !frame) return;
 
     if (!hitTestSourceRequested) {
         session.requestReferenceSpace('viewer')
             .then((referenceSpace) => session.requestHitTestSource({ space: referenceSpace }))
-            .then((source) => {
-                hitTestSource = source;
-            })
-            .catch(() => {
-                showToast('AR placement unavailable', 'Hit testing could not be started for this session.', 'error', 4200);
-            });
+            .then((source) => { hitTestSource = source; })
+            .catch(() => showToast('AR placement unavailable', 'Hit testing could not be started for this session.', 'error', 4200));
 
         session.addEventListener('end', resetHitTestState, { once: true });
         hitTestSourceRequested = true;
     }
 
-    if (!hitTestSource) {
-        return;
-    }
+    if (!hitTestSource) return;
 
     const referenceSpace = renderer.xr.getReferenceSpace();
     const hitTestResults = frame.getHitTestResults(hitTestSource);
@@ -1655,24 +1544,15 @@ window.addEventListener('touchstart', (e) => {
 window.addEventListener('touchmove', (e) => {
     if (!arIsDragging || !state.isInAR || !sceneRoot.visible || e.touches.length !== 1) return;
     const deltaX = e.touches[0].clientX - arTouchStartX;
-    if (Math.abs(deltaX) > 8) {
-        arHasDragged = true;
-    }
+    if (Math.abs(deltaX) > 8) arHasDragged = true;
     sceneRoot.rotation.y = arTouchStartRotationY + (deltaX * 0.015);
 });
 
-window.addEventListener('touchend', () => {
-    arIsDragging = false;
-});
-
-window.addEventListener('touchcancel', () => {
-    arIsDragging = false;
-});
+window.addEventListener('touchend', () => arIsDragging = false);
+window.addEventListener('touchcancel', () => arIsDragging = false);
 
 function placeModelFromReticle() {
-    if (!state.isInAR || !reticle.visible || !modelRoot || arHasDragged) {
-        return;
-    }
+    if (!state.isInAR || !reticle.visible || !modelRoot || arHasDragged) return;
 
     const placementPosition = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
     sceneRoot.position.copy(placementPosition);
@@ -1688,6 +1568,24 @@ function placeModelFromReticle() {
     showToast('Object placed', 'Tap again on another surface if you want to reposition the flag.', 'success', 3200);
 }
 
+function schedulePostARRestore() {
+    const restorePreview = () => {
+        handleResize();
+        restorePreviewState(previewStateBeforeAR);
+    };
+
+    window.clearTimeout(postArRestoreTimer);
+    restorePreview();
+
+    window.requestAnimationFrame(() => {
+        restorePreview();
+        postArRestoreTimer = window.setTimeout(() => restorePreview(), mobileViewportMediaQuery.matches ? 320 : 140);
+    });
+}
+
+/* ---------------------------------
+   Render Loop
+--------------------------------- */
 function handleResize() {
     const width = dom.canvasContainer.clientWidth;
     const height = dom.canvasContainer.clientHeight;
@@ -1713,9 +1611,7 @@ function handleResize() {
 function renderFrame(_, frame) {
     TWEEN.update();
 
-    if (state.isInAR) {
-        updateARHitTesting(frame);
-    }
+    if (state.isInAR) updateARHitTesting(frame);
 
     timer.update();
     const delta = timer.getDelta();
@@ -1723,42 +1619,8 @@ function renderFrame(_, frame) {
         sceneRoot.rotation.y += turntableSpeed * delta;
     }
 
-    if (mixer) {
-        mixer.update(delta);
-    }
+    if (mixer) mixer.update(delta);
 
     controls.update();
     renderer.render(scene, camera);
-}
-
-function truncateFileName(fileName, containerElement) {
-    const extIndex = fileName.lastIndexOf('.');
-    const ext = extIndex !== -1 ? fileName.substring(extIndex) : '';
-    const name = extIndex !== -1 ? fileName.substring(0, extIndex) : fileName;
-    
-    const endChars = 4;
-    if (name.length <= endChars + 5) return fileName;
-    
-    if (!containerElement) return fileName;
-
-    const canvas = truncateFileName.canvas || (truncateFileName.canvas = document.createElement('canvas'));
-    const context = canvas.getContext('2d');
-    const computedStyle = window.getComputedStyle(containerElement);
-    context.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-    
-    const availableWidth = Math.max(0, containerElement.clientWidth - 24);
-    
-    if (context.measureText(fileName).width <= availableWidth) {
-        return fileName;
-    }
-    
-    const endText = `.......${name.substring(name.length - endChars)}${ext}`;
-    const endWidth = context.measureText(endText).width;
-    
-    let startText = name.substring(0, name.length - endChars);
-    while (startText.length > 0 && (context.measureText(startText).width + endWidth > availableWidth)) {
-        startText = startText.substring(0, startText.length - 1);
-    }
-    
-    return `${startText}${endText}`;
 }

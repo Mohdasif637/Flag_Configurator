@@ -1,3 +1,6 @@
+/* ---------------------------------
+   Variables
+--------------------------------- */
 :root {
     --bg: #e0e0e0;
     --panel-bg: rgba(252, 251, 247, 0.94);
@@ -26,6 +29,9 @@
     --space-5: 24px;
 }
 
+/* ---------------------------------
+   Base & Resets
+--------------------------------- */
 html, body {
     margin: 0;
     width: 100%;
@@ -54,7 +60,9 @@ body::before {
     pointer-events: none;
 }
 
-
+/* ---------------------------------
+   Typography
+--------------------------------- */
 h2 {
     margin: 0;
     font-size: 19px;
@@ -101,6 +109,9 @@ label {
     color: var(--muted);
 }
 
+/* ---------------------------------
+   Utilities
+--------------------------------- */
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -113,7 +124,9 @@ label {
     border: 0;
 }
 
-
+/* ---------------------------------
+   Buttons
+--------------------------------- */
 button, .guide-btn {
     border: none;
     cursor: pointer;
@@ -140,7 +153,136 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     transform: none !important;
 }
 
+.guide-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: var(--space-4);
+    box-sizing: border-box;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #205f4b 0%, #2c8667 100%);
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+}
 
+.secondary-btn, .danger-btn, .primary-btn {
+    width: 100%;
+    min-height: 40px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.secondary-btn { background: var(--surface-strong); color: var(--text); }
+.danger-btn { background: rgba(196, 77, 68, 0.12); color: var(--danger-strong); }
+.primary-btn {
+    background: linear-gradient(135deg, #1d6b52 0%, #2a8a68 100%);
+    color: #fff;
+}
+
+.action-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.action-stack button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* ---------------------------------
+   Layout & UI Shell
+--------------------------------- */
+#ui-container {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    z-index: 3;
+    max-height: calc(100vh - 40px);
+    width: min(345px, calc(100vw - 40px));
+    display: flex;
+}
+
+#ui-bg {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, calc(100vw - 52px));
+    border-radius: 26px;
+    background: #fcfbf7;
+    border: 1px solid var(--panel-border);
+    z-index: -1;
+    pointer-events: none;
+}
+
+#ui-shell {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    direction: rtl;
+    --panel-scrollbar-thumb: transparent;
+    border-radius: 26px;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: --panel-scrollbar-thumb 0.28s ease;
+}
+
+#ui-header-wrapper {
+    direction: ltr;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    width: min(340px, calc(100vw - 52px));
+    padding: 20px var(--space-4) 14px;
+    box-sizing: border-box;
+}
+
+#ui-header-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(252, 251, 247, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 26px 26px 0 0;
+    border-bottom: 1px solid var(--line);
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+    z-index: -1;
+}
+
+#ui-header-wrapper > * {
+    position: relative;
+    z-index: 1;
+}
+
+#ui-panel {
+    direction: ltr;
+    height: fit-content;
+    width: min(340px, calc(100vw - 52px));
+    padding: 18px var(--space-4) var(--space-4);
+    box-sizing: border-box;
+}
+
+#ui-panel.is-disabled { opacity: 0.85; pointer-events: none; }
+
+.control-group { margin-bottom: var(--space-4); }
+
+/* ---------------------------------
+   Canvas & Loading Overlay
+--------------------------------- */
 #canvas-container {
     position: absolute;
     inset: 0;
@@ -199,130 +341,9 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     to { transform: rotate(360deg); }
 }
 
-#ui-container {
-    position: absolute;
-    top: 20px;
-    left: 0;
-    z-index: 3;
-    max-height: calc(100vh - 40px);
-    width: min(345px, calc(100vw - 40px));
-    display: flex;
-}
-
-#ui-bg {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(340px, calc(100vw - 52px));
-    border-radius: 26px;
-    background: #fcfbf7;
-    border: 1px solid var(--panel-border);
-    z-index: -1;
-    pointer-events: none;
-}
-
-#ui-shell {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    box-sizing: border-box;
-    direction: rtl;
-    --panel-scrollbar-thumb: transparent;
-    border-radius: 26px;
-    outline: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-#ui-header-wrapper {
-    direction: ltr;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    width: min(340px, calc(100vw - 52px));
-    padding: 20px var(--space-4) 14px;
-    box-sizing: border-box;
-}
-
-#ui-header-wrapper::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(252, 251, 247, 0.82);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 26px 26px 0 0;
-    border-bottom: 1px solid var(--line);
-    -webkit-mask-image: -webkit-radial-gradient(white, black);
-    mask-image: radial-gradient(white, black);
-    z-index: -1;
-}
-
-#ui-header-wrapper > * {
-    position: relative;
-    z-index: 1;
-}
-
-#ui-panel {
-    direction: ltr;
-    height: fit-content;
-    width: min(340px, calc(100vw - 52px));
-    padding: 18px var(--space-4) var(--space-4);
-    box-sizing: border-box;
-}
-
-#ui-panel.is-disabled { opacity: 0.85; pointer-events: none; }
-
-.control-group { margin-bottom: var(--space-4); }
-
-
-.guide-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 12px 14px;
-    margin-bottom: var(--space-4);
-    box-sizing: border-box;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #205f4b 0%, #2c8667 100%);
-    color: #fff;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.secondary-btn, .danger-btn, .primary-btn {
-    width: 100%;
-    min-height: 40px;
-    padding: 10px 14px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.secondary-btn { background: var(--surface-strong); color: var(--text); }
-.danger-btn { background: rgba(196, 77, 68, 0.12); color: var(--danger-strong); }
-.primary-btn {
-    background: linear-gradient(135deg, #1d6b52 0%, #2a8a68 100%);
-    color: #fff;
-}
-
-.action-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.action-stack button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
+/* ---------------------------------
+   Upload Component
+--------------------------------- */
 .upload-card {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -413,6 +434,9 @@ button:disabled, input:disabled, .upload-card.is-disabled {
 .upload-actions { display: flex; gap: 10px; }
 .upload-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
+/* ---------------------------------
+   Form Controls
+--------------------------------- */
 .transform-controls {
     padding: 14px;
     border: 1px solid rgba(34, 49, 39, 0.09);
@@ -454,6 +478,9 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     accent-color: var(--primary);
 }
 
+/* ---------------------------------
+   Color Picker Override
+--------------------------------- */
 .color-picker-shell { width: 100%; }
 .color-picker-trigger {
     width: 100%;
@@ -499,6 +526,9 @@ button:disabled, input:disabled, .upload-card.is-disabled {
 }
 .pcr-app.is-bottom-sheet { position: fixed; transform-origin: center center; }
 
+/* ---------------------------------
+   Camera & Actions
+--------------------------------- */
 #camera-wrapper {
     position: absolute;
     top: auto;
@@ -589,39 +619,6 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     border-color: rgba(255, 255, 255, 0.34);
 }
 
-#ARButton {
-    width: 48px !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    flex: 0 0 48px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    position: static !important;
-    inset: auto !important;
-    transform: none !important;
-
-    background: linear-gradient(145deg, #276d58 0%, #184837 100%) !important;
-    color: #fff !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: 15px !important;
-    
-    -webkit-appearance: none !important;
-    appearance: none !important;
-}
-
-#ARButton:disabled { display: inline-flex !important; }
-
-#ARButton.is-ar-disabled {
-    opacity: 0.34 !important;
-    cursor: not-allowed !important;
-    pointer-events: auto !important;
-    background: linear-gradient(145deg, rgba(39, 109, 88, 0.55) 0%, rgba(24, 72, 55, 0.5) 100%) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
 .btn-icon { flex: 0 0 auto; }
 .control-icon {
     display: block;
@@ -645,6 +642,9 @@ button:disabled, input:disabled, .upload-card.is-disabled {
 #play-pause.is-paused .is-play { display: inline-flex; }
 #play-pause.is-paused .is-pause { display: none; }
 
+/* ---------------------------------
+   Environment Panel
+--------------------------------- */
 #env-panel {
     position: absolute;
     right: 0;
@@ -710,6 +710,42 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     color: rgba(255, 255, 255, 0.92);
 }
 
+/* ---------------------------------
+   AR Experience
+--------------------------------- */
+#ARButton {
+    width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    flex: 0 0 48px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+
+    background: linear-gradient(145deg, #276d58 0%, #184837 100%) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 15px !important;
+    
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+
+#ARButton:disabled { display: inline-flex !important; }
+
+#ARButton.is-ar-disabled {
+    opacity: 0.34 !important;
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+    background: linear-gradient(145deg, rgba(39, 109, 88, 0.55) 0%, rgba(24, 72, 55, 0.5) 100%) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 #ar-overlay {
     position: fixed;
     top: 0;
@@ -743,6 +779,9 @@ body.is-in-ar #stop-ar-btn {
     display: block;
 }
 
+/* ---------------------------------
+   Toast Notifications
+--------------------------------- */
 #toast-region {
     position: fixed;
     right: 10px;
@@ -786,14 +825,13 @@ body.is-in-ar #stop-ar-btn {
 .toast-title { display: block; margin-bottom: 1px; font-size: 13px; font-weight: 700; }
 .toast-copy { display: block; font-size: 12px; line-height: 1.2; color: rgba(255, 255, 255, 0.84); }
 
+/* ---------------------------------
+   Custom Scrollbar
+--------------------------------- */
 @property --panel-scrollbar-thumb {
     syntax: "<color>";
     inherits: true;
     initial-value: transparent;
-}
-
-#ui-shell {
-    transition: --panel-scrollbar-thumb 0.28s ease;
 }
 
 #ui-shell:hover, #ui-shell:focus-within, #ui-shell:active { 
@@ -813,6 +851,9 @@ body.is-in-ar #stop-ar-btn {
     height: 0;
 }
 
+/* ---------------------------------
+   Media Queries
+--------------------------------- */
 @media (max-width: 860px) {
     #ui-container { width: min(342px, calc(100vw - 32px)); }
     #ui-bg, #ui-panel { width: min(330px, calc(100vw - 44px)); }
