@@ -1,7 +1,9 @@
 /* ---------------------------------
    Imports & Dependencies
 --------------------------------- */
+
 import * as THREE from 'three';
+import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
@@ -60,7 +62,7 @@ const sideConfigs = {
         scaleInput: document.getElementById('artwork-scale'),
         xInput: document.getElementById('artwork-x'),
         yInput: document.getElementById('artwork-y'),
-        materialName: 'Graphic Shader',
+        materialName: 'L_DS_Right',
         material: null,
         originalMap: null,
         uploadedTexture: null,
@@ -301,11 +303,14 @@ const timer = new Timer();
 const textureLoader = new THREE.TextureLoader();
 const modelLoader = new GLTFLoader();
 const environmentLoader = new HDRLoader();
+const exrLoader = new EXRLoader();
+exrLoader.setDataType(THREE.FloatType);
+let vatTexture = null;
+const vatMaterials = [];
 
 let pocketMaterial = null;
 let modelRoot = null;
 let environmentTexture = null;
-let mixer = null;
 let action = null;
 let isPlaying = true;
 let pocketColorPickr = null;
@@ -328,7 +333,7 @@ const state = {
     ready: false,
     isExporting: false,
     isInAR: false,
-    turntableEnabled: true,
+    turntableEnabled: false,
     arUnsupported: false,
     arSupportResolved: false,
     arSupported: false,
@@ -909,53 +914,145 @@ function loadEnvironment() {
     );
 }
 
+/* ---------------------------------
+   Asset Loading (Updated for Flement VAT)
+--------------------------------- */
+
 function loadModel() {
-    modelLoader.load(
-        'flag.glb',
-        (gltf) => {
-            modelRoot = gltf.scene;
-            sceneRoot.add(modelRoot);
-            sceneRoot.visible = !state.isInAR;
+    // 1. Load the EXR VAT Texture First
+    exrLoader.load('3D/VAT/L/positions.exr', (texture) => {
+        vatTexture = texture;
+        vatTexture.minFilter = THREE.NearestFilter;
+        vatTexture.magFilter = THREE.NearestFilter;
+        vatTexture.wrapS = THREE.RepeatWrapping; 
+        vatTexture.wrapT = THREE.RepeatWrapping;
+        vatTexture.generateMipmaps = false;
 
-            modelRoot.traverse((child) => {
-                if (!child.isMesh) return;
-                child.castShadow = true;
-                child.receiveShadow = true;
+        // 2. Load the Static GLB
+        modelLoader.load(
+            '3D/Convex.glb', // Your new static GLB
+            (gltf) => {
+                modelRoot = gltf.scene;
+                sceneRoot.add(modelRoot);
+                sceneRoot.visible = !state.isInAR;
 
-                const materials = Array.isArray(child.material) ? child.material : [child.material];
-                materials.forEach((material) => {
-                    material.side = THREE.DoubleSide;
+                modelRoot.traverse((child) => {
+                    if (!child.isMesh) return;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.frustumCulled = false; 
+                
+                    // --- 0. FIX THREE.JS GLTFLOADER HARD LIMIT ---
+                    // Rename 'texcoord_4', 'texcoord_5' etc., into standard 'uv4', 'uv5'
+                    Object.keys(child.geometry.attributes).forEach((key) => {
+                        if (key.startsWith('texcoord_')) {
+                            const index = key.split('_')[1]; // Extracts the '4' or '5'
+                            child.geometry.setAttribute(`uv${index}`, child.geometry.attributes[key]);
+                            child.geometry.deleteAttribute(key);
+                        }
+                    });
+                
+                    // --- 1. SMART AUTO-DETECT VAT UV CHANNEL ---
+                    let maxUvIndex = 0;
+                    
+                    Object.keys(child.geometry.attributes).forEach((key) => {
+                        if (key.startsWith('uv') && key !== 'uv') {
+                            const index = parseInt(key.replace('uv', ''), 10);
+                            if (index > maxUvIndex) maxUvIndex = index;
+                        }
+                    });
+                
+                    const vatUv = maxUvIndex > 0 ? `uv${maxUvIndex}` : 'uv';
+                    
+                    // Debug log to ensure the script found the right channel
+                    console.log(`Mesh: ${child.name} | VAT UV channel detected as: ${vatUv}`);
 
-                    if (material.name === sideConfigs.artwork.materialName) {
-                        sideConfigs.artwork.material = material;
-                        sideConfigs.artwork.originalMap = material.map;
+                    // Dynamically detect any mesh containing "vat" (case-insensitive) to support L_vat, XS_vat, M_vat, etc.
+                    const isVatMesh = child.name.toLowerCase().includes('vat');
+
+                    // Isolate the VAT UV into a dedicated attribute to prevent any clashes with material UVs
+                    if (isVatMesh && child.geometry.attributes[vatUv]) {
+                        child.geometry.setAttribute('vatPositionUv', child.geometry.attributes[vatUv]);
                     }
-
-                    if (material.name === 'Cloth.001') {
-                        pocketMaterial = material;
-                    }
+                
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+                    
+                    materials.forEach((material) => {
+                        material.side = THREE.DoubleSide;
+                
+                        if (material.name === sideConfigs.artwork.materialName) {
+                            sideConfigs.artwork.material = material;
+                            sideConfigs.artwork.originalMap = material.map;
+                        }
+                        if (material.name === 'Pocket') {
+                            pocketMaterial = material;
+                        }
+                
+                        // Inject VAT into all materials on the VAT mesh
+                        if (isVatMesh && vatTexture) {
+                            
+                            if (!vatMaterials.includes(material)) {
+                                vatMaterials.push(material);
+                            }
+                
+                            material.onBeforeCompile = (shader) => {
+                                shader.uniforms.posTexture = { value: vatTexture };
+                                shader.uniforms.uTime = { value: 0 };
+                                shader.uniforms.uTotalFrames = { value: 99.0 }; 
+                                shader.uniforms.uFps = { value: 30.0 }; 
+                
+                                material.userData.shader = shader;
+                
+                                // --- 2. DYNAMIC SHADER DECLARATIONS ---
+                                let declarations = `
+                                    uniform sampler2D posTexture;
+                                    uniform float uTime;
+                                    uniform float uTotalFrames;
+                                    uniform float uFps;
+                                    attribute vec2 vatPositionUv; // Isolated VAT UV
+                                `;
+                
+                                // Fix the Three.js native limitation for uv4+
+                                // Three.js handles uv, uv1, uv2, uv3 natively. We only declare uv4 and above to prevent redefinition crashes.
+                                for (let i = 4; i <= 10; i++) {
+                                    declarations += `attribute vec2 uv${i};\n`;
+                                }
+                
+                                // Inject into <common> safely below WebGL headers
+                                shader.vertexShader = shader.vertexShader.replace(
+                                    '#include <common>',
+                                    declarations + '\n#include <common>'
+                                );
+                
+                                // 3. Override the vertex position
+                                shader.vertexShader = shader.vertexShader.replace(
+                                    '#include <begin_vertex>',
+                                    `
+                                    float frame = mod(uTime * uFps, uTotalFrames) / uTotalFrames;
+                                    
+                                    vec4 texPos = texture2D(posTexture, vec2(vatPositionUv.x, vatPositionUv.y - frame));
+                                    
+                                    vec3 transformed = position;
+                                    
+                                    // Fallback check
+                                    if (length(texPos.xyz) > 0.0001) {
+                                        transformed = texPos.xzy; 
+                                    }
+                                    `
+                                );
+                            };
+                        }
+                    });
                 });
-            });
-
-            renderer.shadowMap.needsUpdate = true;
-            if (gltf.animations && gltf.animations.length > 0) {
-                mixer = new THREE.AnimationMixer(modelRoot);
-                action = mixer.clipAction(gltf.animations[0]);
-                action.play();
-            }
-
-            syncPocketColorUi(dom.pocketColor.value);
-            state.modelLoaded = true;
-            syncReadyState();
-        },
-        undefined,
-        () => {
-            state.modelFailed = true;
-            setLoadingState(true, 'The 3D model could not be loaded. Refresh the page and try again.');
-            syncControlAvailability();
-            showToast('Model load failed', 'The preview model is unavailable, so the configurator cannot continue.', 'error', 5000);
-        }
-    );
+                renderer.shadowMap.needsUpdate = true;
+                syncPocketColorUi(dom.pocketColor.value);
+                state.modelLoaded = true;
+                syncReadyState();
+            },
+            undefined,
+            () => { /* Load Error Handling */ }
+        );
+    });
 }
 
 /* ---------------------------------
@@ -1300,20 +1397,12 @@ async function generatePdfProof() {
         const savedRotation = sceneRoot.rotation.clone();
         sceneRoot.rotation.set(0, 0, 0);
 
-        let savedMixerTime = 0;
-        if (mixer) {
-            savedMixerTime = mixer.time;
-            mixer.setTime(0);
-        }
-
         scene.updateMatrixWorld(true);
 
         const frontImage = captureProofView(new THREE.Vector3(0, targetCenter.y, cameraDistance));
         const backImage = captureProofView(new THREE.Vector3(0, targetCenter.y, -cameraDistance));
 
         sceneRoot.rotation.copy(savedRotation);
-        if (mixer) mixer.setTime(savedMixerTime);
-
         doc.setFontSize(22);
         doc.setTextColor(50, 50, 50);
         doc.text('Probo Configurator - Client Proof', 20, 20);
@@ -1608,6 +1697,9 @@ function handleResize() {
     });
 }
 
+/* ---------------------------------
+   Render Loop (Updated for VAT)
+--------------------------------- */
 function renderFrame(_, frame) {
     TWEEN.update();
 
@@ -1615,11 +1707,21 @@ function renderFrame(_, frame) {
 
     timer.update();
     const delta = timer.getDelta();
+    
     if (state.turntableEnabled && !state.isInAR) {
         sceneRoot.rotation.y += turntableSpeed * delta;
     }
 
-    if (mixer) mixer.update(delta);
+    // --- UPDATE VAT ANIMATION TIME ---
+    // If playing, update the uTime uniform on ALL VAT materials
+    if (isPlaying) {
+        const currentTime = timer.getElapsed();
+        vatMaterials.forEach((mat) => {
+            if (mat.userData.shader) {
+                mat.userData.shader.uniforms.uTime.value = currentTime;
+            }
+        });
+    }
 
     controls.update();
     renderer.render(scene, camera);
