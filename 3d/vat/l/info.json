@@ -1,0 +1,65 @@
+{
+    "mesh_name": "l_vat",
+    "vertex_count": 1581,
+    "frame_count": 52,
+    "uv_maps": [
+        {
+            "index": 0,
+            "name": "ds_right"
+        },
+        {
+            "index": 1,
+            "name": "right"
+        },
+        {
+            "index": 2,
+            "name": "left"
+        },
+        {
+            "index": 3,
+            "name": "air"
+        },
+        {
+            "index": 4,
+            "name": "ds_left"
+        },
+        {
+            "index": 5,
+            "name": "vertex_anim"
+        }
+    ],
+    "materials": [
+        {
+            "index": 0,
+            "name": "l_ds_right"
+        },
+        {
+            "index": 1,
+            "name": "l_ds_left"
+        },
+        {
+            "index": 2,
+            "name": "l_right"
+        },
+        {
+            "index": 3,
+            "name": "l_left"
+        },
+        {
+            "index": 4,
+            "name": "l_air_right"
+        },
+        {
+            "index": 5,
+            "name": "l_air_left"
+        },
+        {
+            "index": 6,
+            "name": "air_translucent"
+        },
+        {
+            "index": 7,
+            "name": "translucent"
+        }
+    ]
+}

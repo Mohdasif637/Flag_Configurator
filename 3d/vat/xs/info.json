@@ -1,0 +1,65 @@
+{
+    "mesh_name": "xs_vat",
+    "vertex_count": 697,
+    "frame_count": 59,
+    "uv_maps": [
+        {
+            "index": 0,
+            "name": "ds_right"
+        },
+        {
+            "index": 1,
+            "name": "right"
+        },
+        {
+            "index": 2,
+            "name": "left"
+        },
+        {
+            "index": 3,
+            "name": "air"
+        },
+        {
+            "index": 4,
+            "name": "ds_left"
+        },
+        {
+            "index": 5,
+            "name": "vertex_anim"
+        }
+    ],
+    "materials": [
+        {
+            "index": 0,
+            "name": "xs_ds_right"
+        },
+        {
+            "index": 1,
+            "name": "xs_ds_left"
+        },
+        {
+            "index": 2,
+            "name": "xs_right"
+        },
+        {
+            "index": 3,
+            "name": "xs_left"
+        },
+        {
+            "index": 4,
+            "name": "xs_air_right"
+        },
+        {
+            "index": 5,
+            "name": "xs_air_left"
+        },
+        {
+            "index": 6,
+            "name": "air_translucent"
+        },
+        {
+            "index": 7,
+            "name": "translucent"
+        }
+    ]
+}

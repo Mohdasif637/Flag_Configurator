@@ -26,11 +26,110 @@
         <div id="ui-bg"></div>
         <div id="ui-shell">
             <div id="ui-header-wrapper">
+                <div class="total-price-badge">
+                    <span class="price-value" id="total-price-value">€0.00</span>
+                </div>
                 <h2>Flag Configurator</h2>
+
                 <p class="panel-copy">Upload artwork, tune the preview, and export a clean client proof.</p>
             </div>
             <div id="ui-panel">
-                <a href="Template.pdf" download="Template.pdf" class="guide-btn">
+                <div class="config-section" id="section-size">
+                    <h3 class="section-title">Sizes</h3>
+                    <div class="selection-info">
+                        <span class="selection-name">Beach flag Convex L</span>
+                        <span class="selection-price"></span>
+                    </div>
+                    <div class="carousel-wrapper">
+                        <button class="carousel-arrow left-arrow" aria-label="Scroll left">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <div class="carousel-track scrollable-track">
+                            <button class="config-card" data-category="size" data-value="Beach flag Convex XS" data-price=""><div class="card-icon">XS</div></button>
+                            <!-- <button class="config-card" data-category="size" data-value="Beach flag Convex S" data-price=""><div class="card-icon">S</div></button>
+                            <button class="config-card" data-category="size" data-value="Beach flag Convex M" data-price=""><div class="card-icon">M</div></button>
+                            <button class="config-card" data-category="size" data-value="Beach flag Convex M-Extra Wide" data-price=""><div class="card-icon" style="font-size: 0.8rem;">M-W</div></button> -->
+                            <button class="config-card is-active" data-category="size" data-value="Beach flag Convex L" data-price=""><div class="card-icon">L</div></button>
+                        </div>
+                        <button class="carousel-arrow right-arrow" aria-label="Scroll right">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-section" id="section-printing">
+                    <h3 class="section-title">Printing</h3>
+                    <div class="selection-info">
+                        <span class="selection-name">Single Sided</span>
+                        <span class="selection-price"></span>
+                    </div>
+                    <div class="carousel-track wrap-track">
+                        <button class="config-card is-active" data-category="printing" data-value="Single Sided"><div class="card-icon" style="font-size: 0.8rem;">1-S</div></button>
+                        <button class="config-card" data-category="printing" data-value="Double Sided"><div class="card-icon" style="font-size: 0.8rem;">2-S</div></button>
+                        <button class="config-card" data-category="printing" data-value="Air Textile"><div class="card-icon" style="font-size: 0.8rem;">Air</div></button>
+                    </div>
+                </div>
+
+                <div class="config-section" id="section-direction">
+                    <h3 class="section-title">Direction</h3>
+                    <div class="selection-info">
+                        <span class="selection-name">Right</span>
+                    </div>
+                    <div class="carousel-track wrap-track">
+                        <button class="config-card is-active" data-category="direction" data-value="Right"><div class="card-icon" style="font-size: 0.8rem;">Right</div></button>
+                        <button class="config-card" data-category="direction" data-value="Left"><div class="card-icon" style="font-size: 0.8rem;">Left</div></button>
+                    </div>
+                </div>
+
+                <div class="config-section" id="section-pole-cover">
+                    <h3 class="section-title">Pole Cover</h3>
+                    <input type="hidden" id="pocket-color" value="#000000">
+                    <div class="color-picker-shell">
+                        <button type="button" id="pocket-color-trigger" class="color-picker-trigger" aria-expanded="false">
+                            <span id="pocket-color-swatch" class="color-picker-swatch" aria-hidden="true"></span>
+                            <span class="color-picker-text">
+                                <span class="color-picker-title">Choose pocket color</span>
+                                <span id="pocket-color-value" class="color-picker-value">#000000</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-section" id="section-pole">
+                    <h3 class="section-title">Pole</h3>
+                    <div class="selection-info">
+                        <span class="selection-name">With Pole</span>
+                        <span class="selection-price"></span>
+                    </div>
+                    <div class="carousel-track wrap-track">
+                        <button class="config-card is-active" data-category="pole" data-value="With Pole"><div class="card-icon" style="font-size: 0.8rem;">Yes</div></button>
+                        <button class="config-card" data-category="pole" data-value="Without Pole"><div class="card-icon" style="font-size: 0.8rem;">No</div></button>
+                    </div>
+                </div>
+
+                <div class="config-section" id="section-base">
+                    <h3 class="section-title">Base</h3>
+                    <div class="selection-info">
+                        <span class="selection-name">No base</span>
+                        <span class="selection-price"></span>
+                    </div>
+                    <div class="carousel-wrapper">
+                        <button class="carousel-arrow left-arrow" aria-label="Scroll left">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <div class="carousel-track scrollable-track">
+                            <button class="config-card is-active" data-category="base" data-value="No base" data-price=""><div class="card-icon" style="font-size: 0.8rem;">None</div></button>
+                            <button class="config-card" data-category="base" data-value="Luxury cross base" data-price=""><div class="card-icon" style="font-size: 0.8rem;">Lux</div></button>
+                            <button class="config-card" data-category="base" data-value="Cross base-grey" data-price=""><div class="card-icon" style="font-size: 0.8rem;">Grey</div></button>
+                            <button class="config-card" data-category="base" data-value="Cross base-black" data-price=""><div class="card-icon" style="font-size: 0.8rem;">Black</div></button>
+                        </div>
+                        <button class="carousel-arrow right-arrow" aria-label="Scroll right">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <a href="assets/template.pdf" download="template.pdf" class="guide-btn">
                     <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
@@ -75,22 +174,6 @@
                     </div>
                 </div>
 
-                <div class="control-group">
-                    <div class="control-heading">
-                        <label for="pocket-color-trigger">Pocket Color</label>
-                    </div>
-                    <input type="hidden" id="pocket-color" value="#000000">
-                    <div class="color-picker-shell">
-                        <button type="button" id="pocket-color-trigger" class="color-picker-trigger" aria-expanded="false">
-                            <span id="pocket-color-swatch" class="color-picker-swatch" aria-hidden="true"></span>
-                            <span class="color-picker-text">
-                                <span class="color-picker-title">Choose pocket color</span>
-                                <span id="pocket-color-value" class="color-picker-value">#000000</span>
-                            </span>
-                        </button>
-                    </div>
-                </div>
-
                 <div class="action-stack">
                     <button type="button" id="generate-pdf" class="primary-btn">
                         <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -124,7 +207,7 @@
             <div id="ar-container" hidden></div>
 
             <button type="button" id="turntable-toggle" title="Toggle Turntable" aria-label="Toggle Turntable">
-                <img class="control-icon" src="Icons/rotate.svg" alt="" aria-hidden="true">
+                <img class="control-icon" src="icons/rotate.svg" alt="" aria-hidden="true">
             </button>
 
             <button type="button" id="play-pause" title="Shortcut: Press Spacebar" aria-label="Toggle Play Animation">
@@ -142,7 +225,7 @@
             </button>
 
             <button type="button" id="env-toggle" title="Environment Settings" aria-label="Environment Settings">
-                <img class="control-icon" src="Icons/env.svg" alt="" aria-hidden="true">
+                <img class="control-icon" src="icons/env.svg" alt="" aria-hidden="true">
             </button>
 
             <div id="env-panel" hidden>
@@ -173,4 +256,3 @@
     <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
     <script type="module" src="main.js"></script>
 </body>
-</html>

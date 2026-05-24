@@ -1,0 +1,34 @@
+{
+  "currency": "€",
+  "vatIncluded": false,
+  "shippingIncluded": false,
+  "pricingTiers": {
+    "completeWithHardware": [
+      { "size": "xs", "singleSided": 49.95, "doubleSided": 70.95, "airTextile": 63.95 },
+      { "size": "S", "singleSided": 65.95, "doubleSided": 92.95, "airTextile": 75.95 },
+      { "size": "M", "singleSided": 77.95, "doubleSided": 106.95, "airTextile": 93.95 },
+      { "size": "M-Wide", "singleSided": 85.95, "doubleSided": 123.95, "airTextile": 106.95 },
+      { "size": "l", "singleSided": 99.95, "doubleSided": 155.95, "airTextile": 124.95 }
+    ],
+    "flagOnly": [
+      { "size": "xs", "singleSided": 25.95, "doubleSided": 46.95, "airTextile": 36.95 },
+      { "size": "S", "singleSided": 42.95, "doubleSided": 68.95, "airTextile": 46.95 },
+      { "size": "M", "singleSided": 57.95, "doubleSided": 89.95, "airTextile": 73.95 },
+      { "size": "M-Wide", "singleSided": 64.95, "doubleSided": 101.95, "airTextile": 84.95 },
+      { "size": "l", "singleSided": 78.95, "doubleSided": 126.95, "airTextile": 93.95 }
+    ],
+    "bases": {
+      "Luxury cross base": 32.95,
+      "Cross base, grey": 19.95,
+	  "Cross base, black": 24.95,
+      "Ground pin": 15.95,
+      "Screw base": 14.95,
+      "Plastic screw": 6.95,
+      "Ground plate": 33.95,
+      "Beach flag holder, 30kg, plastic": 32.95,
+      "Wall mount bracket, 45 degrees": 19.95,
+      "Wall mount bracket, 90 degrees": 19.95,
+      "Wall mount bracket, 180 degrees": 19.95
+    }
+  }
+}

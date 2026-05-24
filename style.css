@@ -269,11 +269,26 @@ button:disabled, input:disabled, .upload-card.is-disabled {
 }
 
 #ui-panel {
+    position: relative;
     direction: ltr;
     height: fit-content;
     width: min(340px, calc(100vw - 52px));
     padding: 18px var(--space-4) var(--space-4);
     box-sizing: border-box;
+}
+
+#ui-header-wrapper .total-price-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #df8d43;
+    color: white;
+    padding: 3px 10px;
+    border-top-right-radius: 26px;
+    border-bottom-left-radius:26px;
+    font-weight: 600;
+    font-size: 1rem;
+    z-index: 10;
 }
 
 #ui-panel.is-disabled { opacity: 0.85; pointer-events: none; }
@@ -851,13 +866,143 @@ body.is-in-ar #stop-ar-btn {
     height: 0;
 }
 
+/* Section & Typography */
+.config-section {
+    margin-bottom: 24px;
+}
+.section-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #666;
+    margin-bottom: 8px;
+}
+.selection-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+.selection-price {
+    color: #df8d43; /* Using your brand orange */
+}
+
+/* Carousel Layout */
+.carousel-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    
+}
+.carousel-track {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: 4px 0; /* Room for box-shadows */
+    -ms-overflow-style: none;  /* Hide scrollbar IE/Edge */
+    scrollbar-width: none;  /* Hide scrollbar Firefox */
+}
+.carousel-track::-webkit-scrollbar {
+    display: none; /* Hide scrollbar Chrome/Safari */
+}
+
+/* The Cards */
+.config-card {
+    flex: 0 0 auto;
+    width: clamp(56px, 20vw, 76px);
+    aspect-ratio: 1 / 1;
+    scroll-snap-align: start;
+    background: #fff;
+    border: 2px solid #eaeaea;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.config-card:hover {
+    border-color: #ccc;
+}
+.config-card.is-active {
+    border-color: #df8d43;
+    box-shadow: 0 4px 12px rgba(223, 141, 67, 0.2);
+}
+.card-icon {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+}
+
+/* Floating Arrows */
+.carousel-arrow {
+    position: absolute;
+    z-index: 2;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    color: #333;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.carousel-wrapper:hover .carousel-arrow:not(.is-hidden) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.carousel-arrow.is-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+.left-arrow { left: -16px; }
+.right-arrow { right: -16px; }
+
+.carousel-track.wrap-track {
+    flex-wrap: wrap;
+    overflow: visible;
+}
+
+.carousel-track.wrap-track .config-card {
+    flex: 1;
+    aspect-ratio: auto;
+    padding: 12px 0;
+}
+
+.color-picker-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px solid #eaeaea;
+    background: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    color: var(--text);
+}
+
+.color-picker-btn:hover {
+    border-color: #ccc;
+}
+
 /* ---------------------------------
    Media Queries
 --------------------------------- */
-@media (max-width: 860px) {
+/* @media (max-width: 860px) {
     #ui-container { width: min(342px, calc(100vw - 32px)); }
-    #ui-bg, #ui-panel { width: min(330px, calc(100vw - 44px)); }
-}
+    #ui-bg, #ui-panel { width: min(340px, calc(100vw - 44px)); }
+} */
 
 @media (max-width: 768px) {
     body { overflow: hidden; }
@@ -871,17 +1016,7 @@ body.is-in-ar #stop-ar-btn {
         max-height: 48%;
     }
 
-    #ui-bg {
-        width: auto;
-        border-radius: 24px 24px 0 0;
-        border-left: none;
-        border-right: none;
-        border-bottom: none;
-    }
-
     #ui-shell {
-        direction: ltr;
-        border-radius: 30px;
         background-color: #fdfcf8;
     }
 
@@ -925,4 +1060,12 @@ body.is-in-ar #stop-ar-btn {
         top: max(40px, env(safe-area-inset-top, 40px));
     }
     .toast { max-width: none; min-width: 0; }
+
+    #ui-header-wrapper .total-price-badge {
+        top: 0;
+        right: -5px;
+        padding: 6px 14px;
+        border-top-right-radius: 30px;
+        border-bottom-left-radius: 30px;
+    }
 }
