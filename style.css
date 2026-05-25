@@ -40,10 +40,7 @@ html, body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     color: var(--text);
     -webkit-tap-highlight-color: transparent;
-    background:
-        radial-gradient(circle at top left, rgba(223, 141, 67, 0.22), transparent 28%),
-        radial-gradient(circle at top right, rgba(29, 107, 82, 0.14), transparent 34%),
-        linear-gradient(145deg, #f7f4ee 0%, var(--bg) 50%, #dde6dd 100%);
+    background: #e0e0e0
 }
 
 [hidden] { display: none !important; }
@@ -160,6 +157,7 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     gap: 8px;
     width: 100%;
     padding: 12px 14px;
+    margin-top: 20px;
     margin-bottom: var(--space-4);
     box-sizing: border-box;
     border-radius: var(--radius-md);
@@ -256,7 +254,7 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     background: rgba(252, 251, 247, 0.82);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-radius: 26px 26px 0 0;
+    border-radius: 24px 24px 0 0;
     border-bottom: 1px solid var(--line);
     -webkit-mask-image: -webkit-radial-gradient(white, black);
     mask-image: radial-gradient(white, black);
@@ -273,7 +271,7 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     direction: ltr;
     height: fit-content;
     width: min(340px, calc(100vw - 52px));
-    padding: 18px var(--space-4) var(--space-4);
+    padding: 0px var(--space-4) var(--space-4);
     box-sizing: border-box;
 }
 
@@ -284,8 +282,8 @@ button:disabled, input:disabled, .upload-card.is-disabled {
     background: #df8d43;
     color: white;
     padding: 3px 10px;
-    border-top-right-radius: 26px;
-    border-bottom-left-radius:26px;
+    border-top-right-radius: 24px;
+    border-bottom-left-radius:24px;
     font-weight: 600;
     font-size: 1rem;
     z-index: 10;
@@ -868,17 +866,28 @@ body.is-in-ar #stop-ar-btn {
 
 /* Section & Typography */
 .config-section {
-    margin-bottom: 24px;
+    margin-bottom: 10px;
 }
+
+.config-section + .config-section {
+    padding-top: 10px;
+    border-top: 2px solid #eaeaea;
+}
+
+#section-base.config-section {
+    padding-bottom: 8px;
+    border-bottom: 2px solid #eaeaea;
+}
+
 .section-title {
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: #666;
-    margin-bottom: 8px;
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
-.selection-info {
-    display: flex;
+.selection-info {    display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
@@ -999,10 +1008,20 @@ body.is-in-ar #stop-ar-btn {
 /* ---------------------------------
    Media Queries
 --------------------------------- */
-/* @media (max-width: 860px) {
-    #ui-container { width: min(342px, calc(100vw - 32px)); }
-    #ui-bg, #ui-panel { width: min(340px, calc(100vw - 44px)); }
-} */
+
+@media (min-width: 769px) and (max-width: 1100px) {
+    #ui-container {
+        width: min(300px, calc(100vw - 40px));
+        top: 0;
+        bottom: 0;
+    }
+    #ui-bg, #ui-header-wrapper, #ui-panel {
+        width: min(295px, calc(100vw - 52px));
+    }
+    #canvas-container {
+        left: 250px;
+    }
+}
 
 @media (max-width: 768px) {
     body { overflow: hidden; }
@@ -1031,7 +1050,6 @@ body.is-in-ar #stop-ar-btn {
 
     #ui-panel {
         width: 100%;
-        padding: 14px 16px 26px;
     }
     h2 { font-size: 18px; }
     .panel-copy { margin-top: 5px; font-size: 11px; line-height: 1.35; }
@@ -1060,12 +1078,4 @@ body.is-in-ar #stop-ar-btn {
         top: max(40px, env(safe-area-inset-top, 40px));
     }
     .toast { max-width: none; min-width: 0; }
-
-    #ui-header-wrapper .total-price-badge {
-        top: 0;
-        right: -5px;
-        padding: 6px 14px;
-        border-top-right-radius: 30px;
-        border-bottom-left-radius: 30px;
-    }
 }
