@@ -62,7 +62,6 @@ const sideConfigs = {
         scaleInput: document.getElementById('artwork-scale'),
         xInput: document.getElementById('artwork-x'),
         yInput: document.getElementById('artwork-y'),
-        materialName: 'l_ds_right',
         material: null,
         originalMap: null,
         uploadedTexture: null,
@@ -109,7 +108,7 @@ function updateDynamicPrices() {
     };
 
     const sizeKey = sizeMapping[configState.size] || configState.size.split(' ').pop();
-    
+
     const printingMapping = {
         'Single Sided': 'singleSided',
         'Double Sided': 'doubleSided',
@@ -122,7 +121,7 @@ function updateDynamicPrices() {
         'Cross base-grey': 'Cross base, grey',
         'Cross base-black': 'Cross base, black'
     };
-    
+
     let sizePrice = 0;
     let printingAddon = 0;
     let poleAddon = 0;
@@ -200,15 +199,15 @@ function updateDynamicPrices() {
                 }
             }
         }
-        });
+    });
 
-        const total = sizePrice + printingAddon + poleAddon + basePrice;
-        const totalEl = document.getElementById('total-price-value');
-        if (totalEl) {
+    const total = sizePrice + printingAddon + poleAddon + basePrice;
+    const totalEl = document.getElementById('total-price-value');
+    if (totalEl) {
         const currencySymbol = pricingData.currency || '';
         totalEl.textContent = `${currencySymbol} ${total.toFixed(2)}`.trim();
-        }
-        }
+    }
+}
 
 function getVisibleMaxDimension() {
     if (!modelRoot) return 1;
@@ -218,17 +217,17 @@ function getVisibleMaxDimension() {
         if (child.isMesh) {
             let isVisible = true;
             let current = child;
-            while(current) {
-                if(!current.visible) {
+            while (current) {
+                if (!current.visible) {
                     isVisible = false;
                     break;
                 }
                 if (current === modelRoot) break;
                 current = current.parent;
             }
-            if(isVisible && child.geometry) {
-                if(!child.geometry.boundingBox) child.geometry.computeBoundingBox();
-                if(child.geometry.boundingBox) {
+            if (isVisible && child.geometry) {
+                if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
+                if (child.geometry.boundingBox) {
                     const childBox = child.geometry.boundingBox.clone();
                     childBox.applyMatrix4(child.matrixWorld);
                     box.expandByPoint(childBox.min);
@@ -245,24 +244,41 @@ function getVisibleMaxDimension() {
     return 1;
 }
 
-export async function applyConfigurationToScene(animateTransition = false) {
+export async function applyConfigurationToScene(animateTransition = false, transitionDuration = 800) {
     const currentCounter = ++applyConfigCounter;
+    currentCameraSequenceId++; // Cancel any active async camera sequences immediately
+
+    // Stop any running camera transitions immediately
+    if (activeCameraTween) {
+        activeCameraTween.stop();
+        activeCameraTween = null;
+        controls.enabled = true;
+    }
+
+    // Stop any running size-swap scale tweens immediately and restore clean neutral states
+    if (modelRoot) {
+        if (modelRoot.userData.scaleTween) {
+            modelRoot.userData.scaleTween.stop();
+            modelRoot.userData.scaleTween = null;
+            controls.enabled = true;
+        }
+        // Cancel any in-progress pole fade so opacity doesn't get stuck mid-animation
+        if (modelRoot.userData.poleFadeTween) {
+            modelRoot.userData.poleFadeTween.stop();
+            modelRoot.userData.poleFadeTween = null;
+        }
+        modelRoot.scale.set(1, 1, 1);
+        modelRoot.rotation.y = 0;
+        modelRoot.updateMatrixWorld(true);
+    }
 
     // Update dynamic prices based on current configState
     updateDynamicPrices();
 
-    // Grey out direction if Double Sided
-    const directionCards = document.querySelectorAll('#section-direction .config-card');
-    if (configState.printing === 'Double Sided') {
-        directionCards.forEach(card => {
-            card.style.opacity = '0.4';
-            card.style.pointerEvents = 'none';
-        });
-    } else {
-        directionCards.forEach(card => {
-            card.style.opacity = '1';
-            card.style.pointerEvents = 'auto';
-        });
+    // Expand/collapse direction section based on Printing option
+    const directionSection = document.getElementById('section-direction');
+    if (directionSection) {
+        directionSection.classList.toggle('is-visible', configState.printing !== 'Double Sided');
     }
 
     if (!modelRoot) return;
@@ -286,13 +302,13 @@ export async function applyConfigurationToScene(animateTransition = false) {
 
     const sizeCode = configState.size.split(' ').pop(); // 'l', 'xs', etc.
     const sizePrefix = sizeCode.toLowerCase();
-    
+
     // Load VAT data if needed
     let currentVatData = vatCache[sizeCode];
     if (!currentVatData) {
         currentVatData = await loadVATData(sizeCode);
     }
-    
+
     if (currentCounter !== applyConfigCounter) return; // Stale call
 
     // Pre-upload textures to the GPU to prevent micro-stutter at the exact moment of the swap
@@ -300,13 +316,13 @@ export async function applyConfigurationToScene(animateTransition = false) {
         renderer.initTexture(currentVatData.positions);
         renderer.initTexture(currentVatData.normals);
     }
-    
+
     const performSwap = () => {
         if (currentVatData) {
             // Update global VAT textures
             vatTexture = currentVatData.positions;
             normTexture = currentVatData.normals;
-            
+
             // Update uniforms for all VAT materials
             vatMaterials.forEach((mat) => {
                 if (mat.userData.shader) {
@@ -324,10 +340,11 @@ export async function applyConfigurationToScene(animateTransition = false) {
         }
 
         // First hide everything that belongs to the configurator
+        // NOTE: pole meshes are excluded here — their visibility is managed by fadePole() for smooth fading
         modelRoot.traverse((child) => {
             if (!child.isMesh && child.type !== 'Group' && child.type !== 'Object3D') return;
             const lowerName = (child.name || '').toLowerCase();
-            if (lowerName.includes('vat') || lowerName.includes('pocket') || lowerName.includes('pole') || lowerName.includes('base') || lowerName.includes('cross')) {
+            if (lowerName.includes('vat') || lowerName.includes('pocket') || lowerName.includes('base') || lowerName.includes('cross')) {
                 child.visible = false;
             }
         });
@@ -335,13 +352,11 @@ export async function applyConfigurationToScene(animateTransition = false) {
         // Then selectively show and configure based on state
         modelRoot.traverse((child) => {
             const lowerName = (child.name || '').toLowerCase();
-            
+
             if (lowerName.includes(`${sizePrefix}_vat`) || lowerName.includes(`${sizePrefix}_pocket`)) {
                 child.traverse(c => c.visible = true);
             }
-            if (configState.pole === 'With Pole' && (lowerName === 'pole' || lowerName.includes('pole'))) {
-                child.traverse(c => c.visible = true);
-            }
+            // Pole visibility handled by fadePole() below — skip here
             if (configState.base === 'Luxury cross base' && lowerName.includes('luxury_cross_base')) {
                 child.traverse(c => c.visible = true);
             } else if ((configState.base === 'Cross base-grey' || configState.base === 'Cross base-black') && lowerName.includes('cross_base_grey_black')) {
@@ -358,50 +373,106 @@ export async function applyConfigurationToScene(animateTransition = false) {
                 });
             }
         });
+
+        // Apply Dynamic Materials
+        const meshes = modelRoot.userData.flagMeshes[sizePrefix];
+        const cache = modelRoot.userData.flagMaterialsCache;
+        if (meshes && cache && cache[sizePrefix]) {
+            const { front, back } = meshes;
+            let frontMat, backMat;
+
+            if (configState.printing === 'Double Sided') {
+                frontMat = cache[sizePrefix]['ds_right'];
+                backMat = cache[sizePrefix]['ds_left'];
+            } else if (configState.printing === 'Single Sided') {
+                if (configState.direction === 'Right') {
+                    frontMat = cache[sizePrefix]['right'];
+                    backMat = cache.global['translucent'] || cache.global['air_translucent'];
+                } else { // Left
+                    frontMat = cache.global['translucent'] || cache.global['air_translucent'];
+                    backMat = cache[sizePrefix]['left'];
+                }
+            } else if (configState.printing === 'Air Textile') {
+                if (configState.direction === 'Right') {
+                    frontMat = cache[sizePrefix]['right'];
+                    backMat = cache.global['air_translucent'] || cache.global['translucent'];
+                } else { // Left
+                    frontMat = cache.global['air_translucent'] || cache.global['translucent'];
+                    backMat = cache[sizePrefix]['left'];
+                }
+            }
+
+            const isDoubleSided = configState.printing === 'Double Sided';
+            const isAirTextile = configState.printing === 'Air Textile';
+            const airTexMask = cache.global['air_translucent'] ? cache.global['air_translucent'].map : null;
+
+            const applyProps = (mat, side, isTranslucent) => {
+                if (!mat) return;
+
+                if (isTranslucent) {
+                    mat.side = side;
+                    mat.polygonOffset = true;
+                    mat.polygonOffsetFactor = -1;
+                    mat.polygonOffsetUnits = -1;
+                } else {
+                    // For single-sided prints, the opaque material must be DoubleSide to block the background
+                    // For double-sided prints, they strictly face outwards to prevent Z-fighting
+                    mat.side = isDoubleSided ? side : THREE.DoubleSide;
+
+                    // Add an explicit polygon offset to the back side to prevent grazing-angle Z-fighting 
+                    // between the front and back clones of the volumetric mesh
+                    if (isDoubleSided && side === THREE.BackSide) {
+                        mat.polygonOffset = true;
+                        mat.polygonOffsetFactor = 1;
+                        mat.polygonOffsetUnits = 1;
+                    } else {
+                        mat.polygonOffset = false;
+                        mat.polygonOffsetFactor = 0;
+                        mat.polygonOffsetUnits = 0;
+                    }
+                }
+
+                // Inject Air Textile holes logic
+                if (isAirTextile && airTexMask) {
+                    mat.alphaMap = airTexMask;
+                    mat.transparent = true;
+                    mat.alphaTest = 0.5;
+                } else {
+                    mat.alphaMap = null;
+                    if (!isTranslucent) {
+                        mat.transparent = false;
+                    }
+                    mat.alphaTest = 0;
+                }
+
+                mat.needsUpdate = true;
+            };
+
+            applyProps(frontMat, THREE.FrontSide, frontMat && frontMat.name.includes('translucent'));
+            applyProps(backMat, THREE.BackSide, backMat && backMat.name.includes('translucent'));
+
+            if (frontMat) front.material = frontMat;
+            if (backMat) back.material = backMat;
+        }
     };
 
     if (animateTransition && !state.isInAR) {
-        // 1. Stop active tweens to prevent conflicts
-        if (modelRoot.userData.scaleTween) {
-            modelRoot.userData.scaleTween.stop();
-        }
-
-        // Clean up any orphaned flash overlays from rapidly clicked interruptions
-        const existingFlash = document.getElementById('first-swap-flash');
-        if (existingFlash) existingFlash.remove();
-
-        // 1.5 Setup the midpoint fade ONLY for the very first swap
-        let fadeOverlay = null;
-        if (!window._firstConfigSwapDone) {
-            window._firstConfigSwapDone = true; 
-            
-            fadeOverlay = document.createElement('div');
-            fadeOverlay.id = 'first-swap-flash';
-            fadeOverlay.style.position = 'absolute';
-            fadeOverlay.style.inset = '0';
-            fadeOverlay.style.backgroundColor = 'rgba(224, 224, 224, 1)'; // Matched exactly to your canvas background!
-            fadeOverlay.style.opacity = '0'; 
-            fadeOverlay.style.pointerEvents = 'none'; 
-            fadeOverlay.style.zIndex = '10';
-            
-            if (window.getComputedStyle(dom.canvasContainer).position === 'static') {
-                dom.canvasContainer.style.position = 'relative';
-            }
-            dom.canvasContainer.appendChild(fadeOverlay);
-        }
-
         const currentVisualScale = modelRoot.scale.clone();
         const startRotationY = modelRoot.rotation.y || 0;
         const targetRotationY = startRotationY + (Math.PI * 2); 
+        
+        // --- SCENE ALIGNMENT: Blend turntable rotation back to neutral 0 ---
+        const startSceneRotationY = getNormalizedRotationAngle(sceneRoot.rotation.y);
+        const endSceneRotationY = 0;
         
         // 2. Measure intrinsic dimension of the currently visible (OLD) model
         modelRoot.scale.set(1, 1, 1);
         modelRoot.updateMatrixWorld(true);
         const intrinsicOldDim = getVisibleMaxDimension();
 
-        // --- CAMERA BLEND: Capture start position ---
-        const startCameraPos = camera.position.clone();
-        const startControlsTarget = controls.target.clone();
+        // --- CAMERA BLEND: Capture start target and spherical coordinates ---
+        const startTarget = controls.target.clone();
+        const startSpherical = new THREE.Spherical().setFromVector3(camera.position.clone().sub(startTarget));
 
         // 3. Temporarily apply new visibilities to measure the NEW model's target size
         const visibilityMap = new Map();
@@ -410,13 +481,13 @@ export async function applyConfigurationToScene(animateTransition = false) {
         modelRoot.traverse((child) => {
             if (!child.isMesh && child.type !== 'Group' && child.type !== 'Object3D') return;
             const lowerName = (child.name || '').toLowerCase();
-            if (lowerName.includes('vat') || lowerName.includes('pocket') || lowerName.includes('pole') || lowerName.includes('base') || lowerName.includes('cross')) child.visible = false;
+            if (lowerName.includes('vat') || lowerName.includes('pocket') || lowerName.includes('base') || lowerName.includes('cross')) child.visible = false;
         });
 
         modelRoot.traverse((child) => {
             const lowerName = (child.name || '').toLowerCase();
             if (lowerName.includes(`${sizePrefix}_vat`) || lowerName.includes(`${sizePrefix}_pocket`)) child.traverse(c => c.visible = true);
-            if (configState.pole === 'With Pole' && (lowerName === 'pole' || lowerName.includes('pole'))) child.traverse(c => c.visible = true);
+            // Pole excluded from bounding box pass — it doesn’t affect flag bounds
             if (configState.base === 'Luxury cross base' && lowerName.includes('luxury_cross_base')) child.traverse(c => c.visible = true);
             else if ((configState.base === 'Cross base-grey' || configState.base === 'Cross base-black') && lowerName.includes('cross_base_grey_black')) child.traverse(c => c.visible = true);
         });
@@ -431,6 +502,10 @@ export async function applyConfigurationToScene(animateTransition = false) {
         const activeView = dom.cameraButtons.find(b => b.classList.contains('is-active'))?.dataset.view || 'home';
         const endCameraPos = cameraTargets[activeView] ? cameraTargets[activeView].clone() : cameraTargets.home.clone();
         const endControlsTarget = targetCenter.clone();
+        const endSpherical = new THREE.Spherical().setFromVector3(endCameraPos.clone().sub(endControlsTarget));
+
+        while (endSpherical.theta - startSpherical.theta > Math.PI) endSpherical.theta -= Math.PI * 2;
+        while (endSpherical.theta - startSpherical.theta < -Math.PI) endSpherical.theta += Math.PI * 2;
 
         // 4. Restore OLD visibilities and the visual scale for the transition
         modelRoot.traverse(c => {
@@ -441,37 +516,29 @@ export async function applyConfigurationToScene(animateTransition = false) {
 
         const dimRatio = (intrinsicOldDim > 0 && intrinsicNewDim > 0) ? (intrinsicNewDim / intrinsicOldDim) : 1;
 
-        // 5. Fire the independent hardware-accelerated CSS Dip
-        if (fadeOverlay) {
-            fadeOverlay.animate([
-                { opacity: 0, offset: 0 },      
-                { opacity: 0, offset: 0.25 },
-                { opacity: 1, offset: 0.4 },    
-                { opacity: 1, offset: 0.6 },   
-                { opacity: 1, offset: 0.75 },
-                { opacity: 0, offset: 1 }       
-            ], {
-                duration: 1000,
-                easing: 'ease-in-out',
-                fill: 'forwards'
-            });
-        }
-
         // 6. The Velocity Handoff + 360 Spin Mask + Camera Blend Transition
         let hasSwapped = false;
         const animState = { progress: 0 };
 
+        controls.enabled = false; // Disable controls during the size-swap showcase transition
+
         modelRoot.userData.scaleTween = new TWEEN.Tween(animState)
-            .to({ progress: 1 }, 800)
+            .to({ progress: 1 }, transitionDuration)
             .easing(TWEEN.Easing.Cubic.InOut) 
             .onUpdate(({ progress }) => {
                 const currentScaleAmt = THREE.MathUtils.lerp(1.0, dimRatio, progress);
                 modelRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, targetRotationY, progress);
+                
+                // Smoothly restore base turntable rotation to exactly 0 to match presets
+                sceneRoot.rotation.y = THREE.MathUtils.lerp(startSceneRotationY, endSceneRotationY, progress);
 
-                // Seamlessly blend the camera distance to perfectly match the upcoming flag size
-                camera.position.lerpVectors(startCameraPos, endCameraPos, progress);
-                controls.target.lerpVectors(startControlsTarget, endControlsTarget, progress);
-                controls.update();
+                // Seamlessly blend the camera using spherical coordinates to orbit *around* the model
+                const radius = THREE.MathUtils.lerp(startSpherical.radius, endSpherical.radius, progress);
+                const phi = THREE.MathUtils.lerp(startSpherical.phi, endSpherical.phi, progress);
+                const theta = THREE.MathUtils.lerp(startSpherical.theta, endSpherical.theta, progress);
+
+                controls.target.lerpVectors(startTarget, endControlsTarget, progress);
+                camera.position.setFromSpherical(new THREE.Spherical(radius, phi, theta)).add(controls.target);
 
                 if (progress < 0.5) {
                     modelRoot.scale.set(currentScaleAmt, currentScaleAmt, currentScaleAmt);
@@ -479,6 +546,8 @@ export async function applyConfigurationToScene(animateTransition = false) {
                     if (!hasSwapped) {
                         performSwap();
                         hasSwapped = true;
+                        // Fade pole in or out from the midpoint of the swap
+                        fadePole(configState.pole === 'With Pole' ? 1 : 0, 350);
                     }
                     const newModelLocalScale = currentScaleAmt / dimRatio;
                     modelRoot.scale.set(newModelLocalScale, newModelLocalScale, newModelLocalScale);
@@ -489,30 +558,26 @@ export async function applyConfigurationToScene(animateTransition = false) {
                 
                 modelRoot.scale.set(1, 1, 1);
                 modelRoot.rotation.y = startRotationY; 
+                sceneRoot.rotation.y = 0; // Lock to perfectly forward-facing
                 modelRoot.updateMatrixWorld(true);
                 modelRoot.userData.scaleTween = null;
-                
-                if (fadeOverlay && fadeOverlay.parentElement) {
-                    fadeOverlay.remove();
-                }
+                controls.enabled = true;
+                controls.update(); // Sync OrbitControls internal state
             })
             .start();
 
     } else {
-        if (modelRoot.userData.scaleTween) {
-            modelRoot.userData.scaleTween.stop();
-            modelRoot.userData.scaleTween = null;
-        }
-        
-        const existingFlash = document.getElementById('first-swap-flash');
-        if (existingFlash) existingFlash.remove();
-        
         performSwap();
+        fadePole(configState.pole === 'With Pole' ? 1 : 0, 350);
         modelRoot.scale.set(1, 1, 1);
         modelRoot.rotation.y = 0;
 
-        // If no animation, explicitly jump the camera immediately
-        if (typeof updateDynamicCameraTargets === 'function') {
+        if (animateTransition) {
+            sceneRoot.rotation.y = 0;
+        }
+
+        // If no animation, explicitly jump the camera immediately only if size changed
+        if (animateTransition && typeof updateDynamicCameraTargets === 'function') {
             updateDynamicCameraTargets(true);
         }
     }
@@ -521,33 +586,36 @@ export async function applyConfigurationToScene(animateTransition = false) {
 
 function updateDynamicCameraTargets(moveCamera = true) {
     if (!modelRoot) return;
-    
+
     // 1. Save current transformations to ensure we calculate neutral, unrotated bounds
     const currentScale = modelRoot.scale.clone();
     const currentRotation = modelRoot.rotation.clone();
-    
+    const currentSceneRotation = sceneRoot.rotation.clone();
+
     // 2. Temporarily lock to neutral 0 degrees to prevent bounding box bloat during spins!
     modelRoot.scale.set(1, 1, 1);
-    modelRoot.rotation.set(0, 0, 0); 
+    modelRoot.rotation.set(0, 0, 0);
+    sceneRoot.rotation.set(0, 0, 0);
     modelRoot.updateMatrixWorld(true);
-    
+    sceneRoot.updateMatrixWorld(true);
+
     const box = new THREE.Box3();
     let hasVisibleMesh = false;
-    
+
     modelRoot.traverse((child) => {
         if (child.isMesh) {
             let isVisible = true;
             let current = child;
-            while(current) {
-                if(!current.visible) {
+            while (current) {
+                if (!current.visible) {
                     isVisible = false;
                     break;
                 }
                 current = current.parent;
             }
-            if(isVisible && child.geometry) {
+            if (isVisible && child.geometry) {
                 child.geometry.computeBoundingBox();
-                if(child.geometry.boundingBox) {
+                if (child.geometry.boundingBox) {
                     const childBox = child.geometry.boundingBox.clone();
                     childBox.applyMatrix4(child.matrixWorld);
                     box.expandByPoint(childBox.min);
@@ -561,18 +629,20 @@ function updateDynamicCameraTargets(moveCamera = true) {
     // 3. Restore transformations instantly
     modelRoot.scale.copy(currentScale);
     modelRoot.rotation.copy(currentRotation);
+    sceneRoot.rotation.copy(currentSceneRotation);
     modelRoot.updateMatrixWorld(true);
+    sceneRoot.updateMatrixWorld(true);
 
     if (hasVisibleMesh && !box.isEmpty()) {
         box.getCenter(targetCenter);
         const size = box.getSize(new THREE.Vector3());
-        
+
         const maxDim = Math.max(size.x, size.y, size.z);
         const fov = camera.fov * (Math.PI / 180);
         let fitDistance = maxDim / (2 * Math.tan(fov / 2));
-        
-        cameraDistance = fitDistance * 1.2; 
-        
+
+        cameraDistance = fitDistance * 1.2;
+
         cameraTargets.home.set(targetCenter.x + cameraDistance * 0.3, targetCenter.y + size.y * 0.2, targetCenter.z + cameraDistance);
         cameraTargets.front.set(targetCenter.x, targetCenter.y, targetCenter.z + cameraDistance);
         cameraTargets.back.set(targetCenter.x, targetCenter.y, targetCenter.z - cameraDistance);
@@ -583,7 +653,7 @@ function updateDynamicCameraTargets(moveCamera = true) {
         if (moveCamera) {
             controls.target.copy(targetCenter);
             controls.update();
-            
+
             const activeView = dom.cameraButtons.find(b => b.classList.contains('is-active'))?.dataset.view;
             if (activeView) {
                 focusCameraView(activeView);
@@ -592,9 +662,46 @@ function updateDynamicCameraTargets(moveCamera = true) {
     }
 }
 
+let currentCameraSequenceId = 0;
+let activeCameraTween = null;
+
+async function runPrintingCameraSequence() {
+    currentCameraSequenceId++;
+    const sequenceId = currentCameraSequenceId;
+
+    const primaryView = (configState.printing === 'Double Sided') ? 'front' : ((configState.direction === 'Left') ? 'back' : 'front');
+    const secondaryView = (configState.printing === 'Double Sided') ? 'back' : ((configState.direction === 'Left') ? 'front' : 'back');
+
+    // Step 1: Primary view
+    focusCameraView(primaryView, 800, true);
+    await new Promise(resolve => setTimeout(resolve, 850));
+    if (sequenceId !== currentCameraSequenceId) return;
+
+    // Step 2: Secondary View
+    focusCameraView(secondaryView, 800, true);
+    await new Promise(resolve => setTimeout(resolve, 850));
+    if (sequenceId !== currentCameraSequenceId) return;
+
+    // Step 3: Wait 1 second at secondary view
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (sequenceId !== currentCameraSequenceId) return;
+
+    // Step 4: Primary view again
+    focusCameraView(primaryView, 800, true);
+}
+
+async function runDirectionCameraSequence(direction) {
+    currentCameraSequenceId++;
+    if (direction === 'Right') {
+        focusCameraView('front', 800, false);
+    } else if (direction === 'Left') {
+        focusCameraView('back', 800, false);
+    }
+}
+
 function initConfiguratorUI() {
     const sections = document.querySelectorAll('.config-section');
-    
+
     sections.forEach(section => {
         const track = section.querySelector('.carousel-track');
         const cards = section.querySelectorAll('.config-card');
@@ -616,7 +723,7 @@ function initConfiguratorUI() {
 
             track.addEventListener('scroll', updateArrows);
             window.addEventListener('resize', updateArrows);
-            
+
             // Initial check
             // Use requestAnimationFrame or setTimeout to let layout calculate
             setTimeout(updateArrows, 100);
@@ -626,7 +733,7 @@ function initConfiguratorUI() {
         cards.forEach(card => {
             const category = card.dataset.category;
             const value = card.dataset.value;
-            
+
             if (category && configState[category] === value) {
                 cards.forEach(c => c.classList.remove('is-active'));
                 card.classList.add('is-active');
@@ -637,11 +744,11 @@ function initConfiguratorUI() {
             card.addEventListener('click', () => {
                 cards.forEach(c => c.classList.remove('is-active'));
                 card.classList.add('is-active');
-                
+
                 const category = card.dataset.category;
                 const value = card.dataset.value;
                 const price = card.dataset.price;
-                
+
                 let sizeChanged = false;
                 if (category && category !== 'pole-cover') {
                     if (category === 'size' && configState.size !== value) {
@@ -653,11 +760,32 @@ function initConfiguratorUI() {
                 if (nameDisplay) nameDisplay.textContent = value;
                 if (priceDisplay && price) priceDisplay.textContent = price;
 
-                if (sizeChanged) {
-                    setActiveCameraView('home');
+                if (category === 'size' || category === 'printing') {
+                    stopTurntableRotation();
                 }
-                
-                applyConfigurationToScene(sizeChanged);
+
+                let swapDuration = 800;
+                if (sizeChanged) {
+                    if (typeof isZoomedIn !== 'undefined') isZoomedIn = false;
+                    preZoomState = null;
+
+                    const primaryView = (configState.printing === 'Double Sided') ? 'front' : ((configState.direction === 'Left') ? 'back' : 'front');
+                    const primaryBtn = dom.cameraButtons.find(b => b.dataset.view === primaryView);
+                    if (primaryBtn && !primaryBtn.classList.contains('is-active')) {
+                        setActiveCameraView(primaryView);
+                        swapDuration = 570; // 800 / 1.4 = 571ms (40% faster speed)
+                    } else {
+                        setActiveCameraView(primaryView);
+                    }
+                }
+
+                applyConfigurationToScene(sizeChanged, swapDuration);
+
+                if (category === 'printing') {
+                    runPrintingCameraSequence();
+                } else if (category === 'direction') {
+                    runDirectionCameraSequence(value);
+                }
             });
         });
     });
@@ -677,8 +805,8 @@ const scene = new THREE.Scene();
 const defaultBackground = new THREE.Color('#e0e0e0');
 scene.background = defaultBackground;
 
-const camera = new THREE.PerspectiveCamera(45, getViewportAspect(), 0.01, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: true });
+const camera = new THREE.PerspectiveCamera(45, getViewportAspect(), 0.1, 100);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: false });
 renderer.setSize(dom.canvasContainer.clientWidth, dom.canvasContainer.clientHeight);
 renderer.setPixelRatio(getClampedPixelRatio());
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -695,20 +823,22 @@ scene.add(sceneRoot);
 const lightingGroup = new THREE.Group();
 scene.add(lightingGroup);
 
-const overheadLight = new THREE.DirectionalLight(0xffffff, 0.6); 
-overheadLight.position.set(3.5, 6, 5); 
+const overheadLight = new THREE.DirectionalLight(0xffffff, 0.6);
+overheadLight.position.set(3.5, 6, 5);
 overheadLight.castShadow = true;
-overheadLight.shadow.mapSize.width = 2048;
-overheadLight.shadow.mapSize.height = 2048;
+const isMobileDevice = window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+const shadowResolution = isMobileDevice ? 1024 : 2048;
+overheadLight.shadow.mapSize.width = shadowResolution;
+overheadLight.shadow.mapSize.height = shadowResolution;
 
-const d = 3.5; 
+const d = 3.5;
 overheadLight.shadow.camera.left = -d;
 overheadLight.shadow.camera.right = d;
 overheadLight.shadow.camera.top = d;
 overheadLight.shadow.camera.bottom = -d;
 overheadLight.shadow.camera.near = 0.5;
 overheadLight.shadow.camera.far = 25;
-overheadLight.shadow.bias = -0.0001; 
+overheadLight.shadow.bias = -0.0001;
 overheadLight.shadow.normalBias = 0.05;
 overheadLight.shadow.radius = 10;
 overheadLight.shadow.blurSamples = 20;
@@ -716,10 +846,10 @@ overheadLight.shadow.blurSamples = 20;
 lightingGroup.add(overheadLight);
 
 const shadowGeometry = new THREE.PlaneGeometry(200, 200);
-const shadowMaterial = new THREE.ShadowMaterial({ opacity: 0.4 }); 
+const shadowMaterial = new THREE.ShadowMaterial({ opacity: 0.4 });
 const shadowCatcher = new THREE.Mesh(shadowGeometry, shadowMaterial);
 shadowCatcher.rotation.x = -Math.PI / 2;
-shadowCatcher.position.y = 0; 
+shadowCatcher.position.y = 0;
 shadowCatcher.receiveShadow = true;
 
 sceneRoot.add(shadowCatcher);
@@ -753,6 +883,8 @@ controls.mouseButtons = {
     MIDDLE: THREE.MOUSE.PAN,
     RIGHT: THREE.MOUSE.PAN
 };
+controls.minPolarAngle = 0.05; // Avoid top vertical singularity jitter
+controls.maxPolarAngle = Math.PI - 0.05; // Avoid bottom vertical singularity jitter
 controls.target.copy(targetCenter);
 camera.position.copy(cameraHome);
 controls.update();
@@ -763,6 +895,7 @@ function bindOrbitPresetClearOnUserAdjust() {
     const onUserAdjust = () => {
         if (state.isInAR || !state.ready || state.isExporting) return;
         setActiveCameraView(null);
+        currentCameraSequenceId++;
     };
     controls.addEventListener('start', onUserAdjust);
     canvas.addEventListener('wheel', onUserAdjust, { passive: true });
@@ -782,10 +915,10 @@ function handleDoubleTapZoom(event) {
 
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTapTime;
-    
+
     if (tapLength < 300 && tapLength > 0) {
         event.preventDefault();
-        
+
         if (isZoomedIn) {
             zoomOutSmoothly();
         } else {
@@ -793,18 +926,18 @@ function handleDoubleTapZoom(event) {
             const rect = canvas.getBoundingClientRect();
             let clientX = event.clientX;
             let clientY = event.clientY;
-            
+
             raycastPointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
             raycastPointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
             raycaster.setFromCamera(raycastPointer, camera);
             const intersects = raycaster.intersectObject(modelRoot, true);
-            
+
             if (intersects.length > 0) {
                 zoomInSmoothly(intersects[0].point);
             }
         }
-        lastTapTime = 0; 
+        lastTapTime = 0;
     } else {
         lastTapTime = currentTime;
     }
@@ -812,32 +945,43 @@ function handleDoubleTapZoom(event) {
 
 function zoomInSmoothly(hitPoint) {
     isZoomedIn = true;
-    
+
+    if (activeCameraTween) {
+        activeCameraTween.stop();
+        activeCameraTween = null;
+        controls.enabled = true;
+    }
+
+    controls.enabled = false; // Disable controls to prevent damping drift/user dragging during transition
+
     preZoomState = {
         cameraPosition: camera.position.clone(),
         controlsTarget: controls.target.clone(),
         activeView: dom.cameraButtons.find(b => b.classList.contains('is-active'))?.dataset.view
     };
-    
+
     const endTarget = hitPoint.clone();
     const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-    const zoomDistance = 1.5; 
+    const zoomDistance = 1.5;
     const endCameraPosition = hitPoint.clone().add(direction.multiplyScalar(zoomDistance));
 
     const startTarget = controls.target.clone();
     const startCameraPosition = camera.position.clone();
 
-    TWEEN.removeAll();
-    new TWEEN.Tween({ progress: 0 })
+    activeCameraTween = new TWEEN.Tween({ progress: 0 })
         .to({ progress: 1 }, 600)
         .easing(TWEEN.Easing.Cubic.Out)
         .onUpdate(({ progress }) => {
             controls.target.lerpVectors(startTarget, endTarget, progress);
             camera.position.lerpVectors(startCameraPosition, endCameraPosition, progress);
-            controls.update();
+        })
+        .onComplete(() => {
+            activeCameraTween = null;
+            controls.enabled = true; // Re-enable controls
+            controls.update(); // Synchronize OrbitControls internal state
         })
         .start();
-        
+
     setActiveCameraView(null);
     if (state.turntableEnabled) {
         stopTurntableRotation();
@@ -847,34 +991,32 @@ function zoomInSmoothly(hitPoint) {
 function zoomOutSmoothly() {
     isZoomedIn = false;
     if (!preZoomState) return;
-    
+
+    if (activeCameraTween) {
+        activeCameraTween.stop();
+        activeCameraTween = null;
+        controls.enabled = true;
+    }
+
+    controls.enabled = false; // Disable controls to prevent damping drift/user dragging during transition
+
     const endTarget = preZoomState.controlsTarget;
     const endCameraPosition = preZoomState.cameraPosition;
     const startTarget = controls.target.clone();
     const startCameraPosition = camera.position.clone();
 
-    const startSpherical = new THREE.Spherical().setFromVector3(startCameraPosition.clone().sub(startTarget));
-    const endSpherical = new THREE.Spherical().setFromVector3(endCameraPosition.clone().sub(endTarget));
-    
-    while (endSpherical.theta - startSpherical.theta > Math.PI) endSpherical.theta -= Math.PI * 2;
-    while (endSpherical.theta - startSpherical.theta < -Math.PI) endSpherical.theta += Math.PI * 2;
-
-    TWEEN.removeAll();
-    new TWEEN.Tween({ progress: 0 })
+    activeCameraTween = new TWEEN.Tween({ progress: 0 })
         .to({ progress: 1 }, 600)
         .easing(TWEEN.Easing.Cubic.Out)
         .onUpdate(({ progress }) => {
             controls.target.lerpVectors(startTarget, endTarget, progress);
-            
-            const radius = THREE.MathUtils.lerp(startSpherical.radius, endSpherical.radius, progress);
-            const phi = THREE.MathUtils.lerp(startSpherical.phi, endSpherical.phi, progress);
-            const theta = THREE.MathUtils.lerp(startSpherical.theta, endSpherical.theta, progress);
-            
-            camera.position.setFromSpherical(new THREE.Spherical(radius, phi, theta)).add(controls.target);
-            controls.update();
+            camera.position.lerpVectors(startCameraPosition, endCameraPosition, progress);
         })
         .onComplete(() => {
-             setActiveCameraView(preZoomState.activeView);
+            setActiveCameraView(preZoomState.activeView);
+            activeCameraTween = null;
+            controls.enabled = true; // Re-enable controls
+            controls.update(); // Synchronize OrbitControls internal state
         })
         .start();
 }
@@ -914,7 +1056,7 @@ const vatLoadPromises = {};
 export async function loadVATData(sizeCode) {
     if (vatCache[sizeCode]) return vatCache[sizeCode];
     if (vatLoadPromises[sizeCode]) return vatLoadPromises[sizeCode];
-    
+
     vatLoadPromises[sizeCode] = (async () => {
         try {
             const [pTex, nTex, infoRes] = await Promise.all([
@@ -922,21 +1064,21 @@ export async function loadVATData(sizeCode) {
                 new Promise((resolve, reject) => exrLoader.load(`3d/vat/${sizeCode.toLowerCase()}/normals.exr`, resolve, undefined, reject)),
                 fetch(`3d/vat/${sizeCode.toLowerCase()}/info.json`)
             ]);
-            
+
             const info = await infoRes.json();
-            
+
             pTex.minFilter = THREE.NearestFilter;
             pTex.magFilter = THREE.NearestFilter;
-            pTex.wrapS = THREE.RepeatWrapping; 
+            pTex.wrapS = THREE.RepeatWrapping;
             pTex.wrapT = THREE.RepeatWrapping;
             pTex.generateMipmaps = false;
-            
+
             nTex.minFilter = THREE.NearestFilter;
             nTex.magFilter = THREE.NearestFilter;
-            nTex.wrapS = THREE.RepeatWrapping; 
+            nTex.wrapS = THREE.RepeatWrapping;
             nTex.wrapT = THREE.RepeatWrapping;
             nTex.generateMipmaps = false;
-            
+
             vatCache[sizeCode] = { positions: pTex, normals: nTex, info };
             return vatCache[sizeCode];
         } catch (e) {
@@ -949,7 +1091,7 @@ export async function loadVATData(sizeCode) {
             delete vatLoadPromises[sizeCode];
         }
     })();
-    
+
     return vatLoadPromises[sizeCode];
 }
 
@@ -981,7 +1123,7 @@ const state = {
     ready: false,
     isExporting: false,
     isInAR: false,
-    turntableEnabled: false,
+    turntableEnabled: true,
     arUnsupported: false,
     arSupportResolved: false,
     arSupported: false,
@@ -1073,11 +1215,53 @@ function getNormalizedRotationAngle(angle) {
     return THREE.MathUtils.euclideanModulo(angle + Math.PI, Math.PI * 2) - Math.PI;
 }
 
+function fadePole(targetOpacity, duration = 350) {
+    if (!modelRoot || !modelRoot.userData.poleMeshes) return;
+    const poleMeshes = modelRoot.userData.poleMeshes;
+    if (!poleMeshes.length) return;
+
+    // Stop any running pole fade tween
+    if (modelRoot.userData.poleFadeTween) {
+        modelRoot.userData.poleFadeTween.stop();
+        modelRoot.userData.poleFadeTween = null;
+    }
+
+    // Get current opacity from first pole material (they all share the same opacity)
+    let currentOpacity = 1.0;
+    const firstMat = Array.isArray(poleMeshes[0].material) ? poleMeshes[0].material[0] : poleMeshes[0].material;
+    if (firstMat) currentOpacity = firstMat.opacity;
+
+    // Make pole visible before fading in
+    if (targetOpacity > 0) {
+        poleMeshes.forEach(mesh => { mesh.visible = true; });
+    }
+
+    modelRoot.userData.poleFadeTween = new TWEEN.Tween({ opacity: currentOpacity })
+        .to({ opacity: targetOpacity }, duration)
+        .easing(TWEEN.Easing.Cubic.InOut)
+        .onUpdate(({ opacity }) => {
+            poleMeshes.forEach(mesh => {
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                mats.forEach(m => {
+                    if (m) m.opacity = opacity;
+                });
+            });
+        })
+        .onComplete(() => {
+            // Hide completely after fade out to stop rendering invisible geometry
+            if (targetOpacity === 0) {
+                poleMeshes.forEach(mesh => { mesh.visible = false; });
+            }
+            modelRoot.userData.poleFadeTween = null;
+        })
+        .start();
+}
+
 function truncateFileName(fileName, containerElement) {
     const extIndex = fileName.lastIndexOf('.');
     const ext = extIndex !== -1 ? fileName.substring(extIndex) : '';
     const name = extIndex !== -1 ? fileName.substring(0, extIndex) : fileName;
-    
+
     const endChars = 4;
     if (name.length <= endChars + 5) return fileName;
     if (!containerElement) return fileName;
@@ -1086,21 +1270,21 @@ function truncateFileName(fileName, containerElement) {
     const context = canvas.getContext('2d');
     const computedStyle = window.getComputedStyle(containerElement);
     context.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-    
+
     const availableWidth = Math.max(0, containerElement.clientWidth - 24);
-    
+
     if (context.measureText(fileName).width <= availableWidth) {
         return fileName;
     }
-    
+
     const endText = `.......${name.substring(name.length - endChars)}${ext}`;
     const endWidth = context.measureText(endText).width;
-    
+
     let startText = name.substring(0, name.length - endChars);
     while (startText.length > 0 && (context.measureText(startText).width + endWidth > availableWidth)) {
         startText = startText.substring(0, startText.length - 1);
     }
-    
+
     return `${startText}${endText}`;
 }
 
@@ -1168,7 +1352,7 @@ function dismissToast(toast) {
 
     toast.classList.remove('is-visible');
     toast.classList.add('is-hiding');
-    
+
     window.setTimeout(() => {
         toast.remove();
         if (toast.resolvePromise) toast.resolvePromise();
@@ -1420,10 +1604,10 @@ function syncSideUi(side) {
     config.input.disabled = !canInteract;
     config.resetButton.disabled = !canInteract || !hasUpload;
     config.clearButton.disabled = !canInteract || !hasUpload;
-    
+
     if (config.actionsWrapper) config.actionsWrapper.classList.toggle('is-visible', hasUpload);
     if (config.transformsWrapper) config.transformsWrapper.classList.toggle('is-visible', hasUpload);
-    
+
     config.thumbFrame.hidden = !config.previewUrl;
     config.subtitleElement.hidden = hasUpload;
     config.dropzone.classList.toggle('is-disabled', !canInteract);
@@ -1511,6 +1695,8 @@ function restorePreviewState(previewState = null) {
     const snapshot = previewState ?? defaultPreviewState;
 
     TWEEN.removeAll();
+    activeCameraTween = null;
+    controls.enabled = true;
     sceneRoot.visible = true;
     sceneRoot.position.copy(snapshot.sceneRootPosition);
     sceneRoot.rotation.copy(snapshot.sceneRootRotation);
@@ -1582,7 +1768,7 @@ function loadEnvironment() {
 
 function loadModel() {
     const initialSizeCode = configState.size.split(' ').pop(); // e.g. 'l'
-    
+
     // 1. Load initial VAT Data based on the starting config
     loadVATData(initialSizeCode).then((vatData) => {
         if (vatData) {
@@ -1598,15 +1784,58 @@ function loadModel() {
                 sceneRoot.add(modelRoot);
                 sceneRoot.visible = !state.isInAR;
 
-                let backFaceMaterial = null;
+                const flagMaterialsCache = { global: {} };
                 modelRoot.traverse((child) => {
                     if (child.isMesh && child.material) {
                         const mats = Array.isArray(child.material) ? child.material : [child.material];
                         mats.forEach(m => {
-                            if (m.name === 'l_ds_left') { // Updated to match new material name
-                                backFaceMaterial = m;
+                            if (m.name === 'translucent' || m.name === 'air_translucent') {
+                                flagMaterialsCache.global[m.name] = m;
+                            } else if (m.name.includes('_')) {
+                                const size = m.name.split('_')[0];
+                                const type = m.name.substring(size.length + 1);
+                                if (['ds_right', 'ds_left', 'right', 'left'].includes(type)) {
+                                    if (!flagMaterialsCache[size]) flagMaterialsCache[size] = {};
+                                    flagMaterialsCache[size][type] = m;
+                                }
                             }
                         });
+                    }
+                });
+                modelRoot.userData.flagMaterialsCache = flagMaterialsCache;
+                modelRoot.userData.flagMeshes = {};
+
+                // --- POLE FADE SETUP: collect pole meshes and enable transparency for smooth fading ---
+                const poleMeshes = [];
+                modelRoot.traverse((child) => {
+                    if (!child.isMesh) return;
+                    const lowerName = (child.name || '').toLowerCase();
+                    if (lowerName.includes('pole')) {
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach(m => {
+                            if (m && !m.userData.poleOriginalTransparent) {
+                                m.userData.poleOriginalTransparent = m.transparent;
+                                m.userData.poleOriginalOpacity = m.opacity;
+                                m.transparent = true;
+                                m.opacity = 1.0;
+                            }
+                        });
+                        poleMeshes.push(child);
+                    }
+                });
+                modelRoot.userData.poleMeshes = poleMeshes;
+                modelRoot.userData.poleFadeTween = null;
+
+                sideConfigs.artwork.materials = [];
+                const addArtworkMaterial = (m) => {
+                    if (!m) return;
+                    if (!m.userData.originalMap) m.userData.originalMap = m.map;
+                    if (!sideConfigs.artwork.materials.includes(m)) sideConfigs.artwork.materials.push(m);
+                };
+                // Exclude global translucent materials from receiving uploaded artwork
+                Object.keys(flagMaterialsCache).forEach(key => {
+                    if (key !== 'global') {
+                        Object.values(flagMaterialsCache[key]).forEach(addArtworkMaterial);
                     }
                 });
 
@@ -1615,8 +1844,8 @@ function loadModel() {
                     if (!child.isMesh) return;
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    child.frustumCulled = false; 
-                
+                    child.frustumCulled = !child.name.toLowerCase().includes('vat');
+
                     // --- 0. FIX THREE.JS GLTFLOADER HARD LIMIT (Max 10) ---
                     for (let i = 4; i <= 10; i++) {
                         const oldKey = `texcoord_${i}`;
@@ -1633,26 +1862,30 @@ function loadModel() {
                             maxUvIndex = i;
                         }
                     }
-                    
+
                     const vatUv = maxUvIndex > 0 ? `uv${maxUvIndex}` : 'uv';
-                    
+
                     // Dynamically detect any mesh containing "vat"
                     const isVatMesh = child.name.toLowerCase().includes('vat');
 
                     // Isolate the VAT UV into a dedicated attribute to prevent any clashes
                     if (isVatMesh && child.geometry.attributes[vatUv]) {
                         child.geometry.setAttribute('vatPositionUv', child.geometry.attributes[vatUv]);
-                        
+
                         if (!child.customDepthMaterial && vatTexture) {
                             child.customDepthMaterial = new THREE.MeshDepthMaterial({
                                 depthPacking: THREE.RGBADepthPacking,
                                 alphaTest: 0.5
                             });
                             child.customDepthMaterial.onBeforeCompile = (shader) => {
+                                const currentSizeCode = configState.size.split(' ').pop();
+                                const currentVatData = vatCache[currentSizeCode];
+                                const frameCount = currentVatData ? currentVatData.info.frame_count : 1.0;
+
                                 shader.uniforms.posTexture = { value: vatTexture };
                                 shader.uniforms.uTime = { value: 0 };
-                                shader.uniforms.uTotalFrames = { value: vatData ? vatData.info.frame_count : 1.0 }; 
-                                shader.uniforms.uFps = { value: 30.0 }; 
+                                shader.uniforms.uTotalFrames = { value: frameCount };
+                                shader.uniforms.uFps = { value: 30.0 };
                                 child.customDepthMaterial.userData.shader = shader;
                                 if (!vatMaterials.includes(child.customDepthMaterial)) {
                                     vatMaterials.push(child.customDepthMaterial);
@@ -1686,16 +1919,17 @@ function loadModel() {
                             };
                         }
                     }
-                
+
                     const materials = Array.isArray(child.material) ? child.material : [child.material];
-                    
+
                     materials.forEach((material) => {
-                        let backMaterial = null;
-                
-                        if (material.name === sideConfigs.artwork.materialName) {
-                            sideConfigs.artwork.material = material;
-                            sideConfigs.artwork.originalMap = material.map;
-                            
+                        if (material.name.endsWith('_ds_right')) {
+                            const size = material.name.split('_')[0]; // e.g., 'l' or 'xs'
+
+                            if (!sideConfigs.artwork.material) {
+                                sideConfigs.artwork.material = material;
+                            }
+
                             material.side = THREE.FrontSide;
                             const backMesh = child.clone();
                             backMesh.userData.isBackClone = true;
@@ -1705,109 +1939,142 @@ function loadModel() {
                             if (child.customDistanceMaterial) {
                                 backMesh.customDistanceMaterial = child.customDistanceMaterial;
                             }
-                            
-                            if (backFaceMaterial) {
-                                backMaterial = backFaceMaterial.clone();
-                                backMaterial.side = THREE.BackSide;
+
+                            let backMaterial;
+                            if (flagMaterialsCache[size] && flagMaterialsCache[size]['ds_left']) {
+                                backMaterial = flagMaterialsCache[size]['ds_left'];
                             } else {
                                 backMaterial = material.clone();
-                                backMaterial.side = THREE.BackSide;
-                                backMaterial.name = material.name + '_back'; // Updated to lowercase
-                                backMaterial.map = null;
+                                backMaterial.name = material.name + '_back';
                                 backMaterial.color.setHex(0x000000);
+                                if (!backMaterial.userData.originalMap) backMaterial.userData.originalMap = backMaterial.map;
+                                sideConfigs.artwork.materials.push(backMaterial);
                             }
+                            backMaterial.side = THREE.BackSide;
 
                             backMesh.material = backMaterial;
                             child.parent.add(backMesh);
+
+                            modelRoot.userData.flagMeshes[size] = { front: child, back: backMesh };
                         }
-                        if (material.name === 'pocket') { // Updated to match lowercase material
+
+                        if (material.name === 'pocket') {
                             pocketMaterial = material;
                         }
-                
-                        // Inject VAT into all materials on the VAT mesh
-                        if (isVatMesh && vatTexture && normTexture) {
-                            
-                            const matsToProcess = backMaterial ? [material, backMaterial] : [material];
-                            
-                            matsToProcess.forEach(mat => {
-                                if (!vatMaterials.includes(mat)) {
-                                    vatMaterials.push(mat);
-                                }
-                
-                                mat.onBeforeCompile = (shader) => {
-                                    shader.uniforms.posTexture = { value: vatTexture };
-                                    shader.uniforms.normTexture = { value: normTexture };
-                                    shader.uniforms.uTime = { value: 0 };
-                                    shader.uniforms.uTotalFrames = { value: vatData ? vatData.info.frame_count : 1.0 }; 
-                                    shader.uniforms.uFps = { value: 30.0 }; 
-                
-                                    mat.userData.shader = shader;
-                
+                    });
+
+                    // Inject VAT into all materials 
+                    if (isVatMesh && vatTexture && normTexture) {
+                        const allFlagMats = [];
+                        Object.values(flagMaterialsCache.global).forEach(m => { if (m) allFlagMats.push(m); });
+                        Object.keys(flagMaterialsCache).forEach(key => {
+                            if (key !== 'global') {
+                                Object.values(flagMaterialsCache[key]).forEach(m => { if (m) allFlagMats.push(m); });
+                            }
+                        });
+
+                        allFlagMats.forEach(mat => {
+                            if (!vatMaterials.includes(mat)) {
+                                vatMaterials.push(mat);
+                            }
+
+                            if (mat.userData.shaderInjected) return; // Prevent double injection
+                            mat.userData.shaderInjected = true;
+
+                            mat.onBeforeCompile = (shader) => {
+                                const currentSizeCode = configState.size.split(' ').pop();
+                                const currentVatData = vatCache[currentSizeCode];
+                                const frameCount = currentVatData ? currentVatData.info.frame_count : 1.0;
+
+                                shader.uniforms.posTexture = { value: vatTexture };
+                                shader.uniforms.normTexture = { value: normTexture };
+                                shader.uniforms.uTime = { value: 0 };
+                                shader.uniforms.uTotalFrames = { value: frameCount };
+                                shader.uniforms.uFps = { value: 30.0 };
+
+                                mat.userData.shader = shader;
+
                                 // --- 2. DYNAMIC SHADER DECLARATIONS ---
                                 let declarations = `
-                                    uniform sampler2D posTexture;
-                                    uniform sampler2D normTexture;
-                                    uniform float uTime;
-                                    uniform float uTotalFrames;
-                                    uniform float uFps;
-                                    attribute vec2 vatPositionUv; // Isolated VAT UV
-                                `;
-                
+                                uniform sampler2D posTexture;
+                                uniform sampler2D normTexture;
+                                uniform float uTime;
+                                uniform float uTotalFrames;
+                                uniform float uFps;
+                                attribute vec2 vatPositionUv; // Isolated VAT UV
+                            `;
+
                                 for (let i = 4; i <= 10; i++) {
                                     declarations += `attribute vec2 uv${i};\n`;
                                 }
-                
+
                                 shader.vertexShader = shader.vertexShader.replace(
                                     '#include <common>',
                                     declarations + '\n#include <common>'
                                 );
-                                
+
                                 // NORMAL INJECTION
                                 shader.vertexShader = shader.vertexShader.replace(
                                     '#include <beginnormal_vertex>',
                                     `
-                                    #include <beginnormal_vertex>
-                                    
-                                    // Calculate the frame exactly once
-                                    float frame = mod(uTime * uFps, uTotalFrames) / uTotalFrames;
-                                    vec2 finalUv = vec2(vatPositionUv.x, vatPositionUv.y - frame);
-                                    
-                                    // Sample Normal Texture
-                                    vec4 texNorm = texture2D(normTexture, finalUv);
-                                    
-                                    // If we have actual normal data (not the fallback 0,0,0)
-                                    if (length(texNorm.xyz) > 0.0001) {
-                                        // Unpack normal from (0 to 1) back to (-1 to 1)
-                                        vec3 unpackedNormal = texNorm.xyz * 2.0 - 1.0;
-                                        // Swizzle to match the position orientation
-                                        objectNormal = unpackedNormal.xzy; 
-                                    }
-                                    `
+                                #include <beginnormal_vertex>
+                                
+                                // Calculate the frame exactly once
+                                float frame = mod(uTime * uFps, uTotalFrames) / uTotalFrames;
+                                vec2 finalUv = vec2(vatPositionUv.x, vatPositionUv.y - frame);
+                                
+                                // Sample Normal Texture
+                                vec4 texNorm = texture2D(normTexture, finalUv);
+                                
+                                // If we have actual normal data (not the fallback 0,0,0)
+                                if (length(texNorm.xyz) > 0.0001) {
+                                    // Unpack normal from (0 to 1) back to (-1 to 1)
+                                    vec3 unpackedNormal = texNorm.xyz * 2.0 - 1.0;
+                                    // Swizzle to match the position orientation
+                                    objectNormal = unpackedNormal.xzy; 
+                                }
+                                `
                                 );
-                
+
                                 // POSITION INJECTION
                                 shader.vertexShader = shader.vertexShader.replace(
                                     '#include <begin_vertex>',
                                     `
-                                    #include <begin_vertex>
-                                    
-                                    vec4 texPos = texture2D(posTexture, finalUv);
-                                    
-                                    if (length(texPos.xyz) > 0.0001) {
-                                        transformed = texPos.xzy; 
-                                    }
-                                    `
+                                #include <begin_vertex>
+                                
+                                vec4 texPos = texture2D(posTexture, finalUv);
+                                
+                                if (length(texPos.xyz) > 0.0001) {
+                                    transformed = texPos.xzy; 
+                                }
+                                `
                                 );
-                                };
-                            });
-                        }
-                    });
+                            };
+                        });
+                    }
                 });
                 renderer.shadowMap.needsUpdate = true;
+
+                // --- SHADER PRE-COMPILATION TO PREVENT SIZE-SWAP STUTTER ---
+                const compiledVisibilityStates = new Map();
+                modelRoot.traverse((child) => {
+                    compiledVisibilityStates.set(child.uuid, child.visible);
+                    child.visible = true;
+                });
+                renderer.compile(scene, camera);
+                modelRoot.traverse((child) => {
+                    if (compiledVisibilityStates.has(child.uuid)) {
+                        child.visible = compiledVisibilityStates.get(child.uuid);
+                    }
+                });
+
                 syncPocketColorUi(dom.pocketColor.value);
                 state.modelLoaded = true;
                 if (typeof applyConfigurationToScene === 'function') {
-                    applyConfigurationToScene();
+                    applyConfigurationToScene(false);
+                }
+                if (typeof updateDynamicCameraTargets === 'function') {
+                    updateDynamicCameraTargets(true);
                 }
                 syncReadyState();
             },
@@ -1946,7 +2213,7 @@ async function handleArtworkFile(side, file) {
         if (action) action.paused = true;
         syncPlayPauseButton();
     }
-    
+
     if (state.turntableEnabled) stopTurntableRotation();
 
     config.dropzone.classList.add('is-loading');
@@ -1968,13 +2235,13 @@ async function handleArtworkFile(side, file) {
             return;
         }
         showToast('Processing PDF', 'Converting the first page of the PDF to a high-quality image.', 'info', 3000);
-        
+
         try {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             const page = await pdf.getPage(1);
             const viewport = page.getViewport({ scale: 1 });
-            
+
             const scale = 2048 / Math.max(viewport.width, viewport.height);
             const scaledViewport = page.getViewport({ scale });
 
@@ -1984,7 +2251,7 @@ async function handleArtworkFile(side, file) {
             canvas.width = scaledViewport.width;
 
             await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
-            
+
             const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
             file = new File([blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' });
         } catch (error) {
@@ -2053,10 +2320,12 @@ async function handleArtworkFile(side, file) {
 
 function applySideMaterialMap(side) {
     const config = sideConfigs[side];
-    if (!config.material) return;
-    config.material.map = config.uploadedTexture || config.originalMap;
-    config.material.color.setHex(0xffffff);
-    config.material.needsUpdate = true;
+    if (!config.materials || config.materials.length === 0) return;
+    config.materials.forEach((material) => {
+        material.map = config.uploadedTexture || material.userData.originalMap;
+        material.color.setHex(0xffffff);
+        material.needsUpdate = true;
+    });
 }
 
 function clearArtwork(side, announce = false) {
@@ -2200,7 +2469,7 @@ function getExportRenderer() {
             antialias: true,
             alpha: true,
             preserveDrawingBuffer: true,
-            logarithmicDepthBuffer: true
+            logarithmicDepthBuffer: false
         });
         exportRenderer.setSize(exportRenderSize, exportRenderSize, false);
         exportRenderer.setPixelRatio(1);
@@ -2208,8 +2477,8 @@ function getExportRenderer() {
         exportRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         exportRenderer.shadowMap.enabled = true;
         exportRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        
-        exportCamera = new THREE.PerspectiveCamera(45, 1, 0.05, 1000);
+
+        exportCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     }
 
     exportRenderer.toneMappingExposure = renderer.toneMappingExposure;
@@ -2227,9 +2496,15 @@ function captureProofView(position) {
 /* ---------------------------------
    Camera Transitions
 --------------------------------- */
-function transitionCamera(targetPosition) {
+function transitionCamera(targetPosition, duration = 800) {
     if (state.isInAR) return;
-    TWEEN.removeAll();
+    if (activeCameraTween) {
+        activeCameraTween.stop();
+        activeCameraTween = null;
+        controls.enabled = true;
+    }
+
+    controls.enabled = false; // Disable controls to prevent damping drift/user dragging during transition
 
     const endPosition = targetPosition.clone();
     const startTarget = controls.target.clone();
@@ -2244,8 +2519,8 @@ function transitionCamera(targetPosition) {
     while (endSpherical.theta - startSpherical.theta > Math.PI) endSpherical.theta -= Math.PI * 2;
     while (endSpherical.theta - startSpherical.theta < -Math.PI) endSpherical.theta += Math.PI * 2;
 
-    new TWEEN.Tween({ progress: 0 })
-        .to({ progress: 1 }, 800)
+    activeCameraTween = new TWEEN.Tween({ progress: 0 })
+        .to({ progress: 1 }, duration)
         .easing(TWEEN.Easing.Cubic.InOut)
         .onUpdate(({ progress }) => {
             controls.target.lerpVectors(startTarget, endTarget, progress);
@@ -2255,17 +2530,29 @@ function transitionCamera(targetPosition) {
 
             sceneRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, endRotationY, progress);
             camera.position.setFromSpherical(new THREE.Spherical(radius, phi, theta)).add(controls.target);
-            controls.update();
+        })
+        .onComplete(() => {
+            activeCameraTween = null;
+            controls.enabled = true; // Re-enable controls
+            controls.update(); // Sync OrbitControls internal state
         })
         .start();
 }
-    
-function focusCameraView(view) {
+
+function focusCameraView(view, duration = 800, isSequence = false) {
+    // Freshly calculate targets with unrotated neutral bounds
+    updateDynamicCameraTargets(false);
+
     const targetPosition = cameraTargets[view];
     if (!targetPosition) return;
     if (typeof isZoomedIn !== 'undefined') isZoomedIn = false;
-    
-    transitionCamera(targetPosition);
+    preZoomState = null;
+
+    if (!isSequence) {
+        currentCameraSequenceId++;
+    }
+
+    transitionCamera(targetPosition, duration);
     setActiveCameraView(view);
 }
 
@@ -2471,7 +2758,7 @@ function renderFrame(_, frame) {
 
     timer.update();
     const delta = timer.getDelta(); // This is the crucial fix for pausing!
-    
+
     if (state.turntableEnabled && !state.isInAR) {
         sceneRoot.rotation.y += turntableSpeed * delta;
     }
@@ -2479,12 +2766,12 @@ function renderFrame(_, frame) {
     // --- UPDATE VAT ANIMATION TIME ---
     if (isPlaying) {
         accumulatedTime += delta; // Accumulate delta instead of elapsed
-        vatMaterials.forEach((mat) => {
-            if (mat.userData.shader) {
-                mat.userData.shader.uniforms.uTime.value = accumulatedTime;
-            }
-        });
     }
+    vatMaterials.forEach((mat) => {
+        if (mat.userData.shader) {
+            mat.userData.shader.uniforms.uTime.value = accumulatedTime;
+        }
+    });
 
     controls.update();
     renderer.render(scene, camera);

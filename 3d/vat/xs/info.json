@@ -47,18 +47,10 @@
         },
         {
             "index": 4,
-            "name": "xs_air_right"
-        },
-        {
-            "index": 5,
-            "name": "xs_air_left"
-        },
-        {
-            "index": 6,
             "name": "air_translucent"
         },
         {
-            "index": 7,
+            "index": 5,
             "name": "translucent"
         }
     ]
