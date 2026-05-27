@@ -244,9 +244,20 @@ function getVisibleMaxDimension() {
     return 1;
 }
 
-export async function applyConfigurationToScene(animateTransition = false, transitionDuration = 800) {
+export async function applyConfigurationToScene(animateTransition = false, transitionDuration = 800, isBaseSwap = false) {
     const currentCounter = ++applyConfigCounter;
     currentCameraSequenceId++; // Cancel any active async camera sequences immediately
+
+    // Lift/lower model parts based on Luxury cross base selection (lift by 1.14 cm = 0.0114 units)
+    const targetOffset = (configState.base === 'Luxury cross base') ? 0.0114 : 0.0;
+    if (!animateTransition || state.isInAR) {
+        if (baseOffsetTween) {
+            baseOffsetTween.stop();
+            baseOffsetTween = null;
+        }
+        baseYOffset = targetOffset;
+        applyBaseYOffsetToMeshes();
+    }
 
     // Stop any running camera transitions immediately
     if (activeCameraTween) {
@@ -269,6 +280,12 @@ export async function applyConfigurationToScene(animateTransition = false, trans
         }
         modelRoot.scale.set(1, 1, 1);
         modelRoot.rotation.y = 0;
+        modelRoot.children.forEach(child => {
+            const lowerName = (child.name || '').toLowerCase();
+            if (lowerName.includes('base') || lowerName.includes('cross')) {
+                child.rotation.y = 0;
+            }
+        });
         modelRoot.updateMatrixWorld(true);
     }
 
@@ -395,9 +412,9 @@ export async function applyConfigurationToScene(animateTransition = false, trans
             } else if (configState.printing === 'Air Textile') {
                 if (configState.direction === 'Right') {
                     frontMat = cache[sizePrefix]['right'];
-                    backMat = cache.global['air_translucent'] || cache.global['translucent'];
+                    backMat = cache.global['translucent'] || cache.global['air_translucent'];
                 } else { // Left
-                    frontMat = cache.global['air_translucent'] || cache.global['translucent'];
+                    frontMat = cache.global['translucent'] || cache.global['air_translucent'];
                     backMat = cache[sizePrefix]['left'];
                 }
             }
@@ -453,18 +470,36 @@ export async function applyConfigurationToScene(animateTransition = false, trans
 
             if (frontMat) front.material = frontMat;
             if (backMat) back.material = backMat;
+
+            // Set renderOrder to ensure the translucent overlay always renders ON TOP of the artwork mesh
+            const frontIsTranslucent = frontMat && frontMat.name.includes('translucent');
+            const backIsTranslucent = backMat && backMat.name.includes('translucent');
+
+            if (frontIsTranslucent) {
+                front.renderOrder = 2;
+                back.renderOrder = 1;
+            } else if (backIsTranslucent) {
+                front.renderOrder = 1;
+                back.renderOrder = 2;
+            } else {
+                front.renderOrder = 1;
+                back.renderOrder = 1;
+            }
+
+            // Sync all lifted meshes to the current baseYOffset immediately
+            applyBaseYOffsetToMeshes();
         }
     };
 
     if (animateTransition && !state.isInAR) {
         const currentVisualScale = modelRoot.scale.clone();
-        const startRotationY = modelRoot.rotation.y || 0;
-        const targetRotationY = startRotationY + (Math.PI * 2); 
-        
+        const startRotationY = isBaseSwap ? 0 : (modelRoot.rotation.y || 0);
+        const targetRotationY = startRotationY + (Math.PI * 2);
+
         // --- SCENE ALIGNMENT: Blend turntable rotation back to neutral 0 ---
         const startSceneRotationY = getNormalizedRotationAngle(sceneRoot.rotation.y);
         const endSceneRotationY = 0;
-        
+
         // 2. Measure intrinsic dimension of the currently visible (OLD) model
         modelRoot.scale.set(1, 1, 1);
         modelRoot.updateMatrixWorld(true);
@@ -499,9 +534,17 @@ export async function applyConfigurationToScene(animateTransition = false, trans
         if (typeof updateDynamicCameraTargets === 'function') {
             updateDynamicCameraTargets(false); // Passing false computes math, but doesn't move it
         }
-        const activeView = dom.cameraButtons.find(b => b.classList.contains('is-active'))?.dataset.view || 'home';
-        const endCameraPos = cameraTargets[activeView] ? cameraTargets[activeView].clone() : cameraTargets.home.clone();
-        const endControlsTarget = targetCenter.clone();
+        let endCameraPos;
+        let endControlsTarget;
+        if (isBaseSwap) {
+            const baseFocus = getBaseFocusTargets();
+            endControlsTarget = baseFocus.target;
+            endCameraPos = baseFocus.position;
+        } else {
+            const activeView = dom.cameraButtons.find(b => b.classList.contains('is-active'))?.dataset.view || 'home';
+            endCameraPos = cameraTargets[activeView] ? cameraTargets[activeView].clone() : cameraTargets.home.clone();
+            endControlsTarget = targetCenter.clone();
+        }
         const endSpherical = new THREE.Spherical().setFromVector3(endCameraPos.clone().sub(endControlsTarget));
 
         while (endSpherical.theta - startSpherical.theta > Math.PI) endSpherical.theta -= Math.PI * 2;
@@ -524,11 +567,21 @@ export async function applyConfigurationToScene(animateTransition = false, trans
 
         modelRoot.userData.scaleTween = new TWEEN.Tween(animState)
             .to({ progress: 1 }, transitionDuration)
-            .easing(TWEEN.Easing.Cubic.InOut) 
+            .easing(TWEEN.Easing.Cubic.InOut)
             .onUpdate(({ progress }) => {
                 const currentScaleAmt = THREE.MathUtils.lerp(1.0, dimRatio, progress);
-                modelRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, targetRotationY, progress);
-                
+                if (isBaseSwap) {
+                    const rotationY = THREE.MathUtils.lerp(startRotationY, targetRotationY, progress);
+                    modelRoot.children.forEach(child => {
+                        const lowerName = (child.name || '').toLowerCase();
+                        if (lowerName.includes('base') || lowerName.includes('cross')) {
+                            child.rotation.y = rotationY;
+                        }
+                    });
+                } else {
+                    modelRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, targetRotationY, progress);
+                }
+
                 // Smoothly restore base turntable rotation to exactly 0 to match presets
                 sceneRoot.rotation.y = THREE.MathUtils.lerp(startSceneRotationY, endSceneRotationY, progress);
 
@@ -548,16 +601,29 @@ export async function applyConfigurationToScene(animateTransition = false, trans
                         hasSwapped = true;
                         // Fade pole in or out from the midpoint of the swap
                         fadePole(configState.pole === 'With Pole' ? 1 : 0, 350);
+
+                        // Start the Luxury base Y offset animation at the midpoint over the remaining duration!
+                        const targetOffset = (configState.base === 'Luxury cross base') ? 0.0114 : 0.0;
+                        animateBaseYOffset(targetOffset, transitionDuration * 0.5);
                     }
                     const newModelLocalScale = currentScaleAmt / dimRatio;
                     modelRoot.scale.set(newModelLocalScale, newModelLocalScale, newModelLocalScale);
                 }
             })
             .onComplete(() => {
-                if (!hasSwapped) performSwap(); 
-                
+                if (!hasSwapped) performSwap();
+
                 modelRoot.scale.set(1, 1, 1);
-                modelRoot.rotation.y = startRotationY; 
+                if (isBaseSwap) {
+                    modelRoot.children.forEach(child => {
+                        const lowerName = (child.name || '').toLowerCase();
+                        if (lowerName.includes('base') || lowerName.includes('cross')) {
+                            child.rotation.y = 0;
+                        }
+                    });
+                } else {
+                    modelRoot.rotation.y = startRotationY;
+                }
                 sceneRoot.rotation.y = 0; // Lock to perfectly forward-facing
                 modelRoot.updateMatrixWorld(true);
                 modelRoot.userData.scaleTween = null;
@@ -665,6 +731,44 @@ function updateDynamicCameraTargets(moveCamera = true) {
 let currentCameraSequenceId = 0;
 let activeCameraTween = null;
 
+let baseYOffset = 0.0;
+let baseOffsetTween = null;
+
+function applyBaseYOffsetToMeshes() {
+    if (!modelRoot) return;
+
+    modelRoot.traverse((child) => {
+        const lowerName = (child.name || '').toLowerCase();
+        const isPole = lowerName.includes('pole');
+        const isPocket = lowerName.includes('_pocket');
+        const isVat = lowerName.includes('_vat') || child.userData.isBackClone;
+
+        if ((isPole || isPocket || isVat) && typeof child.userData.originalPosY !== 'undefined') {
+            child.position.y = child.userData.originalPosY + baseYOffset;
+        }
+    });
+}
+
+function animateBaseYOffset(targetOffset, duration = 800) {
+    if (baseOffsetTween) {
+        baseOffsetTween.stop();
+        baseOffsetTween = null;
+    }
+
+    baseOffsetTween = new TWEEN.Tween({ offset: baseYOffset })
+        .to({ offset: targetOffset }, duration)
+        .easing(TWEEN.Easing.Cubic.Out)
+        .onUpdate(({ offset }) => {
+            baseYOffset = offset;
+            applyBaseYOffsetToMeshes();
+        })
+        .onComplete(() => {
+            baseOffsetTween = null;
+        })
+        .start();
+}
+
+
 async function runPrintingCameraSequence() {
     currentCameraSequenceId++;
     const sequenceId = currentCameraSequenceId;
@@ -672,22 +776,17 @@ async function runPrintingCameraSequence() {
     const primaryView = (configState.printing === 'Double Sided') ? 'front' : ((configState.direction === 'Left') ? 'back' : 'front');
     const secondaryView = (configState.printing === 'Double Sided') ? 'back' : ((configState.direction === 'Left') ? 'front' : 'back');
 
-    // Step 1: Primary view
-    focusCameraView(primaryView, 800, true);
-    await new Promise(resolve => setTimeout(resolve, 850));
+    // Step 1: Fast move 180 degree to show back view (secondary view)
+    focusCameraSpinHalf(secondaryView, 500, false, true);
+    await new Promise(resolve => setTimeout(resolve, 550));
     if (sequenceId !== currentCameraSequenceId) return;
 
-    // Step 2: Secondary View
-    focusCameraView(secondaryView, 800, true);
-    await new Promise(resolve => setTimeout(resolve, 850));
-    if (sequenceId !== currentCameraSequenceId) return;
-
-    // Step 3: Wait 1 second at secondary view
+    // Step 2: Rest here for 1 second (Strictly the only stay in the entire sequence)
     await new Promise(resolve => setTimeout(resolve, 1000));
     if (sequenceId !== currentCameraSequenceId) return;
 
-    // Step 4: Primary view again
-    focusCameraView(primaryView, 800, true);
+    // Step 3: Complete the rest 180 degree rotation to return to primary view
+    focusCameraSpinHalf(primaryView, 800, true, true);
 }
 
 async function runDirectionCameraSequence(direction) {
@@ -750,9 +849,13 @@ function initConfiguratorUI() {
                 const price = card.dataset.price;
 
                 let sizeChanged = false;
+                let baseChanged = false;
                 if (category && category !== 'pole-cover') {
                     if (category === 'size' && configState.size !== value) {
                         sizeChanged = true;
+                    }
+                    if (category === 'base' && configState.base !== value) {
+                        baseChanged = true;
                     }
                     configState[category] = value;
                 }
@@ -760,11 +863,12 @@ function initConfiguratorUI() {
                 if (nameDisplay) nameDisplay.textContent = value;
                 if (priceDisplay && price) priceDisplay.textContent = price;
 
-                if (category === 'size' || category === 'printing') {
+                if (category === 'size' || category === 'printing' || category === 'base') {
                     stopTurntableRotation();
                 }
 
                 let swapDuration = 800;
+                let isBaseSwap = false;
                 if (sizeChanged) {
                     if (typeof isZoomedIn !== 'undefined') isZoomedIn = false;
                     preZoomState = null;
@@ -777,9 +881,14 @@ function initConfiguratorUI() {
                     } else {
                         setActiveCameraView(primaryView);
                     }
+                } else if (baseChanged) {
+                    if (typeof isZoomedIn !== 'undefined') isZoomedIn = false;
+                    preZoomState = null;
+                    setActiveCameraView('home');
+                    isBaseSwap = true;
                 }
 
-                applyConfigurationToScene(sizeChanged, swapDuration);
+                applyConfigurationToScene(sizeChanged || baseChanged, swapDuration, isBaseSwap);
 
                 if (category === 'printing') {
                     runPrintingCameraSequence();
@@ -1256,6 +1365,124 @@ function fadePole(targetOpacity, duration = 350) {
         })
         .start();
 }
+
+function getBaseFocusTargets() {
+    const baseBox = new THREE.Box3();
+    let hasBaseMesh = false;
+    if (modelRoot) {
+        modelRoot.traverse(child => {
+            if (child.isMesh && child.visible) {
+                const lowerName = (child.name || '').toLowerCase();
+                // Check if the mesh is one of the base parts
+                if (lowerName.includes('luxury_cross_base') || lowerName.includes('cross_base_grey_black') || lowerName.includes('base') || lowerName.includes('cross')) {
+                    child.geometry.computeBoundingBox();
+                    if (child.geometry.boundingBox) {
+                        const childBox = child.geometry.boundingBox.clone();
+                        childBox.applyMatrix4(child.matrixWorld);
+                        baseBox.expandByPoint(childBox.min);
+                        baseBox.expandByPoint(childBox.max);
+                        hasBaseMesh = true;
+                    }
+                }
+            }
+        });
+    }
+
+    const target = new THREE.Vector3();
+    const pos = new THREE.Vector3();
+
+    if (hasBaseMesh && !baseBox.isEmpty()) {
+        baseBox.getCenter(target);
+        const size = baseBox.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        // Distance should be close to focus on the base
+        const distance = Math.max(maxDim * 1.5, 1.8);
+        // Calculate the camera position: low angle, home side (slightly to the right and above target)
+        pos.set(target.x + distance * 0.45, target.y + distance * 0.35, target.z + distance * 0.88);
+    } else {
+        // Safe defaults if meshes aren't found or bounds are empty
+        target.set(0, 0.25, 0);
+        pos.set(0.8, 0.7, 1.6);
+    }
+    return { target, position: pos };
+}
+
+async function silentWarmupAllSizes() {
+    if (!modelRoot || !vatMaterials.length) return;
+
+    // Collect all active size codes from the HTML cards
+    const sizeCards = Array.from(document.querySelectorAll('.config-card[data-category="size"]'));
+    const allSizeCodes = sizeCards
+        .map(card => card.dataset.value.split(' ').pop())
+        .filter(Boolean);
+
+    const originalSizeCode = configState.size.split(' ').pop();
+
+    // Step 1: Load ALL VAT data in parallel first (network fetch phase)
+    await Promise.all(allSizeCodes.map(code => loadVATData(code)));
+
+    // Step 2: For each size, swap textures + fire a 1×1 pixel scissor render to fully warm GPU shaders
+    for (const sizeCode of allSizeCodes) {
+        const vatData = vatCache[sizeCode];
+        if (!vatData) continue;
+
+        // Swap VAT uniforms to this size
+        vatMaterials.forEach(mat => {
+            if (mat.userData.shader) {
+                if (mat.userData.shader.uniforms.posTexture)
+                    mat.userData.shader.uniforms.posTexture.value = vatData.positions;
+                if (mat.userData.shader.uniforms.normTexture)
+                    mat.userData.shader.uniforms.normTexture.value = vatData.normals;
+                if (mat.userData.shader.uniforms.uTotalFrames)
+                    mat.userData.shader.uniforms.uTotalFrames.value = vatData.info.frame_count;
+            }
+        });
+
+        // Make the VAT meshes for this size visible, hide all others
+        const sizePrefix = sizeCode.toLowerCase();
+        modelRoot.traverse(child => {
+            const lowerName = (child.name || '').toLowerCase();
+            if (lowerName.includes('_vat') || lowerName.includes('_pocket')) {
+                child.visible = lowerName.includes(`${sizePrefix}_vat`) || lowerName.includes(`${sizePrefix}_pocket`);
+            }
+        });
+        modelRoot.updateMatrixWorld(true);
+
+        // Fire a 1×1 pixel render — forces GPU shader compilation for this size's program
+        renderer.setScissorTest(true);
+        renderer.setScissor(0, 0, 1, 1);
+        renderer.render(scene, camera);
+        renderer.setScissorTest(false);
+
+        // Yield to keep the browser responsive (one microtask per size)
+        await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
+    // Step 3: Restore original size textures and visibility
+    const originalVatData = vatCache[originalSizeCode];
+    if (originalVatData) {
+        vatTexture = originalVatData.positions;
+        normTexture = originalVatData.normals;
+        vatMaterials.forEach(mat => {
+            if (mat.userData.shader) {
+                if (mat.userData.shader.uniforms.posTexture)
+                    mat.userData.shader.uniforms.posTexture.value = vatTexture;
+                if (mat.userData.shader.uniforms.normTexture)
+                    mat.userData.shader.uniforms.normTexture.value = normTexture;
+                if (mat.userData.shader.uniforms.uTotalFrames)
+                    mat.userData.shader.uniforms.uTotalFrames.value = originalVatData.info.frame_count;
+            }
+        });
+    }
+
+    // Re-apply the active configuration to restore correct visibility/materials
+    if (typeof applyConfigurationToScene === 'function') {
+        applyConfigurationToScene(false);
+    }
+}
+
+
+
 
 function truncateFileName(fileName, containerElement) {
     const extIndex = fileName.lastIndexOf('.');
@@ -1826,6 +2053,13 @@ function loadModel() {
                 modelRoot.userData.poleMeshes = poleMeshes;
                 modelRoot.userData.poleFadeTween = null;
 
+                // Store original Y position of all meshes/groups in the model
+                modelRoot.traverse((child) => {
+                    if (child.userData.originalPosY === undefined) {
+                        child.userData.originalPosY = child.position.y;
+                    }
+                });
+
                 sideConfigs.artwork.materials = [];
                 const addArtworkMaterial = (m) => {
                     if (!m) return;
@@ -1933,6 +2167,7 @@ function loadModel() {
                             material.side = THREE.FrontSide;
                             const backMesh = child.clone();
                             backMesh.userData.isBackClone = true;
+                            backMesh.userData.originalPosY = child.userData.originalPosY;
                             if (child.customDepthMaterial) {
                                 backMesh.customDepthMaterial = child.customDepthMaterial;
                             }
@@ -2076,7 +2311,11 @@ function loadModel() {
                 if (typeof updateDynamicCameraTargets === 'function') {
                     updateDynamicCameraTargets(true);
                 }
-                syncReadyState();
+
+                // Keep loading overlay open — silently warm up every size via 1px renders, then reveal
+                silentWarmupAllSizes().then(() => {
+                    syncReadyState();
+                });
             },
             undefined,
             () => { /* Load Error Handling */ }
@@ -2553,6 +2792,71 @@ function focusCameraView(view, duration = 800, isSequence = false) {
     }
 
     transitionCamera(targetPosition, duration);
+    setActiveCameraView(view);
+}
+
+function transitionCameraSpinHalf(targetPosition, duration = 800, isSecondHalf = false) {
+    if (state.isInAR) return;
+    if (activeCameraTween) {
+        activeCameraTween.stop();
+        activeCameraTween = null;
+        controls.enabled = true;
+    }
+
+    controls.enabled = false; // Disable controls to prevent damping drift/user dragging during transition
+
+    const endPosition = targetPosition.clone();
+    const startTarget = controls.target.clone();
+    const endTarget = targetCenter.clone();
+    const startSpherical = new THREE.Spherical().setFromVector3(camera.position.clone().sub(startTarget));
+    const endSpherical = new THREE.Spherical().setFromVector3(endPosition.clone().sub(endTarget));
+    const startRotationY = getNormalizedRotationAngle(sceneRoot.rotation.y);
+    const endRotationY = 0;
+
+    sceneRoot.rotation.y = startRotationY;
+
+    // Force rotation in the clockwise (negative) direction to end exactly at the target's theta!
+    while (endSpherical.theta >= startSpherical.theta) {
+        endSpherical.theta -= Math.PI * 2;
+    }
+    while (startSpherical.theta - endSpherical.theta > Math.PI * 2) {
+        endSpherical.theta += Math.PI * 2;
+    }
+
+    activeCameraTween = new TWEEN.Tween({ progress: 0 })
+        .to({ progress: 1 }, duration)
+        .easing(TWEEN.Easing.Cubic.InOut)
+        .onUpdate(({ progress }) => {
+            controls.target.lerpVectors(startTarget, endTarget, progress);
+            const radius = THREE.MathUtils.lerp(startSpherical.radius, endSpherical.radius, progress);
+            const phi = THREE.MathUtils.lerp(startSpherical.phi, endSpherical.phi, progress);
+            const theta = THREE.MathUtils.lerp(startSpherical.theta, endSpherical.theta, progress);
+
+            sceneRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, endRotationY, progress);
+            camera.position.setFromSpherical(new THREE.Spherical(radius, phi, theta)).add(controls.target);
+        })
+        .onComplete(() => {
+            activeCameraTween = null;
+            controls.enabled = true; // Re-enable controls
+            controls.update(); // Sync OrbitControls internal state
+        })
+        .start();
+}
+
+function focusCameraSpinHalf(view, duration = 800, isSecondHalf = false, isSequence = false) {
+    // Freshly calculate targets with unrotated neutral bounds
+    updateDynamicCameraTargets(false);
+
+    const targetPosition = cameraTargets[view];
+    if (!targetPosition) return;
+    if (typeof isZoomedIn !== 'undefined') isZoomedIn = false;
+    preZoomState = null;
+
+    if (!isSequence) {
+        currentCameraSequenceId++;
+    }
+
+    transitionCameraSpinHalf(targetPosition, duration, isSecondHalf);
     setActiveCameraView(view);
 }
 
