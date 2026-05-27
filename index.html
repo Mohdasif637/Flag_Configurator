@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Flag Configurator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -12,6 +18,7 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 </head>
+
 <body>
     <div id="canvas-container">
         <div id="loading-overlay" class="overlay is-visible" aria-live="polite">
@@ -31,7 +38,8 @@
                 </div>
                 <h2>Flag Configurator</h2>
 
-                <p class="panel-copy">Upload artwork, tune the preview, and export a clean client proof.</p>
+                <p class="panel-copy">Select your size and layout, upload your design, tweak the 3D preview, and save.
+                </p>
             </div>
             <div id="ui-panel">
                 <div class="config-section" id="section-size">
@@ -42,17 +50,29 @@
                     </div>
                     <div class="carousel-wrapper">
                         <button class="carousel-arrow left-arrow" aria-label="Scroll left">
-                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                                fill="none">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
                         </button>
                         <div class="carousel-track scrollable-track">
-                            <button class="config-card" data-category="size" data-value="Beach flag Convex XS" data-price=""><div class="card-icon">XS</div></button>
+                            <button class="config-card" data-category="size" data-value="Beach flag Convex XS"
+                                data-price="">
+                                <div class="card-icon">XS</div>
+                            </button>
                             <!-- <button class="config-card" data-category="size" data-value="Beach flag Convex S" data-price=""><div class="card-icon">S</div></button>
                             <button class="config-card" data-category="size" data-value="Beach flag Convex M" data-price=""><div class="card-icon">M</div></button>
                             <button class="config-card" data-category="size" data-value="Beach flag Convex M-Extra Wide" data-price=""><div class="card-icon" style="font-size: 0.8rem;">M-W</div></button> -->
-                            <button class="config-card is-active" data-category="size" data-value="Beach flag Convex L" data-price=""><div class="card-icon">L</div></button>
+                            <button class="config-card is-active" data-category="size" data-value="Beach flag Convex L"
+                                data-price="">
+                                <div class="card-icon">L</div>
+                            </button>
                         </div>
                         <button class="carousel-arrow right-arrow" aria-label="Scroll right">
-                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                                fill="none">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -64,9 +84,15 @@
                         <span class="selection-price"></span>
                     </div>
                     <div class="carousel-track wrap-track">
-                        <button class="config-card is-active" data-category="printing" data-value="Single Sided"><div class="card-icon" style="font-size: 0.8rem;">1-S</div></button>
-                        <button class="config-card" data-category="printing" data-value="Double Sided"><div class="card-icon" style="font-size: 0.8rem;">2-S</div></button>
-                        <button class="config-card" data-category="printing" data-value="Air Textile"><div class="card-icon" style="font-size: 0.8rem;">Air</div></button>
+                        <button class="config-card is-active" data-category="printing" data-value="Single Sided">
+                            <div class="card-icon" style="font-size: 0.8rem;">1-S</div>
+                        </button>
+                        <button class="config-card" data-category="printing" data-value="Double Sided">
+                            <div class="card-icon" style="font-size: 0.8rem;">2-S</div>
+                        </button>
+                        <button class="config-card" data-category="printing" data-value="Air Textile">
+                            <div class="card-icon" style="font-size: 0.8rem;">Air</div>
+                        </button>
                     </div>
                 </div>
 
@@ -78,8 +104,72 @@
                                 <span class="selection-name">Right</span>
                             </div>
                             <div class="carousel-track wrap-track">
-                                <button class="config-card is-active" data-category="direction" data-value="Right"><div class="card-icon" style="font-size: 0.8rem;">Right</div></button>
-                                <button class="config-card" data-category="direction" data-value="Left"><div class="card-icon" style="font-size: 0.8rem;">Left</div></button>
+                                <button class="config-card is-active" data-category="direction" data-value="Right">
+                                    <div class="card-icon" style="font-size: 0.8rem;">Right</div>
+                                </button>
+                                <button class="config-card" data-category="direction" data-value="Left">
+                                    <div class="card-icon" style="font-size: 0.8rem;">Left</div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Download Section -->
+                <div class="config-section" id="section-template">
+                    <a href="assets/template.pdf" download="template.pdf" class="guide-btn"
+                        style="margin-top: 0; margin-bottom: 0;">
+                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Graphic Template
+                    </a>
+                </div>
+
+                <!-- Graphic Upload Section -->
+                <div class="config-section" id="section-graphic">
+                    <div class="control-group" style="margin-bottom: 0;">
+                        <div class="control-heading">
+                            <label for="graphic-upload">Graphic</label>
+                            <span class="control-hint">PNG, JPG, or PDF</span>
+                        </div>
+
+                        <label id="graphic-dropzone" class="upload-card" for="graphic-upload" tabindex="0">
+                            <div class="upload-progress"></div>
+                            <input type="file" id="graphic-upload" class="visually-hidden"
+                                accept="image/png, image/jpeg, image/webp, application/pdf">
+                            <div class="upload-card-copy">
+                                <span class="upload-title">Drop graphic here</span>
+                                <span class="upload-subtitle">or click to browse your files</span>
+                            </div>
+                            <div id="graphic-thumb-frame" class="upload-thumb-frame" hidden>
+                                <img id="graphic-thumb" class="upload-thumb" alt="Graphic preview">
+                            </div>
+                        </label>
+
+                        <div id="graphic-actions-wrapper" class="expandable-section">
+                            <div id="graphic-actions" class="upload-actions expandable-content">
+                                <button type="button" id="reset-graphic-tex" class="secondary-btn"
+                                    title="Reset graphic transforms" disabled>Reset</button>
+                                <button type="button" id="clear-graphic" class="danger-btn" title="Remove graphic"
+                                    disabled>Remove</button>
+                            </div>
+                        </div>
+
+                        <div id="graphic-transforms-wrapper" class="expandable-section">
+                            <div class="expandable-content">
+                                <div id="graphic-transforms" class="transform-controls">
+                                    <label>Scale <input type="range" id="graphic-scale" min="0.1" max="3" step="0.01"
+                                            value="1"></label>
+                                    <label>Pan X <input type="range" id="graphic-x" min="-1" max="1" step="0.01"
+                                            value="0"></label>
+                                    <label>Pan Y <input type="range" id="graphic-y" min="-1" max="1" step="0.01"
+                                            value="0"></label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -89,7 +179,8 @@
                     <h3 class="section-title">Pole Cover</h3>
                     <input type="hidden" id="pocket-color" value="#000000">
                     <div class="color-picker-shell">
-                        <button type="button" id="pocket-color-trigger" class="color-picker-trigger" aria-expanded="false">
+                        <button type="button" id="pocket-color-trigger" class="color-picker-trigger"
+                            aria-expanded="false">
                             <span id="pocket-color-swatch" class="color-picker-swatch" aria-hidden="true"></span>
                             <span class="color-picker-text">
                                 <span class="color-picker-title">Choose pocket color</span>
@@ -106,8 +197,12 @@
                         <span class="selection-price"></span>
                     </div>
                     <div class="carousel-track wrap-track">
-                        <button class="config-card is-active" data-category="pole" data-value="With Pole"><div class="card-icon" style="font-size: 0.8rem;">Yes</div></button>
-                        <button class="config-card" data-category="pole" data-value="Without Pole"><div class="card-icon" style="font-size: 0.8rem;">No</div></button>
+                        <button class="config-card is-active" data-category="pole" data-value="With Pole">
+                            <div class="card-icon" style="font-size: 0.8rem;">Yes</div>
+                        </button>
+                        <button class="config-card" data-category="pole" data-value="Without Pole">
+                            <div class="card-icon" style="font-size: 0.8rem;">No</div>
+                        </button>
                     </div>
                 </div>
 
@@ -119,74 +214,48 @@
                     </div>
                     <div class="carousel-wrapper">
                         <button class="carousel-arrow left-arrow" aria-label="Scroll left">
-                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                                fill="none">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
                         </button>
                         <div class="carousel-track scrollable-track">
-                            <button class="config-card is-active" data-category="base" data-value="No base" data-price=""><div class="card-icon" style="font-size: 0.8rem;">None</div></button>
-                            <button class="config-card" data-category="base" data-value="Luxury cross base" data-price=""><div class="card-icon" style="font-size: 0.8rem;">Lux</div></button>
-                            <button class="config-card" data-category="base" data-value="Cross base-grey" data-price=""><div class="card-icon" style="font-size: 0.8rem;">Grey</div></button>
-                            <button class="config-card" data-category="base" data-value="Cross base-black" data-price=""><div class="card-icon" style="font-size: 0.8rem;">Black</div></button>
+                            <button class="config-card is-active" data-category="base" data-value="No base"
+                                data-price="">
+                                <div class="card-icon" style="font-size: 0.8rem;">None</div>
+                            </button>
+                            <button class="config-card" data-category="base" data-value="Luxury cross base"
+                                data-price="">
+                                <div class="card-icon" style="font-size: 0.8rem;">Lux</div>
+                            </button>
+                            <button class="config-card" data-category="base" data-value="Cross base-grey" data-price="">
+                                <div class="card-icon" style="font-size: 0.8rem;">Grey</div>
+                            </button>
+                            <button class="config-card" data-category="base" data-value="Cross base-black"
+                                data-price="">
+                                <div class="card-icon" style="font-size: 0.8rem;">Black</div>
+                            </button>
                         </div>
                         <button class="carousel-arrow right-arrow" aria-label="Scroll right">
-                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                                fill="none">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
                         </button>
-                    </div>
-                </div>
-
-                <a href="assets/template.pdf" download="template.pdf" class="guide-btn">
-                    <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Graphic Template
-                </a>
-
-                <div class="control-group">
-                    <div class="control-heading">
-                        <label for="artwork-upload">Artwork</label>
-                        <span class="control-hint">PNG, JPG, or PDF</span>
-                    </div>
-
-                    <label id="artwork-dropzone" class="upload-card" for="artwork-upload" tabindex="0">
-                        <div class="upload-progress"></div>
-                        <input type="file" id="artwork-upload" class="visually-hidden" accept="image/png, image/jpeg, image/webp, application/pdf">
-                        <div class="upload-card-copy">
-                            <span class="upload-title">Drop artwork here</span>
-                            <span class="upload-subtitle">or click to browse your files</span>
-                        </div>
-                        <div id="artwork-thumb-frame" class="upload-thumb-frame" hidden>
-                            <img id="artwork-thumb" class="upload-thumb" alt="Artwork preview">
-                        </div>
-                    </label>
-
-                    <div id="artwork-actions-wrapper" class="expandable-section">
-                        <div id="artwork-actions" class="upload-actions expandable-content">
-                            <button type="button" id="reset-artwork-tex" class="secondary-btn" title="Reset artwork transforms" disabled>Reset</button>
-                            <button type="button" id="clear-artwork" class="danger-btn" title="Remove artwork" disabled>Remove</button>
-                        </div>
-                    </div>
-
-                    <div id="artwork-transforms-wrapper" class="expandable-section">
-                        <div class="expandable-content">
-                            <div id="artwork-transforms" class="transform-controls">
-                                <label>Scale <input type="range" id="artwork-scale" min="0.1" max="3" step="0.01" value="1"></label>
-                                <label>Pan X <input type="range" id="artwork-x" min="-1" max="1" step="0.01" value="0"></label>
-                                <label>Pan Y <input type="range" id="artwork-y" min="-1" max="1" step="0.01" value="0"></label>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
                 <div class="action-stack">
                     <button type="button" id="generate-pdf" class="primary-btn">
-                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
                             <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
                             <path d="M14 2v6h6"></path>
                             <path d="M8 13h8"></path>
                             <path d="M8 17h8"></path>
                         </svg>
-                        Generate PDF Proof
+                        Save My Design
                     </button>
                 </div>
             </div>
@@ -198,7 +267,8 @@
             <button type="button" id="cam-back" data-view="back" title="Back View">Back</button>
             <button type="button" id="cam-left" data-view="left" title="Left View">Left</button>
             <button type="button" id="cam-home" data-view="home" title="Home View">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     <polyline points="9 22 9 12 15 12 15 22"></polyline>
                 </svg>

@@ -46,24 +46,24 @@ const dom = {
 
 
 const sideConfigs = {
-    artwork: {
-        label: 'Artwork',
-        input: document.getElementById('artwork-upload'),
-        dropzone: document.getElementById('artwork-dropzone'),
-        titleElement: document.querySelector('#artwork-dropzone .upload-title'),
-        subtitleElement: document.querySelector('#artwork-dropzone .upload-subtitle'),
-        defaultTitle: 'Drop artwork here',
-        actionsWrapper: document.getElementById('artwork-actions-wrapper'),
-        actions: document.getElementById('artwork-actions'),
-        transformsWrapper: document.getElementById('artwork-transforms-wrapper'),
-        transforms: document.getElementById('artwork-transforms'),
-        thumbFrame: document.getElementById('artwork-thumb-frame'),
-        thumb: document.getElementById('artwork-thumb'),
-        resetButton: document.getElementById('reset-artwork-tex'),
-        clearButton: document.getElementById('clear-artwork'),
-        scaleInput: document.getElementById('artwork-scale'),
-        xInput: document.getElementById('artwork-x'),
-        yInput: document.getElementById('artwork-y'),
+    graphic: {
+        label: 'Graphic',
+        input: document.getElementById('graphic-upload'),
+        dropzone: document.getElementById('graphic-dropzone'),
+        titleElement: document.querySelector('#graphic-dropzone .upload-title'),
+        subtitleElement: document.querySelector('#graphic-dropzone .upload-subtitle'),
+        defaultTitle: 'Drop graphic here',
+        actionsWrapper: document.getElementById('graphic-actions-wrapper'),
+        actions: document.getElementById('graphic-actions'),
+        transformsWrapper: document.getElementById('graphic-transforms-wrapper'),
+        transforms: document.getElementById('graphic-transforms'),
+        thumbFrame: document.getElementById('graphic-thumb-frame'),
+        thumb: document.getElementById('graphic-thumb'),
+        resetButton: document.getElementById('reset-graphic-tex'),
+        clearButton: document.getElementById('clear-graphic'),
+        scaleInput: document.getElementById('graphic-scale'),
+        xInput: document.getElementById('graphic-x'),
+        yInput: document.getElementById('graphic-y'),
         uploadedTexture: null,
         uploadedFrontTex: null,
         uploadedBackTex: null,
@@ -72,7 +72,7 @@ const sideConfigs = {
     }
 };
 
-const uploadedArtworksCache = {};
+const uploadedGraphicsCache = {};
 
 function getCurrentConfigKey() {
     const sizeCode = configState.size.split(' ').pop().toLowerCase();
@@ -85,12 +85,12 @@ function getCurrentConfigKey() {
     return `${sizeCode}_${printing.toLowerCase()}_${configState.direction.toLowerCase()}`;
 }
 
-function saveCurrentArtworkToCache() {
+function saveCurrentGraphicToCache() {
     const key = getCurrentConfigKey();
-    const config = sideConfigs.artwork;
-    
+    const config = sideConfigs.graphic;
+
     if (config.uploadedTexture) {
-        uploadedArtworksCache[key] = {
+        uploadedGraphicsCache[key] = {
             uploadedTexture: config.uploadedTexture,
             uploadedFrontTex: config.uploadedFrontTex,
             uploadedBackTex: config.uploadedBackTex,
@@ -101,22 +101,22 @@ function saveCurrentArtworkToCache() {
             panY: config.yInput.value
         };
     } else {
-        delete uploadedArtworksCache[key];
+        delete uploadedGraphicsCache[key];
     }
 }
 
-function loadArtworkFromCache() {
+function loadGraphicFromCache() {
     const key = getCurrentConfigKey();
-    const config = sideConfigs.artwork;
-    const cached = uploadedArtworksCache[key];
-    
+    const config = sideConfigs.graphic;
+    const cached = uploadedGraphicsCache[key];
+
     if (cached) {
         config.uploadedTexture = cached.uploadedTexture;
         config.uploadedFrontTex = cached.uploadedFrontTex;
         config.uploadedBackTex = cached.uploadedBackTex;
         config.previewUrl = cached.previewUrl;
         config.fileName = cached.fileName;
-        
+
         config.scaleInput.value = cached.scale;
         config.xInput.value = cached.panX;
         config.yInput.value = cached.panY;
@@ -131,7 +131,7 @@ function loadArtworkFromCache() {
         config.uploadedBackTex = null;
         config.previewUrl = null;
         config.fileName = null;
-        
+
         config.scaleInput.value = '1';
         config.xInput.value = '0';
         config.yInput.value = '0';
@@ -142,7 +142,7 @@ function loadArtworkFromCache() {
         config.actionsWrapper.style.display = 'none';
         config.transformsWrapper.style.display = 'none';
     }
-    syncSideUi('artwork');
+    syncSideUi('graphic');
 }
 
 /* ---------------------------------
@@ -269,7 +269,7 @@ function updateDynamicPrices() {
                     const priceDisplay = section.querySelector('.selection-price');
                     if (priceDisplay) {
                         // For Add-ons like printing, pole, and base, we can show + cost if we want
-                        priceDisplay.textContent = (category !== 'size' && cardPrice > 0) ? `+${currencySymbol} ${cardPrice.toFixed(2)}` : formattedPrice;
+                        priceDisplay.textContent = (category !== 'size' && cardPrice > 0) ? `+ ${currencySymbol} ${cardPrice.toFixed(2)}` : formattedPrice;
                     }
                 }
             }
@@ -323,8 +323,8 @@ export async function applyConfigurationToScene(animateTransition = false, trans
     const currentCounter = ++applyConfigCounter;
     currentCameraSequenceId++; // Cancel any active async camera sequences immediately
 
-    // Load the custom artwork associated with this specific config from the cache
-    loadArtworkFromCache();
+    // Load the custom graphic associated with this specific config from the cache
+    loadGraphicFromCache();
 
     // Lift/lower model parts based on Luxury cross base selection (lift by 1.14 cm = 0.0114 units)
     const targetOffset = (configState.base === 'Luxury cross base') ? 0.0114 : 0.0;
@@ -546,21 +546,21 @@ export async function applyConfigurationToScene(animateTransition = false, trans
             applyProps(frontMat, THREE.FrontSide, frontMat && frontMat.name.includes('translucent'));
             applyProps(backMat, THREE.BackSide, backMat && backMat.name.includes('translucent'));
 
-            // Dynamically assign custom uploaded artwork or restore the original map
-            const uploadedFrontTex = sideConfigs.artwork.uploadedFrontTex;
-            const uploadedBackTex = sideConfigs.artwork.uploadedBackTex;
+            // Dynamically assign custom uploaded graphic or restore the original map
+            const uploadedFrontTex = sideConfigs.graphic.uploadedFrontTex;
+            const uploadedBackTex = sideConfigs.graphic.uploadedBackTex;
 
-            const applyArtworkOrRestore = (mat) => {
+            const applyGraphicOrRestore = (mat) => {
                 if (!mat) return;
                 const isTranslucent = mat.name.includes('translucent');
                 if (isTranslucent) {
-                    return; // Translucent overlays never receive the artwork directly
+                    return; // Translucent overlays never receive the graphic directly
                 }
-                
+
                 if (!mat.userData.originalMap) {
                     mat.userData.originalMap = mat.map;
                 }
-                
+
                 if (mat === frontMat && uploadedFrontTex) {
                     if (mat.userData.originalMap) {
                         uploadedFrontTex.channel = mat.userData.originalMap.channel;
@@ -581,14 +581,14 @@ export async function applyConfigurationToScene(animateTransition = false, trans
             // Run map restoration on all cached size-materials to prevent stale overrides
             Object.keys(cache).forEach(key => {
                 if (key !== 'global') {
-                    Object.values(cache[key]).forEach(applyArtworkOrRestore);
+                    Object.values(cache[key]).forEach(applyGraphicOrRestore);
                 }
             });
 
             if (frontMat) front.material = frontMat;
             if (backMat) back.material = backMat;
 
-            // Set renderOrder to ensure the translucent overlay always renders ON TOP of the artwork mesh
+            // Set renderOrder to ensure the translucent overlay always renders ON TOP of the graphic mesh
             const frontIsTranslucent = frontMat && frontMat.name.includes('translucent');
             const backIsTranslucent = backMat && backMat.name.includes('translucent');
 
@@ -1895,14 +1895,14 @@ async function syncReadyState() {
     syncARVisibility();
 
     if (!pdfLibraryAvailable) {
-        await showToast('Preview ready', 'Artwork tools are ready, but PDF export is currently unavailable.', 'info', 4000);
+        await showToast('Preview ready', 'Graphic tools are ready, but design saving is currently unavailable.', 'info', 4000);
     } else {
-        await showToast('Preview ready', 'You can now upload artwork, tune the preview, and export a proof.', 'success');
+        await showToast('Preview ready', 'Pick a size and layout, upload your design, tweak the preview, and save.', 'success');
     }
 
     if (state.arUnsupported && !state.arUnsupportedToastShown) {
         state.arUnsupportedToastShown = true;
-        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
+        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 5000);
     }
 }
 
@@ -1940,7 +1940,7 @@ function syncControlAvailability() {
 
     syncARVisibility();
     syncTurntableButton();
-    syncSideUi('artwork');
+    syncSideUi('graphic');
 }
 
 function syncSideUi(side) {
@@ -2443,7 +2443,7 @@ function bindUploadInputs() {
     Object.entries(sideConfigs).forEach(([side, config]) => {
         config.input.addEventListener('change', (event) => {
             const [file] = event.target.files;
-            if (file) handleArtworkFile(side, file);
+            if (file) handleGraphicFile(side, file);
         });
 
         config.dropzone.addEventListener('keydown', (event) => {
@@ -2474,11 +2474,11 @@ function bindUploadInputs() {
             if (config.input.disabled) return;
 
             const [file] = event.dataTransfer.files;
-            if (file) handleArtworkFile(side, file);
+            if (file) handleGraphicFile(side, file);
         });
 
         config.resetButton.addEventListener('click', () => resetTransforms(side));
-        config.clearButton.addEventListener('click', () => clearArtwork(side, true));
+        config.clearButton.addEventListener('click', () => clearGraphic(side, true));
     });
 }
 
@@ -2547,13 +2547,13 @@ function bindUIEvents() {
 }
 
 /* ---------------------------------
-   Artwork & Transform Handlers
+   Graphic & Transform Handlers
 --------------------------------- */
-async function handleArtworkFile(side, file) {
+async function handleGraphicFile(side, file) {
     const config = sideConfigs[side];
 
     if (!state.ready || !modelRoot) {
-        showToast('Preview still loading', 'Please wait for the 3D preview to finish loading before uploading artwork.', 'info', 3600);
+        showToast('Preview still loading', 'Please wait for the 3D preview to finish loading before uploading graphic.', 'info', 3600);
         return;
     }
 
@@ -2595,7 +2595,7 @@ async function handleArtworkFile(side, file) {
             if (sourceY > 0) {
                 const topData = context.getImageData(0, 0, width, sourceY).data;
                 for (let i = 0; i < topData.length; i += 4) { // Check every single pixel for absolute graphic detection
-                    if (checkPixel(topData[i], topData[i+1], topData[i+2], topData[i+3])) return true;
+                    if (checkPixel(topData[i], topData[i + 1], topData[i + 2], topData[i + 3])) return true;
                 }
             }
             // Check bottom crop area
@@ -2604,7 +2604,7 @@ async function handleArtworkFile(side, file) {
             if (bottomHeight > 0) {
                 const bottomData = context.getImageData(0, bottomStartY, width, bottomHeight).data;
                 for (let i = 0; i < bottomData.length; i += 4) {
-                    if (checkPixel(bottomData[i], bottomData[i+1], bottomData[i+2], bottomData[i+3])) return true;
+                    if (checkPixel(bottomData[i], bottomData[i + 1], bottomData[i + 2], bottomData[i + 3])) return true;
                 }
             }
         } else if (width > 2048) {
@@ -2612,7 +2612,7 @@ async function handleArtworkFile(side, file) {
             if (sourceX > 0) {
                 const leftData = context.getImageData(0, 0, sourceX, height).data;
                 for (let i = 0; i < leftData.length; i += 4) {
-                    if (checkPixel(leftData[i], leftData[i+1], leftData[i+2], leftData[i+3])) return true;
+                    if (checkPixel(leftData[i], leftData[i + 1], leftData[i + 2], leftData[i + 3])) return true;
                 }
             }
             // Check right crop area
@@ -2621,7 +2621,7 @@ async function handleArtworkFile(side, file) {
             if (rightWidth > 0) {
                 const rightData = context.getImageData(rightStartX, 0, rightWidth, height).data;
                 for (let i = 0; i < rightData.length; i += 4) {
-                    if (checkPixel(rightData[i], rightData[i+1], rightData[i+2], rightData[i+3])) return true;
+                    if (checkPixel(rightData[i], rightData[i + 1], rightData[i + 2], rightData[i + 3])) return true;
                 }
             }
         }
@@ -2645,7 +2645,7 @@ async function handleArtworkFile(side, file) {
             // Larger side was scaled to 2048. Draw centered with white padding on shorter side
             cropContext.fillStyle = '#ffffff';
             cropContext.fillRect(0, 0, 2048, 2048);
-            
+
             const destX = Math.round((2048 - renderCanvas.width) / 2);
             const destY = Math.round((2048 - renderCanvas.height) / 2);
             cropContext.drawImage(renderCanvas, destX, destY);
@@ -2768,16 +2768,6 @@ async function handleArtworkFile(side, file) {
         return;
     }
 
-    // --- TEMPORARY REVIEW EXPORT ---
-    const reviewUrl = URL.createObjectURL(file);
-    const reviewLink = document.createElement('a');
-    reviewLink.href = reviewUrl;
-    reviewLink.download = `review_${file.name}`;
-    document.body.appendChild(reviewLink);
-    reviewLink.click();
-    document.body.removeChild(reviewLink);
-    setTimeout(() => URL.revokeObjectURL(reviewUrl), 100);
-
     const textureUrl = URL.createObjectURL(file);
 
     textureLoader.load(
@@ -2812,7 +2802,7 @@ async function handleArtworkFile(side, file) {
 
             resetTransformInputs(side);
             updateTextureTransforms(side);
-            saveCurrentArtworkToCache();
+            saveCurrentGraphicToCache();
             if (modelRoot) modelRoot.userData.lastConfigStr = null;
             applyConfigurationToScene(false);
             config.dropzone.classList.remove('is-loading');
@@ -2824,7 +2814,7 @@ async function handleArtworkFile(side, file) {
             const targetView = (configState.direction === 'Left') ? 'back' : 'front';
             focusCameraView(targetView, 800, false);
 
-            showToast('Artwork applied', `${config.label} artwork has been updated successfully.`, 'success');
+            showToast('Graphic applied', `${config.label} graphic has been updated successfully.`, 'success');
         },
         undefined,
         () => {
@@ -2832,12 +2822,12 @@ async function handleArtworkFile(side, file) {
             config.input.value = '';
             config.dropzone.classList.remove('is-loading');
             restoreAnimation();
-            showToast('Upload failed', `The ${config.label.toLowerCase()} artwork could not be processed.`, 'error', 4200);
+            showToast('Upload failed', `The ${config.label.toLowerCase()} graphic could not be processed.`, 'error', 4200);
         }
     );
 }
 
-function clearArtwork(side, announce = false) {
+function clearGraphic(side, announce = false) {
     const config = sideConfigs[side];
 
     if (config.uploadedTexture) {
@@ -2863,13 +2853,13 @@ function clearArtwork(side, announce = false) {
     config.titleElement.textContent = config.defaultTitle;
     config.titleElement.removeAttribute('title');
     resetTransformInputs(side);
-    saveCurrentArtworkToCache();
+    saveCurrentGraphicToCache();
     if (modelRoot) modelRoot.userData.lastConfigStr = null;
     applyConfigurationToScene(false);
     syncSideUi(side);
 
     if (announce) {
-        showToast('Artwork removed', `${config.label} artwork has been cleared from the preview.`, 'info');
+        showToast('Graphic removed', `${config.label} graphic has been cleared from the preview.`, 'info');
     }
 }
 
@@ -2901,7 +2891,7 @@ function updateTextureTransforms(side) {
         }
     });
 
-    saveCurrentArtworkToCache();
+    saveCurrentGraphicToCache();
 }
 
 /* ---------------------------------
@@ -2935,16 +2925,16 @@ function syncPlayPauseButton() {
 async function generatePdfProof() {
     if (!state.ready || state.isExporting) return;
     if (!pdfLibraryAvailable) {
-        showToast('PDF unavailable', 'The PDF export library is not loaded right now.', 'error', 4200);
+        showToast('PDF unavailable', 'The saving library is not loaded right now.', 'error', 4200);
         return;
     }
 
     state.isExporting = true;
     syncControlAvailability();
-    dom.generatePdf.textContent = 'Generating...';
+    dom.generatePdf.textContent = 'Saving...';
 
     const slowGenerationTimer = setTimeout(() => {
-        showToast('Generating proof', 'Capturing clean front and back views for the PDF.', 'info', 3000);
+        showToast('Saving design', 'Capturing front and back layouts for your design.', 'info', 3000);
     }, 3000);
 
     await new Promise((resolve) => window.requestAnimationFrame(resolve));
@@ -2964,9 +2954,9 @@ async function generatePdfProof() {
         sceneRoot.rotation.copy(savedRotation);
         doc.setFontSize(22);
         doc.setTextColor(50, 50, 50);
-        doc.text('Probo Configurator - Client Proof', 20, 20);
+        doc.text('Probo Configurator - Saved Design', 20, 20);
         doc.setFontSize(12);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 28);
+        doc.text(`Saved on: ${new Date().toLocaleDateString()}`, 20, 28);
         doc.text(`Pocket color: ${normalizeHex(dom.pocketColor.value) || dom.pocketColor.value}`, 20, 36);
 
         doc.setFontSize(14);
@@ -2976,11 +2966,11 @@ async function generatePdfProof() {
         doc.text('Back Layout', 150, 45);
         doc.addImage(backImage, 'JPEG', 150, 50, 110, 110);
 
-        doc.save('Probo_Flag_Proof.pdf');
-        showToast('PDF ready', 'The client proof has been downloaded successfully.', 'success');
+        doc.save('Probo_Flag_Design.pdf');
+        showToast('Design saved', 'Your custom flag design has been saved successfully.', 'success');
     } catch (error) {
         console.error(error);
-        showToast('PDF export failed', 'Unable to generate the proof. Please try again.', 'error', 4200);
+        showToast('Save failed', 'Unable to save your design. Please try again.', 'error', 4200);
     } finally {
         clearTimeout(slowGenerationTimer);
         dom.generatePdf.innerHTML = pdfButtonMarkup;
