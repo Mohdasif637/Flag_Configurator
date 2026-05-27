@@ -43,6 +43,8 @@ const dom = {
 /* ---------------------------------
    Configuration & Options
 --------------------------------- */
+
+
 const sideConfigs = {
     artwork: {
         label: 'Artwork',
@@ -62,13 +64,79 @@ const sideConfigs = {
         scaleInput: document.getElementById('artwork-scale'),
         xInput: document.getElementById('artwork-x'),
         yInput: document.getElementById('artwork-y'),
-        material: null,
-        originalMap: null,
         uploadedTexture: null,
+        uploadedFrontTex: null,
+        uploadedBackTex: null,
         previewUrl: null,
         fileName: null
     }
 };
+
+const uploadedArtworksCache = {};
+
+function getCurrentConfigKey() {
+    const sizeCode = configState.size.split(' ').pop().toLowerCase();
+    return `${sizeCode}_${configState.printing}_${configState.direction}`;
+}
+
+function saveCurrentArtworkToCache() {
+    const key = getCurrentConfigKey();
+    const config = sideConfigs.artwork;
+    
+    if (config.uploadedTexture) {
+        uploadedArtworksCache[key] = {
+            uploadedTexture: config.uploadedTexture,
+            uploadedFrontTex: config.uploadedFrontTex,
+            uploadedBackTex: config.uploadedBackTex,
+            previewUrl: config.previewUrl,
+            fileName: config.fileName,
+            scale: config.scaleInput.value,
+            panX: config.xInput.value,
+            panY: config.yInput.value
+        };
+    } else {
+        delete uploadedArtworksCache[key];
+    }
+}
+
+function loadArtworkFromCache() {
+    const key = getCurrentConfigKey();
+    const config = sideConfigs.artwork;
+    const cached = uploadedArtworksCache[key];
+    
+    if (cached) {
+        config.uploadedTexture = cached.uploadedTexture;
+        config.uploadedFrontTex = cached.uploadedFrontTex;
+        config.uploadedBackTex = cached.uploadedBackTex;
+        config.previewUrl = cached.previewUrl;
+        config.fileName = cached.fileName;
+        
+        config.scaleInput.value = cached.scale;
+        config.xInput.value = cached.panX;
+        config.yInput.value = cached.panY;
+        config.thumb.src = cached.previewUrl;
+        config.thumbFrame.style.display = 'block';
+        config.titleElement.textContent = truncateFileName(cached.fileName, config.titleElement);
+        config.actionsWrapper.style.display = 'flex';
+        config.transformsWrapper.style.display = 'block';
+    } else {
+        config.uploadedTexture = null;
+        config.uploadedFrontTex = null;
+        config.uploadedBackTex = null;
+        config.previewUrl = null;
+        config.fileName = null;
+        
+        config.scaleInput.value = '1';
+        config.xInput.value = '0';
+        config.yInput.value = '0';
+        config.thumb.removeAttribute('src');
+        config.thumbFrame.style.display = 'none';
+        config.titleElement.textContent = config.defaultTitle;
+        config.actionsWrapper.style.display = 'none';
+        config.transformsWrapper.style.display = 'none';
+    }
+    syncSideUi('artwork');
+}
 
 /* ---------------------------------
    Configurator State & UI Logic
@@ -247,6 +315,9 @@ function getVisibleMaxDimension() {
 export async function applyConfigurationToScene(animateTransition = false, transitionDuration = 800, isBaseSwap = false) {
     const currentCounter = ++applyConfigCounter;
     currentCameraSequenceId++; // Cancel any active async camera sequences immediately
+
+    // Load the custom artwork associated with this specific config from the cache
+    loadArtworkFromCache();
 
     // Lift/lower model parts based on Luxury cross base selection (lift by 1.14 cm = 0.0114 units)
     const targetOffset = (configState.base === 'Luxury cross base') ? 0.0114 : 0.0;
@@ -468,6 +539,45 @@ export async function applyConfigurationToScene(animateTransition = false, trans
             applyProps(frontMat, THREE.FrontSide, frontMat && frontMat.name.includes('translucent'));
             applyProps(backMat, THREE.BackSide, backMat && backMat.name.includes('translucent'));
 
+            // Dynamically assign custom uploaded artwork or restore the original map
+            const uploadedFrontTex = sideConfigs.artwork.uploadedFrontTex;
+            const uploadedBackTex = sideConfigs.artwork.uploadedBackTex;
+
+            const applyArtworkOrRestore = (mat) => {
+                if (!mat) return;
+                const isTranslucent = mat.name.includes('translucent');
+                if (isTranslucent) {
+                    return; // Translucent overlays never receive the artwork directly
+                }
+                
+                if (!mat.userData.originalMap) {
+                    mat.userData.originalMap = mat.map;
+                }
+                
+                if (mat === frontMat && uploadedFrontTex) {
+                    if (mat.userData.originalMap) {
+                        uploadedFrontTex.channel = mat.userData.originalMap.channel;
+                    }
+                    mat.map = uploadedFrontTex;
+                } else if (mat === backMat && uploadedBackTex) {
+                    if (mat.userData.originalMap) {
+                        uploadedBackTex.channel = mat.userData.originalMap.channel;
+                    }
+                    mat.map = uploadedBackTex;
+                } else {
+                    mat.map = mat.userData.originalMap;
+                }
+                mat.color.setHex(0xffffff);
+                mat.needsUpdate = true;
+            };
+
+            // Run map restoration on all cached size-materials to prevent stale overrides
+            Object.keys(cache).forEach(key => {
+                if (key !== 'global') {
+                    Object.values(cache[key]).forEach(applyArtworkOrRestore);
+                }
+            });
+
             if (frontMat) front.material = frontMat;
             if (backMat) back.material = backMat;
 
@@ -494,7 +604,7 @@ export async function applyConfigurationToScene(animateTransition = false, trans
     if (animateTransition && !state.isInAR) {
         const currentVisualScale = modelRoot.scale.clone();
         const startRotationY = isBaseSwap ? 0 : (modelRoot.rotation.y || 0);
-        const targetRotationY = startRotationY + (Math.PI * 2);
+        const targetRotationY = startRotationY + (isBaseSwap ? Math.PI : Math.PI * 2);
 
         // --- SCENE ALIGNMENT: Blend turntable rotation back to neutral 0 ---
         const startSceneRotationY = getNormalizedRotationAngle(sceneRoot.rotation.y);
@@ -2060,17 +2170,13 @@ function loadModel() {
                     }
                 });
 
-                sideConfigs.artwork.materials = [];
-                const addArtworkMaterial = (m) => {
-                    if (!m) return;
-                    if (!m.userData.originalMap) m.userData.originalMap = m.map;
-                    if (!sideConfigs.artwork.materials.includes(m)) sideConfigs.artwork.materials.push(m);
-                };
-                // Exclude global translucent materials from receiving uploaded artwork
+                // Pre-save original maps of all flag materials
                 Object.keys(flagMaterialsCache).forEach(key => {
-                    if (key !== 'global') {
-                        Object.values(flagMaterialsCache[key]).forEach(addArtworkMaterial);
-                    }
+                    Object.values(flagMaterialsCache[key]).forEach(m => {
+                        if (m && !m.userData.originalMap) {
+                            m.userData.originalMap = m.map;
+                        }
+                    });
                 });
 
                 modelRoot.traverse((child) => {
@@ -2160,10 +2266,6 @@ function loadModel() {
                         if (material.name.endsWith('_ds_right')) {
                             const size = material.name.split('_')[0]; // e.g., 'l' or 'xs'
 
-                            if (!sideConfigs.artwork.material) {
-                                sideConfigs.artwork.material = material;
-                            }
-
                             material.side = THREE.FrontSide;
                             const backMesh = child.clone();
                             backMesh.userData.isBackClone = true;
@@ -2183,7 +2285,6 @@ function loadModel() {
                                 backMaterial.name = material.name + '_back';
                                 backMaterial.color.setHex(0x000000);
                                 if (!backMaterial.userData.originalMap) backMaterial.userData.originalMap = backMaterial.map;
-                                sideConfigs.artwork.materials.push(backMaterial);
                             }
                             backMaterial.side = THREE.BackSide;
 
@@ -2441,7 +2542,7 @@ function bindUIEvents() {
 async function handleArtworkFile(side, file) {
     const config = sideConfigs[side];
 
-    if (!state.ready || !config.material) {
+    if (!state.ready || !modelRoot) {
         showToast('Preview still loading', 'Please wait for the 3D preview to finish loading before uploading artwork.', 'info', 3600);
         return;
     }
@@ -2515,6 +2616,8 @@ async function handleArtworkFile(side, file) {
             URL.revokeObjectURL(textureUrl);
 
             const previousTexture = config.uploadedTexture;
+            const previousFrontTex = config.uploadedFrontTex;
+            const previousBackTex = config.uploadedBackTex;
             const previousPreviewUrl = config.previewUrl;
 
             texture.flipY = false;
@@ -2527,22 +2630,29 @@ async function handleArtworkFile(side, file) {
             texture.center.set(0.5, 0.5);
 
             config.uploadedTexture = texture;
+            config.uploadedFrontTex = texture.clone();
+            config.uploadedBackTex = texture.clone();
             config.previewUrl = URL.createObjectURL(file);
             config.thumb.src = config.previewUrl;
 
             if (previousPreviewUrl) URL.revokeObjectURL(previousPreviewUrl);
             if (previousTexture) previousTexture.dispose();
+            if (previousFrontTex) previousFrontTex.dispose();
+            if (previousBackTex) previousBackTex.dispose();
 
             resetTransformInputs(side);
             updateTextureTransforms(side);
-            applySideMaterialMap(side);
+            saveCurrentArtworkToCache();
+            if (modelRoot) modelRoot.userData.lastConfigStr = null;
+            applyConfigurationToScene(false);
             config.dropzone.classList.remove('is-loading');
             syncSideUi(side);
             config.titleElement.textContent = truncateFileName(config.fileName, config.titleElement);
             config.input.value = '';
 
             restoreAnimation();
-            focusCameraView('front');
+            const targetView = (configState.direction === 'Left') ? 'back' : 'front';
+            focusCameraView(targetView, 800, false);
 
             showToast('Artwork applied', `${config.label} artwork has been updated successfully.`, 'success');
         },
@@ -2557,22 +2667,20 @@ async function handleArtworkFile(side, file) {
     );
 }
 
-function applySideMaterialMap(side) {
-    const config = sideConfigs[side];
-    if (!config.materials || config.materials.length === 0) return;
-    config.materials.forEach((material) => {
-        material.map = config.uploadedTexture || material.userData.originalMap;
-        material.color.setHex(0xffffff);
-        material.needsUpdate = true;
-    });
-}
-
 function clearArtwork(side, announce = false) {
     const config = sideConfigs[side];
 
     if (config.uploadedTexture) {
         config.uploadedTexture.dispose();
         config.uploadedTexture = null;
+    }
+    if (config.uploadedFrontTex) {
+        config.uploadedFrontTex.dispose();
+        config.uploadedFrontTex = null;
+    }
+    if (config.uploadedBackTex) {
+        config.uploadedBackTex.dispose();
+        config.uploadedBackTex = null;
     }
 
     if (config.previewUrl) {
@@ -2584,7 +2692,9 @@ function clearArtwork(side, announce = false) {
     config.input.value = '';
     config.titleElement.textContent = config.defaultTitle;
     resetTransformInputs(side);
-    applySideMaterialMap(side);
+    saveCurrentArtworkToCache();
+    if (modelRoot) modelRoot.userData.lastConfigStr = null;
+    applyConfigurationToScene(false);
     syncSideUi(side);
 
     if (announce) {
@@ -2612,9 +2722,15 @@ function updateTextureTransforms(side) {
     const panX = Number.parseFloat(config.xInput.value);
     const panY = Number.parseFloat(config.yInput.value);
 
-    config.uploadedTexture.repeat.set(1 / scale, 1 / scale);
-    config.uploadedTexture.offset.set(-panX, panY);
-    config.uploadedTexture.needsUpdate = true;
+    [config.uploadedTexture, config.uploadedFrontTex, config.uploadedBackTex].forEach(tex => {
+        if (tex) {
+            tex.repeat.set(1 / scale, 1 / scale);
+            tex.offset.set(-panX, panY);
+            tex.needsUpdate = true;
+        }
+    });
+
+    saveCurrentArtworkToCache();
 }
 
 /* ---------------------------------
