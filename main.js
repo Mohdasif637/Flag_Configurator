@@ -76,7 +76,13 @@ const uploadedArtworksCache = {};
 
 function getCurrentConfigKey() {
     const sizeCode = configState.size.split(' ').pop().toLowerCase();
-    return `${sizeCode}_${configState.printing}_${configState.direction}`;
+    let printing = configState.printing;
+    // Single Sided and Air Textile share the same graphic template and layout.
+    // Map Air Textile to Single Sided to share the exact same cached texture and transform state.
+    if (printing === 'Air Textile') {
+        printing = 'Single Sided';
+    }
+    return `${sizeCode}_${printing.toLowerCase()}_${configState.direction.toLowerCase()}`;
 }
 
 function saveCurrentArtworkToCache() {
@@ -132,6 +138,7 @@ function loadArtworkFromCache() {
         config.thumb.removeAttribute('src');
         config.thumbFrame.style.display = 'none';
         config.titleElement.textContent = config.defaultTitle;
+        config.titleElement.removeAttribute('title');
         config.actionsWrapper.style.display = 'none';
         config.transformsWrapper.style.display = 'none';
     }
@@ -1595,6 +1602,9 @@ async function silentWarmupAllSizes() {
 
 
 function truncateFileName(fileName, containerElement) {
+    if (containerElement) {
+        containerElement.title = fileName;
+    }
     const extIndex = fileName.lastIndexOf('.');
     const ext = extIndex !== -1 ? fileName.substring(extIndex) : '';
     const name = extIndex !== -1 ? fileName.substring(0, extIndex) : fileName;
@@ -2567,14 +2577,98 @@ async function handleArtworkFile(side, file) {
         }
     };
 
-    if (file.type === 'application/pdf') {
+    // Helper to check if crop areas contain actual graphics (non-white, non-transparent pixels)
+    const hasGraphicInCropAreas = (context, width, height) => {
+        if (width === 2048 && height === 2048) return false;
+
+        const sourceX = Math.round((width - 2048) / 2);
+        const sourceY = Math.round((height - 2048) / 2);
+
+        const checkPixel = (r, g, b, a) => {
+            if (a < 5) return false; // Transparent/near-transparent
+            if (r > 250 && g > 250 && b > 250) return false; // White/near-white
+            return true; // Actual graphic content detected!
+        };
+
+        if (height > 2048) {
+            // Check top crop area
+            if (sourceY > 0) {
+                const topData = context.getImageData(0, 0, width, sourceY).data;
+                for (let i = 0; i < topData.length; i += 4) { // Check every single pixel for absolute graphic detection
+                    if (checkPixel(topData[i], topData[i+1], topData[i+2], topData[i+3])) return true;
+                }
+            }
+            // Check bottom crop area
+            const bottomStartY = sourceY + 2048;
+            const bottomHeight = height - bottomStartY;
+            if (bottomHeight > 0) {
+                const bottomData = context.getImageData(0, bottomStartY, width, bottomHeight).data;
+                for (let i = 0; i < bottomData.length; i += 4) {
+                    if (checkPixel(bottomData[i], bottomData[i+1], bottomData[i+2], bottomData[i+3])) return true;
+                }
+            }
+        } else if (width > 2048) {
+            // Check left crop area
+            if (sourceX > 0) {
+                const leftData = context.getImageData(0, 0, sourceX, height).data;
+                for (let i = 0; i < leftData.length; i += 4) {
+                    if (checkPixel(leftData[i], leftData[i+1], leftData[i+2], leftData[i+3])) return true;
+                }
+            }
+            // Check right crop area
+            const rightStartX = sourceX + 2048;
+            const rightWidth = width - rightStartX;
+            if (rightWidth > 0) {
+                const rightData = context.getImageData(rightStartX, 0, rightWidth, height).data;
+                for (let i = 0; i < rightData.length; i += 4) {
+                    if (checkPixel(rightData[i], rightData[i+1], rightData[i+2], rightData[i+3])) return true;
+                }
+            }
+        }
+
+        return false;
+    };
+
+    // Helper to crop and convert a scaled canvas to high-fidelity WebP (maximum quality 1.0)
+    const cropAndConvertCanvasToWebP = async (renderCanvas, isCroppedCentered, fileName) => {
+        const cropCanvas = document.createElement('canvas');
+        const cropContext = cropCanvas.getContext('2d');
+        cropCanvas.width = 2048;
+        cropCanvas.height = 2048;
+
+        if (isCroppedCentered) {
+            // Shorter side was scaled to 2048. Extract 2048x2048 center square
+            const sourceX = Math.round((renderCanvas.width - 2048) / 2);
+            const sourceY = Math.round((renderCanvas.height - 2048) / 2);
+            cropContext.drawImage(renderCanvas, sourceX, sourceY, 2048, 2048, 0, 0, 2048, 2048);
+        } else {
+            // Larger side was scaled to 2048. Draw centered with white padding on shorter side
+            cropContext.fillStyle = '#ffffff';
+            cropContext.fillRect(0, 0, 2048, 2048);
+            
+            const destX = Math.round((2048 - renderCanvas.width) / 2);
+            const destY = Math.round((2048 - renderCanvas.height) / 2);
+            cropContext.drawImage(renderCanvas, destX, destY);
+        }
+
+        // Convert to WebP at a visually lossless quality factor (0.90) to ensure compact file size and perfect details
+        const blob = await new Promise((resolve) => cropCanvas.toBlob(resolve, 'image/webp', 0.90));
+        return new File([blob], fileName.replace(/\.[^/.]+$/, '') + '.webp', { type: 'image/webp' });
+    };
+
+    const fileType = file.type;
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    const isPdf = fileType === 'application/pdf' || fileExtension === 'pdf';
+    const isImage = /^image\/(png|jpeg|webp)$/.test(fileType) || ['png', 'jpg', 'jpeg', 'webp'].includes(fileExtension);
+
+    if (isPdf) {
         if (typeof pdfjsLib === 'undefined') {
             config.dropzone.classList.remove('is-loading');
             restoreAnimation();
             showToast('PDF unavailable', 'The PDF processing library is not loaded right now.', 'error', 4200);
             return;
         }
-        showToast('Processing PDF', 'Converting the first page of the PDF to a high-quality image.', 'info', 3000);
+        showToast('Processing PDF', 'Converting the first page of the PDF to a high-quality WebP image.', 'info', 3000);
 
         try {
             const arrayBuffer = await file.arrayBuffer();
@@ -2582,18 +2676,32 @@ async function handleArtworkFile(side, file) {
             const page = await pdf.getPage(1);
             const viewport = page.getViewport({ scale: 1 });
 
-            const scale = 2048 / Math.max(viewport.width, viewport.height);
-            const scaledViewport = page.getViewport({ scale });
+            // 1. Try scaling shorter side to 2048 first
+            let scale = 2048 / Math.min(viewport.width, viewport.height);
+            let scaledViewport = page.getViewport({ scale });
 
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = scaledViewport.height;
-            canvas.width = scaledViewport.width;
+            let renderCanvas = document.createElement('canvas');
+            let renderContext = renderCanvas.getContext('2d');
+            renderCanvas.width = scaledViewport.width;
+            renderCanvas.height = scaledViewport.height;
 
-            await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
+            await page.render({ canvasContext: renderContext, viewport: scaledViewport }).promise;
 
-            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-            file = new File([blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' });
+            // 2. Check if the cut-off areas contain any actual graphics
+            let isCroppedCentered = true;
+            if (hasGraphicInCropAreas(renderContext, renderCanvas.width, renderCanvas.height)) {
+                // Graphic detected in crop area! Fallback to scaling the larger side to prevent graphic cutting
+                isCroppedCentered = false;
+                scale = 2048 / Math.max(viewport.width, viewport.height);
+                scaledViewport = page.getViewport({ scale });
+
+                renderCanvas.width = scaledViewport.width;
+                renderCanvas.height = scaledViewport.height;
+
+                await page.render({ canvasContext: renderContext, viewport: scaledViewport }).promise;
+            }
+
+            file = await cropAndConvertCanvasToWebP(renderCanvas, isCroppedCentered, file.name);
         } catch (error) {
             console.error('PDF conversion failed:', error);
             config.dropzone.classList.remove('is-loading');
@@ -2601,12 +2709,74 @@ async function handleArtworkFile(side, file) {
             showToast('PDF error', 'Failed to read or convert the PDF file.', 'error', 4200);
             return;
         }
-    } else if (!/^image\/(png|jpeg)$/.test(file.type)) {
+    } else if (isImage) {
+        // High-fidelity image processing: scale by shorter side first, analyze, and fallback if graphics are in margins
+        showToast('Processing Image', 'Formatting the image to a high-fidelity WebP texture.', 'info', 1800);
+        try {
+            const loadImageElement = (src) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = (err) => reject(err);
+                    img.src = src;
+                });
+            };
+
+            const imgUrl = URL.createObjectURL(file);
+            const img = await loadImageElement(imgUrl);
+            URL.revokeObjectURL(imgUrl);
+
+            // 1. Try scaling shorter side to 2048 first
+            let scale = 2048 / Math.min(img.naturalWidth, img.naturalHeight);
+            let scaledWidth = img.naturalWidth * scale;
+            let scaledHeight = img.naturalHeight * scale;
+
+            let renderCanvas = document.createElement('canvas');
+            let renderContext = renderCanvas.getContext('2d');
+            renderCanvas.width = scaledWidth;
+            renderCanvas.height = scaledHeight;
+
+            renderContext.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+            // 2. Check if the cut-off areas contain any actual graphics
+            let isCroppedCentered = true;
+            if (hasGraphicInCropAreas(renderContext, renderCanvas.width, renderCanvas.height)) {
+                // Graphic detected in crop area! Fallback to scaling the larger side to prevent graphic cutting
+                isCroppedCentered = false;
+                scale = 2048 / Math.max(img.naturalWidth, img.naturalHeight);
+                scaledWidth = img.naturalWidth * scale;
+                scaledHeight = img.naturalHeight * scale;
+
+                renderCanvas.width = scaledWidth;
+                renderCanvas.height = scaledHeight;
+
+                renderContext.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+            }
+
+            file = await cropAndConvertCanvasToWebP(renderCanvas, isCroppedCentered, file.name);
+        } catch (error) {
+            console.error('Image processing failed:', error);
+            config.dropzone.classList.remove('is-loading');
+            restoreAnimation();
+            showToast('Image error', 'Failed to process the uploaded image.', 'error', 4200);
+            return;
+        }
+    } else {
         config.dropzone.classList.remove('is-loading');
         restoreAnimation();
-        showToast('Unsupported file', 'Please upload a PNG, JPG, or PDF file.', 'error', 3800);
+        showToast('Unsupported file', 'Please upload a PNG, JPG, JPEG, WEBP, or PDF file.', 'error', 3800);
         return;
     }
+
+    // --- TEMPORARY REVIEW EXPORT ---
+    const reviewUrl = URL.createObjectURL(file);
+    const reviewLink = document.createElement('a');
+    reviewLink.href = reviewUrl;
+    reviewLink.download = `review_${file.name}`;
+    document.body.appendChild(reviewLink);
+    reviewLink.click();
+    document.body.removeChild(reviewLink);
+    setTimeout(() => URL.revokeObjectURL(reviewUrl), 100);
 
     const textureUrl = URL.createObjectURL(file);
 
@@ -2691,6 +2861,7 @@ function clearArtwork(side, announce = false) {
     config.thumb.removeAttribute('src');
     config.input.value = '';
     config.titleElement.textContent = config.defaultTitle;
+    config.titleElement.removeAttribute('title');
     resetTransformInputs(side);
     saveCurrentArtworkToCache();
     if (modelRoot) modelRoot.userData.lastConfigStr = null;
