@@ -893,16 +893,12 @@ async function runPrintingCameraSequence() {
     const primaryView = (configState.printing === 'Double Sided') ? 'front' : ((configState.direction === 'Left') ? 'back' : 'front');
     const secondaryView = (configState.printing === 'Double Sided') ? 'back' : ((configState.direction === 'Left') ? 'front' : 'back');
 
-    // Step 1: Fast move 180 degree to show back view (secondary view)
-    focusCameraSpinHalf(secondaryView, 500, false, true);
-    await new Promise(resolve => setTimeout(resolve, 550));
+    // Step 1: Smoothly rotate 180 degrees to the secondary/back view, slowing down gently near the end
+    focusCameraSpinHalf(secondaryView, 800, false, true);
+    await new Promise(resolve => setTimeout(resolve, 820));
     if (sequenceId !== currentCameraSequenceId) return;
 
-    // Step 2: Rest here for 1 second (Strictly the only stay in the entire sequence)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (sequenceId !== currentCameraSequenceId) return;
-
-    // Step 3: Complete the rest 180 degree rotation to return to primary view
+    // Step 2: Smoothly rotate the remaining 180 degrees back to primary view, starting gently and accelerating
     focusCameraSpinHalf(primaryView, 800, true, true);
 }
 
@@ -1353,7 +1349,8 @@ const state = {
     arUnsupported: false,
     arSupportResolved: false,
     arSupported: false,
-    arUnsupportedToastShown: false
+    arUnsupportedToastShown: false,
+    arSupportedToastShown: false
 };
 
 const pdfButtonMarkup = dom.generatePdf.innerHTML;
@@ -1904,6 +1901,11 @@ async function syncReadyState() {
         state.arUnsupportedToastShown = true;
         showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 5000);
     }
+
+    if (state.arSupported && !state.arSupportedToastShown) {
+        state.arSupportedToastShown = true;
+        showToast('AR Supported', 'This device supports AR! Tap the AR button on the bottom right to place the flag in your room.', 'success', 5000);
+    }
 }
 
 function syncControlAvailability() {
@@ -2237,6 +2239,12 @@ function loadModel() {
                                 shader.uniforms.uTotalFrames = { value: frameCount };
                                 shader.uniforms.uFps = { value: 30.0 };
                                 child.customDepthMaterial.userData.shader = shader;
+                                if (!child.customDepthMaterial.userData.compiledShaders) {
+                                    child.customDepthMaterial.userData.compiledShaders = [];
+                                }
+                                if (!child.customDepthMaterial.userData.compiledShaders.includes(shader)) {
+                                    child.customDepthMaterial.userData.compiledShaders.push(shader);
+                                }
                                 if (!vatMaterials.includes(child.customDepthMaterial)) {
                                     vatMaterials.push(child.customDepthMaterial);
                                 }
@@ -2339,6 +2347,12 @@ function loadModel() {
                                 shader.uniforms.uFps = { value: 30.0 };
 
                                 mat.userData.shader = shader;
+                                if (!mat.userData.compiledShaders) {
+                                    mat.userData.compiledShaders = [];
+                                }
+                                if (!mat.userData.compiledShaders.includes(shader)) {
+                                    mat.userData.compiledShaders.push(shader);
+                                }
 
                                 // --- 2. DYNAMIC SHADER DECLARATIONS ---
                                 let declarations = `
@@ -3100,9 +3114,11 @@ function transitionCameraSpinHalf(targetPosition, duration = 800, isSecondHalf =
         endSpherical.theta += Math.PI * 2;
     }
 
+    const easingFunc = isSecondHalf ? TWEEN.Easing.Quadratic.In : TWEEN.Easing.Quadratic.Out;
+
     activeCameraTween = new TWEEN.Tween({ progress: 0 })
         .to({ progress: 1 }, duration)
-        .easing(TWEEN.Easing.Cubic.InOut)
+        .easing(easingFunc)
         .onUpdate(({ progress }) => {
             controls.target.lerpVectors(startTarget, endTarget, progress);
             const radius = THREE.MathUtils.lerp(startSpherical.radius, endSpherical.radius, progress);
@@ -3163,6 +3179,7 @@ function initializeARSupport() {
             if (supported) {
                 state.arSupported = true;
                 syncARVisibility();
+                syncReadyState();
             } else {
                 markARUnsupported();
             }
@@ -3351,6 +3368,13 @@ function renderFrame(_, frame) {
     vatMaterials.forEach((mat) => {
         if (mat.userData.shader) {
             mat.userData.shader.uniforms.uTime.value = accumulatedTime;
+        }
+        if (mat.userData.compiledShaders) {
+            mat.userData.compiledShaders.forEach((shader) => {
+                if (shader && shader.uniforms && shader.uniforms.uTime) {
+                    shader.uniforms.uTime.value = accumulatedTime;
+                }
+            });
         }
     });
 
