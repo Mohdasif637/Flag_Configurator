@@ -1897,14 +1897,9 @@ async function syncReadyState() {
         await showToast('Preview ready', 'Pick a size and layout, upload your design, tweak the preview, and save.', 'success');
     }
 
-    if (state.arUnsupported && !state.arUnsupportedToastShown) {
-        state.arUnsupportedToastShown = true;
-        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 5000);
-    }
-
     if (state.arSupported && !state.arSupportedToastShown) {
         state.arSupportedToastShown = true;
-        showToast('AR Supported', 'This device supports AR! Tap the AR button on the bottom right to place the flag in your room.', 'success', 5000);
+        showToast('AR Supported', 'Ready for AR! Tap the green AR button on the right to place the flag in the real world.', 'success', 5000);
     }
 }
 
@@ -2071,6 +2066,7 @@ function isEnvPanelOpen() {
 function setEnvPanelOpen(open) {
     envPanelShouldBeOpen = open;
     window.clearTimeout(envPanelHideTimer);
+    dom.envToggle.classList.toggle('is-active', open);
 
     if (open) {
         dom.envPanel.hidden = false;
@@ -3197,11 +3193,6 @@ function markARUnsupported() {
 
     if (arButton.isConnected) arButton.remove();
     ensureArDisabledFallback();
-
-    if (state.ready && !state.arUnsupportedToastShown) {
-        state.arUnsupportedToastShown = true;
-        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
-    }
     syncARVisibility();
 }
 
