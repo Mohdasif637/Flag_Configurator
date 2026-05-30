@@ -672,7 +672,7 @@ export async function applyConfigurationToScene(animateTransition = false, trans
         }
         let endCameraPos;
         let endControlsTarget;
-        if (isBaseSwap) {
+        if (isBaseSwap && configState.base !== 'No base') {
             const baseFocus = getBaseFocusTargets();
             endControlsTarget = baseFocus.target;
             endCameraPos = baseFocus.position;
@@ -1034,16 +1034,27 @@ function initConfiguratorUI() {
                 } else if (baseChanged) {
                     if (typeof isZoomedIn !== 'undefined') isZoomedIn = false;
                     preZoomState = null;
-                    setActiveCameraView('home');
+                    if (value === 'No base') {
+                        setActiveCameraView('home');
+                    } else {
+                        setActiveCameraView(null); // Set to null (inactive) since the camera is focusing down on the physical base
+                    }
                     isBaseSwap = true;
                 }
 
                 applyConfigurationToScene(sizeChanged || baseChanged, swapDuration, isBaseSwap);
 
+                // Introduce a tiny 50ms frame-settling delay to allow WebGL state changes and
+                // texture uploads (like the Air Textile alphaMap) to bind synchronously first.
+                // This prevents first-frame frame rate spikes, ensuring a buttery smooth transition!
                 if (category === 'printing') {
-                    runPrintingCameraSequence();
+                    window.setTimeout(() => {
+                        runPrintingCameraSequence();
+                    }, 50);
                 } else if (category === 'direction') {
-                    runDirectionCameraSequence(value);
+                    window.setTimeout(() => {
+                        runDirectionCameraSequence(value);
+                    }, 50);
                 }
             });
         });
