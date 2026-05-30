@@ -217,7 +217,7 @@ function updateDynamicPrices() {
     }
 
     if (configState.base !== 'No base') {
-        const mappedBase = baseMapping[configState.base];
+        const mappedBase = baseMapping[configState.base] || configState.base;
         if (mappedBase && pricingData.pricingTiers.bases[mappedBase]) {
             basePrice = pricingData.pricingTiers.bases[mappedBase];
         }
@@ -249,7 +249,7 @@ function updateDynamicPrices() {
             if (value === 'No base') {
                 cardPrice = 0;
             } else {
-                const cardMappedBase = baseMapping[value];
+                const cardMappedBase = baseMapping[value] || value;
                 if (cardMappedBase && pricingData.pricingTiers.bases[cardMappedBase]) {
                     cardPrice = pricingData.pricingTiers.bases[cardMappedBase];
                 }
@@ -452,20 +452,23 @@ export async function applyConfigurationToScene(animateTransition = false, trans
                 child.traverse(c => c.visible = true);
             }
             // Pole visibility handled by fadePole() below — skip here
-            if (configState.base === 'Luxury cross base' && lowerName.includes('luxury_cross_base')) {
-                child.traverse(c => c.visible = true);
-            } else if ((configState.base === 'Cross base-grey' || configState.base === 'Cross base-black') && lowerName.includes('cross_base_grey_black')) {
-                child.traverse(c => c.visible = true);
-                child.traverse(c => {
-                    if (c.isMesh && c.material) {
-                        const materials = Array.isArray(c.material) ? c.material : [c.material];
-                        materials.forEach(mat => {
-                            if (mat.name === 'cross_base_grey_black') {
-                                mat.color.setHex(configState.base === 'Cross base-black' ? 0x222222 : 0x888888);
-                            }
-                        });
-                    }
-                });
+            if (configState.base !== 'No base') {
+                const baseKey = configState.base.toLowerCase().replace(/[\s-]/g, '_');
+                if (lowerName.includes(baseKey) || (baseKey.startsWith('cross_base') && lowerName.includes('cross_base_grey_black'))) {
+                    child.traverse(c => c.visible = true);
+                    
+                    // Handle dynamic color overlay specifically for grey/black shared meshes
+                    child.traverse(c => {
+                        if (c.isMesh && c.material) {
+                            const materials = Array.isArray(c.material) ? c.material : [c.material];
+                            materials.forEach(mat => {
+                                if (mat.name === 'cross_base_grey_black') {
+                                    mat.color.setHex(configState.base === 'Cross base-black' ? 0x222222 : 0x888888);
+                                }
+                            });
+                        }
+                    });
+                }
             }
         });
 
@@ -613,6 +616,18 @@ export async function applyConfigurationToScene(animateTransition = false, trans
         const startRotationY = isBaseSwap ? 0 : (modelRoot.rotation.y || 0);
         const targetRotationY = startRotationY + (isBaseSwap ? Math.PI : Math.PI * 2);
 
+        let oldBaseWasNone = true;
+        modelRoot.traverse((child) => {
+            if (child.isMesh && child.visible) {
+                const lowerName = (child.name || '').toLowerCase();
+                if (lowerName.includes('base') || lowerName.includes('cross')) {
+                    oldBaseWasNone = false;
+                }
+            }
+        });
+        const targetBaseIsNone = (configState.base === 'No base');
+        const isToOrFromNone = isBaseSwap && (oldBaseWasNone || targetBaseIsNone);
+
         // --- SCENE ALIGNMENT: Blend turntable rotation back to neutral 0 ---
         const startSceneRotationY = getNormalizedRotationAngle(sceneRoot.rotation.y);
         const endSceneRotationY = 0;
@@ -640,8 +655,12 @@ export async function applyConfigurationToScene(animateTransition = false, trans
             const lowerName = (child.name || '').toLowerCase();
             if (lowerName.includes(`${sizePrefix}_vat`) || lowerName.includes(`${sizePrefix}_pocket`)) child.traverse(c => c.visible = true);
             // Pole excluded from bounding box pass — it doesn’t affect flag bounds
-            if (configState.base === 'Luxury cross base' && lowerName.includes('luxury_cross_base')) child.traverse(c => c.visible = true);
-            else if ((configState.base === 'Cross base-grey' || configState.base === 'Cross base-black') && lowerName.includes('cross_base_grey_black')) child.traverse(c => c.visible = true);
+            if (configState.base !== 'No base') {
+                const baseKey = configState.base.toLowerCase().replace(/[\s-]/g, '_');
+                if (lowerName.includes(baseKey) || (baseKey.startsWith('cross_base') && lowerName.includes('cross_base_grey_black'))) {
+                    child.traverse(c => c.visible = true);
+                }
+            }
         });
 
         modelRoot.updateMatrixWorld(true);
@@ -688,13 +707,30 @@ export async function applyConfigurationToScene(animateTransition = false, trans
             .onUpdate(({ progress }) => {
                 const currentScaleAmt = THREE.MathUtils.lerp(1.0, dimRatio, progress);
                 if (isBaseSwap) {
-                    const rotationY = THREE.MathUtils.lerp(startRotationY, targetRotationY, progress);
-                    modelRoot.children.forEach(child => {
-                        const lowerName = (child.name || '').toLowerCase();
-                        if (lowerName.includes('base') || lowerName.includes('cross')) {
-                            child.rotation.y = rotationY;
+                    if (isToOrFromNone) {
+                        let scaleVal = 1.0;
+                        if (targetBaseIsNone) {
+                            scaleVal = Math.max(0, 1.0 - progress * 4.0); // Complete shrink twice as fast (within first 25% of progress)
+                        } else if (oldBaseWasNone) {
+                            scaleVal = progress < 0.5 ? 0.0 : Math.min(1.0, (progress - 0.5) * 4.0); // Complete grow twice as fast (within first 25% of the second half)
                         }
-                    });
+                        modelRoot.children.forEach(child => {
+                            const lowerName = (child.name || '').toLowerCase();
+                            if (lowerName.includes('base') || lowerName.includes('cross')) {
+                                child.scale.set(scaleVal, scaleVal, scaleVal);
+                                child.rotation.y = 0;
+                            }
+                        });
+                    } else {
+                        const rotationY = THREE.MathUtils.lerp(startRotationY, targetRotationY, progress);
+                        modelRoot.children.forEach(child => {
+                            const lowerName = (child.name || '').toLowerCase();
+                            if (lowerName.includes('base') || lowerName.includes('cross')) {
+                                child.rotation.y = rotationY;
+                                child.scale.set(1, 1, 1);
+                            }
+                        });
+                    }
                 } else {
                     modelRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, targetRotationY, progress);
                 }
@@ -735,6 +771,7 @@ export async function applyConfigurationToScene(animateTransition = false, trans
                     modelRoot.children.forEach(child => {
                         const lowerName = (child.name || '').toLowerCase();
                         if (lowerName.includes('base') || lowerName.includes('cross')) {
+                            child.scale.set(1, 1, 1);
                             child.rotation.y = 0;
                         }
                     });
@@ -1024,7 +1061,7 @@ window.addEventListener('DOMContentLoaded', async () => {
    Three.js Core Setup
 --------------------------------- */
 const scene = new THREE.Scene();
-const defaultBackground = new THREE.Color('#e0e0e0');
+const defaultBackground = new THREE.Color('#b0afaf');
 scene.background = defaultBackground;
 
 const camera = new THREE.PerspectiveCamera(45, getViewportAspect(), 0.1, 100);
