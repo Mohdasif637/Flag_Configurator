@@ -320,6 +320,7 @@ function getVisibleMaxDimension() {
 }
 
 export async function applyConfigurationToScene(animateTransition = false, transitionDuration = 800, isBaseSwap = false) {
+    sceneDirty = true;
     const currentCounter = ++applyConfigCounter;
     currentCameraSequenceId++; // Cancel any active async camera sequences immediately
 
@@ -1147,6 +1148,11 @@ let cameraTargets = {
 const exportRenderSize = 2048;
 
 const controls = new OrbitControls(camera, renderer.domElement);
+let sceneDirty = true; // Initial frame needs drawing
+let controlsDirty = false;
+controls.addEventListener('change', () => {
+    controlsDirty = true;
+});
 controls.enableDamping = true;
 controls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
@@ -1402,7 +1408,52 @@ const state = {
 };
 
 const pdfButtonMarkup = dom.generatePdf.innerHTML;
-const pdfLibraryAvailable = typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF === 'function';
+let pdfLibraryAvailable = true; // Set to true to keep button enabled on start; lazy-loaded on demand
+let pdfLibrariesLoading = false;
+let pdfLibrariesPromise = null;
+
+function loadPdfLibraries() {
+    if (window.jspdf && window.pdfjsLib) {
+        return Promise.resolve(true);
+    }
+    
+    if (pdfLibrariesLoading) {
+        return pdfLibrariesPromise;
+    }
+    
+    pdfLibrariesLoading = true;
+    showToast('Loading Saving System', 'Preparing the PDF saving modules...', 'info', 3000);
+    
+    pdfLibrariesPromise = Promise.all([
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js")
+    ]).then(() => {
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+        pdfLibrariesLoading = false;
+        return true;
+    }).catch(err => {
+        console.error("Failed to load PDF libraries", err);
+        showToast('Load Failed', 'Could not load the PDF saving libraries. Please check your internet connection.', 'error', 4000);
+        pdfLibrariesLoading = false;
+        pdfLibrariesPromise = null;
+        return false;
+    });
+    
+    return pdfLibrariesPromise;
+}
+
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
 const mobileViewportMediaQuery = window.matchMedia('(max-width: 768px)');
 const pocketColorPickrLayoutState = { restoreStyleText: null };
 const arButtonIconMarkup = `
@@ -2576,6 +2627,7 @@ function bindUIEvents() {
 
     dom.envExposure.addEventListener('input', (event) => {
         renderer.toneMappingExposure = Number.parseFloat(event.target.value);
+        sceneDirty = true;
     });
 
     dom.envRotate.addEventListener('input', (event) => {
@@ -2583,6 +2635,7 @@ function bindUIEvents() {
         const radians = Number.parseFloat(event.target.value);
         scene.environmentRotation.y = radians;
         lightingGroup.rotation.y = radians;
+        sceneDirty = true;
     });
 
     dom.envReset.addEventListener('click', () => {
@@ -2591,6 +2644,7 @@ function bindUIEvents() {
         renderer.toneMappingExposure = 1;
         scene.environmentRotation.y = 0;
         lightingGroup.rotation.y = 0;
+        sceneDirty = true;
     });
 
     dom.cameraButtons.forEach((button) => {
@@ -2721,10 +2775,13 @@ async function handleGraphicFile(side, file) {
 
     if (isPdf) {
         if (typeof pdfjsLib === 'undefined') {
-            config.dropzone.classList.remove('is-loading');
-            restoreAnimation();
-            showToast('PDF unavailable', 'The PDF processing library is not loaded right now.', 'error', 4200);
-            return;
+            showToast('Loading PDF System', 'Preparing the PDF processing modules...', 'info', 3000);
+            const success = await loadPdfLibraries();
+            if (!success) {
+                config.dropzone.classList.remove('is-loading');
+                restoreAnimation();
+                return;
+            }
         }
         showToast('Processing PDF', 'Converting the first page of the PDF to a high-quality WebP image.', 'info', 3000);
 
@@ -2934,6 +2991,7 @@ function resetTransforms(side) {
 }
 
 function updateTextureTransforms(side) {
+    sceneDirty = true;
     const config = sideConfigs[side];
     if (!config.uploadedTexture) return;
 
@@ -2982,9 +3040,10 @@ function syncPlayPauseButton() {
 
 async function generatePdfProof() {
     if (!state.ready || state.isExporting) return;
-    if (!pdfLibraryAvailable) {
-        showToast('PDF unavailable', 'The saving library is not loaded right now.', 'error', 4200);
-        return;
+    
+    if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF !== 'function') {
+        const success = await loadPdfLibraries();
+        if (!success) return;
     }
 
     state.isExporting = true;
@@ -3364,6 +3423,7 @@ function schedulePostARRestore() {
    Render Loop
 --------------------------------- */
 function handleResize() {
+    sceneDirty = true;
     const width = dom.canvasContainer.clientWidth;
     const height = dom.canvasContainer.clientHeight;
 
@@ -3417,6 +3477,23 @@ function renderFrame(_, frame) {
         }
     });
 
-    controls.update();
-    renderer.render(scene, camera);
+    const controlsChanged = controls.update() || controlsDirty;
+    controlsDirty = false; // Reset controls dirty flag
+
+    const tweensActive = TWEEN.getAll().length > 0;
+    const turntableActive = state.turntableEnabled && !state.isInAR;
+    const flagActive = isPlaying;
+    const arActive = state.isInAR;
+
+    const needsRender = sceneDirty || 
+                        controlsChanged || 
+                        tweensActive || 
+                        turntableActive || 
+                        flagActive || 
+                        arActive;
+
+    if (needsRender) {
+        renderer.render(scene, camera);
+        sceneDirty = false;
+    }
 }
