@@ -802,6 +802,63 @@ export async function applyConfigurationToScene(animateTransition = false, trans
             updateDynamicCameraTargets(true);
         }
     }
+
+    // Update the dynamic graphic template download link and subtitle text based on current configuration
+    updateTemplateDownloadLink();
+}
+
+function updateTemplateDownloadLink() {
+    const downloadBtn = document.getElementById('template-download-btn');
+    const filenameDisplay = document.getElementById('template-filename');
+    if (!downloadBtn) return;
+
+    // 1. Get size key and map it to filename dimensions
+    const sizeMapping = {
+        'Beach flag Convex XS': 'xs',
+        'Beach flag Convex S': 'S',
+        'Beach flag Convex M': 'M',
+        'Beach flag Convex M-Extra Wide': 'M-Wide',
+        'Beach flag Convex L': 'l'
+    };
+    const sizeKey = sizeMapping[configState.size] || configState.size.split(' ').pop();
+    
+    const sizeDimensions = {
+        'xs': { file: 'xs-60x180cm', display: 'XS' },
+        'S': { file: 's-60x240cm', display: 'S' },
+        'M': { file: 'm-70x330cm', display: 'M' },
+        'M-Wide': { file: 'm-wide-90x300cm', display: 'M - Extra Wide' },
+        'l': { file: 'l-75x380cm', display: 'L' }
+    };
+    const sizeInfo = sizeDimensions[sizeKey] || { file: 'l-75x380cm', display: sizeKey.toUpperCase() };
+
+    // 2. Map printing and direction to suffix and label
+    let fileSuffix = '';
+    let displayPrint = '';
+
+    if (configState.printing === 'Double Sided') {
+        fileSuffix = '-double-sided';
+        displayPrint = 'Double Side';
+    } else {
+        const dirSuffix = configState.direction.toLowerCase() === 'left' ? '-left' : '-right';
+        fileSuffix = `-single-sided${dirSuffix}`;
+        displayPrint = 'Single Side';
+    }
+
+    // 3. Build URL and Display Name
+    const filename = `beachflag-convex-${sizeInfo.file}${fileSuffix}.pdf`;
+    const downloadUrl = `https://files.proflags.com/beachflag-convex/${filename}`;
+    
+    let displayName = `Beach flag-Convex-${sizeInfo.display}-${displayPrint}`;
+    if (configState.printing !== 'Double Sided') {
+        displayName += `-${configState.direction}`;
+    }
+
+    // 4. Update the DOM
+    downloadBtn.href = downloadUrl;
+    downloadBtn.setAttribute('download', filename);
+    if (filenameDisplay) {
+        filenameDisplay.textContent = displayName;
+    }
 }
 
 
@@ -949,6 +1006,23 @@ async function runDirectionCameraSequence(direction) {
     }
 }
 
+function formatSelectionName(category, value) {
+    if (category === 'size') {
+        const sizeDimensions = {
+            'Beach flag Convex XS': '60x180cm',
+            'Beach flag Convex S': '60x240cm',
+            'Beach flag Convex M': '70x330cm',
+            'Beach flag Convex M-Extra Wide': '90x300cm',
+            'Beach flag Convex L': '75x380cm'
+        };
+        const dim = sizeDimensions[value];
+        if (dim) {
+            return `${value} - ${dim}`;
+        }
+    }
+    return value;
+}
+
 function initConfiguratorUI() {
     const sections = document.querySelectorAll('.config-section');
 
@@ -987,7 +1061,7 @@ function initConfiguratorUI() {
             if (category && configState[category] === value) {
                 cards.forEach(c => c.classList.remove('is-active'));
                 card.classList.add('is-active');
-                if (nameDisplay) nameDisplay.textContent = value;
+                if (nameDisplay) nameDisplay.textContent = formatSelectionName(category, value);
                 if (priceDisplay && card.dataset.price) priceDisplay.textContent = card.dataset.price;
             }
 
@@ -1011,7 +1085,7 @@ function initConfiguratorUI() {
                     configState[category] = value;
                 }
 
-                if (nameDisplay) nameDisplay.textContent = value;
+                if (nameDisplay) nameDisplay.textContent = formatSelectionName(category, value);
                 if (priceDisplay && price) priceDisplay.textContent = price;
 
                 if (category === 'size' || category === 'printing' || category === 'base') {
