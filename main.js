@@ -2166,6 +2166,7 @@ function setEnvPanelOpen(open) {
     envPanelShouldBeOpen = open;
     window.clearTimeout(envPanelHideTimer);
     dom.envToggle.classList.toggle('is-active', open);
+    dom.envToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
 
     if (open) {
         dom.envPanel.hidden = false;
@@ -3109,7 +3110,7 @@ function getExportRenderer() {
         exportRenderer.outputColorSpace = THREE.SRGBColorSpace;
         exportRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         exportRenderer.shadowMap.enabled = true;
-        exportRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        exportRenderer.shadowMap.type = THREE.PCFShadowMap;
 
         exportCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     }
