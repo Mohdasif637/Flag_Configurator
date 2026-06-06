@@ -80,10 +80,10 @@
                     </div>
                     <div class="carousel-track wrap-track">
                         <button class="config-card is-active" data-category="printing" data-value="Single Sided">
-                            <div class="card-icon is-small">1-S</div>
+                            <div class="card-icon is-small">SS</div>
                         </button>
                         <button class="config-card" data-category="printing" data-value="Double Sided">
-                            <div class="card-icon is-small">2-S</div>
+                            <div class="card-icon is-small">DS</div>
                         </button>
                         <button class="config-card" data-category="printing" data-value="Air Textile">
                             <div class="card-icon is-small">Air</div>
@@ -295,6 +295,10 @@
                 </span>
             </button>
 
+            <button type="button" id="char-toggle" title="Toggle Height Reference" aria-label="Toggle Height Reference" aria-pressed="false">
+                <img class="control-icon" src="icons/character.svg" alt="" aria-hidden="true" draggable="false">
+            </button>
+
             <button type="button" id="env-toggle" title="Environment Settings" aria-label="Environment Settings" aria-expanded="false" aria-controls="env-panel">
                 <img class="control-icon" src="icons/env.svg" alt="" aria-hidden="true" draggable="false">
             </button>
@@ -304,7 +308,7 @@
                     <span>Environment</span>
                     <button type="button" id="env-reset" title="Reset Environment">Reset</button>
                 </div>
-                <label>Exposure <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
+                <label>Brightness <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
                 <label>Rotate Light <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0"></label>
             </div>
         </div>

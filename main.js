@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { Timer } from 'three';
@@ -28,6 +29,7 @@ const dom = {
     cameraWrapper: document.getElementById('camera-wrapper'),
     cameraActions: document.getElementById('camera-actions'),
     turntableToggle: document.getElementById('turntable-toggle'),
+    charToggle: document.getElementById('char-toggle'),
     envToggle: document.getElementById('env-toggle'),
     envPanel: document.getElementById('env-panel'),
     envExposure: document.getElementById('env-exposure'),
@@ -39,6 +41,9 @@ const dom = {
     stopArBtn: document.getElementById('stop-ar-btn'),
     cameraButtons: Array.from(document.querySelectorAll('#camera-controls button'))
 };
+
+const mobileViewportMediaQuery = window.matchMedia('(max-width: 768px)');
+let sceneDirty = true; // Initial frame needs drawing
 
 /* ---------------------------------
    Configuration & Options
@@ -866,33 +871,61 @@ function updateDynamicCameraTargets(moveCamera = true) {
     if (!modelRoot) return;
 
     // 1. Save current transformations to ensure we calculate neutral, unrotated bounds
-    const currentScale = modelRoot.scale.clone();
-    const currentRotation = modelRoot.rotation.clone();
-    const currentSceneRotation = sceneRoot.rotation.clone();
+    const transformsToRestore = [];
 
-    // 2. Temporarily lock to neutral 0 degrees to prevent bounding box bloat during spins!
-    modelRoot.scale.set(1, 1, 1);
-    modelRoot.rotation.set(0, 0, 0);
+    const saveAndNormalize = (obj) => {
+        if (!obj) return;
+        transformsToRestore.push({
+            obj: obj,
+            scale: obj.scale.clone(),
+            rotation: obj.rotation.clone()
+        });
+        obj.scale.setScalar(1);
+        obj.rotation.set(0, 0, 0);
+        obj.updateMatrixWorld(true);
+    };
+
+    saveAndNormalize(modelRoot);
+    
+    // For character model, if it is active/visible or in transition to be visible
+    if (characterModel && showCharacter) {
+        saveAndNormalize(characterModel);
+    }
+
+    const currentSceneRotation = sceneRoot.rotation.clone();
     sceneRoot.rotation.set(0, 0, 0);
-    modelRoot.updateMatrixWorld(true);
     sceneRoot.updateMatrixWorld(true);
 
     const box = new THREE.Box3();
     let hasVisibleMesh = false;
 
-    modelRoot.traverse((child) => {
+    // 2. Traverse the entire scene to find all visible meshes (except helpers/ground)
+    scene.traverse((child) => {
         if (child.isMesh) {
+            // Exclude helper meshes and ground shadow catcher
+            if (child === shadowCatcher || (child.name && child.name.includes('shadowCatcher'))) return;
+            if (child === reticle || (child.name && child.name.includes('reticle'))) return;
+            if (child.type && child.type.includes('Helper')) return;
+
+            // Check hierarchical visibility
             let isVisible = true;
             let current = child;
             while (current) {
-                if (!current.visible) {
+                // If it belongs to characterModel, visible state is determined by showCharacter
+                if (current === characterModel) {
+                    if (!showCharacter) {
+                        isVisible = false;
+                        break;
+                    }
+                } else if (!current.visible) {
                     isVisible = false;
                     break;
                 }
                 current = current.parent;
             }
+
             if (isVisible && child.geometry) {
-                child.geometry.computeBoundingBox();
+                if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
                 if (child.geometry.boundingBox) {
                     const childBox = child.geometry.boundingBox.clone();
                     childBox.applyMatrix4(child.matrixWorld);
@@ -904,11 +937,14 @@ function updateDynamicCameraTargets(moveCamera = true) {
         }
     });
 
-    // 3. Restore transformations instantly
-    modelRoot.scale.copy(currentScale);
-    modelRoot.rotation.copy(currentRotation);
+    // 3. Restore all transformations instantly
+    transformsToRestore.forEach((t) => {
+        t.obj.scale.copy(t.scale);
+        t.obj.rotation.copy(t.rotation);
+        t.obj.updateMatrixWorld(true);
+    });
+
     sceneRoot.rotation.copy(currentSceneRotation);
-    modelRoot.updateMatrixWorld(true);
     sceneRoot.updateMatrixWorld(true);
 
     if (hasVisibleMesh && !box.isEmpty()) {
@@ -1147,7 +1183,7 @@ window.addEventListener('DOMContentLoaded', async () => {
    Three.js Core Setup
 --------------------------------- */
 const scene = new THREE.Scene();
-const defaultBackground = new THREE.Color('#b0afaf');
+const defaultBackground = new THREE.Color('#e3e3e3');
 scene.background = defaultBackground;
 
 const camera = new THREE.PerspectiveCamera(45, getViewportAspect(), 0.1, 100);
@@ -1187,6 +1223,7 @@ overheadLight.shadow.bias = -0.0001;
 overheadLight.shadow.normalBias = 0.05;
 overheadLight.shadow.radius = 10;
 overheadLight.shadow.blurSamples = 20;
+overheadLight.shadow.camera.updateProjectionMatrix();
 
 lightingGroup.add(overheadLight);
 
@@ -1222,7 +1259,6 @@ let cameraTargets = {
 const exportRenderSize = 2048;
 
 const controls = new OrbitControls(camera, renderer.domElement);
-let sceneDirty = true; // Initial frame needs drawing
 let controlsDirty = false;
 controls.addEventListener('change', () => {
     controlsDirty = true;
@@ -1392,7 +1428,10 @@ const defaultPreviewState = {
 
 const timer = new Timer();
 const textureLoader = new THREE.TextureLoader();
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/libs/draco/');
 const modelLoader = new GLTFLoader();
+modelLoader.setDRACOLoader(dracoLoader);
 const environmentLoader = new HDRLoader();
 const exrLoader = new EXRLoader();
 exrLoader.setDataType(THREE.FloatType);
@@ -1448,6 +1487,10 @@ export async function loadVATData(sizeCode) {
 
 let pocketMaterial = null;
 let modelRoot = null;
+let characterModel = null;
+let showCharacter = false;
+let characterLoading = false;
+let characterTween = null;
 let environmentTexture = null;
 let action = null;
 let isPlaying = true;
@@ -1528,7 +1571,6 @@ function loadScript(src) {
     });
 }
 
-const mobileViewportMediaQuery = window.matchMedia('(max-width: 768px)');
 const pocketColorPickrLayoutState = { restoreStyleText: null };
 const arButtonIconMarkup = `
     <img src="icons/ar.svg" alt="" aria-hidden="true" data-ar-icon="true" class="control-icon">
@@ -1586,7 +1628,9 @@ function getViewportAspect() {
 }
 
 function getClampedPixelRatio() {
-    return Math.min(window.devicePixelRatio || 1, 2);
+    const isMobile = mobileViewportMediaQuery.matches;
+    const maxDPR = isMobile ? 1.5 : 2.0;
+    return Math.min(window.devicePixelRatio || 1, maxDPR);
 }
 
 function createReticle() {
@@ -1697,6 +1741,10 @@ function getBaseFocusTargets() {
 async function silentWarmupAllSizes() {
     if (!modelRoot || !vatMaterials.length) return;
 
+    // Temporarily disable shadow map updates during warmup to prevent rendering shadow maps into a 1x1 scissor box (which can corrupt/disable shadows on mobile)
+    const prevShadowMapAutoUpdate = renderer.shadowMap.autoUpdate;
+    renderer.shadowMap.autoUpdate = false;
+
     // Collect all active size codes from the HTML cards
     const sizeCards = Array.from(document.querySelectorAll('.config-card[data-category="size"]'));
     const allSizeCodes = sizeCards
@@ -1766,6 +1814,10 @@ async function silentWarmupAllSizes() {
     if (typeof applyConfigurationToScene === 'function') {
         applyConfigurationToScene(false);
     }
+
+    // Restore original shadow map update state
+    renderer.shadowMap.autoUpdate = prevShadowMapAutoUpdate;
+    renderer.shadowMap.needsUpdate = true;
 }
 
 
@@ -2090,6 +2142,7 @@ function syncControlAvailability() {
         button.disabled = !baseEnabled;
     });
     dom.turntableToggle.disabled = !baseEnabled;
+    dom.charToggle.disabled = !baseEnabled;
 
     const environmentEnabled = baseEnabled && state.environmentLoaded;
     dom.envToggle.disabled = !environmentEnabled;
@@ -2110,6 +2163,7 @@ function syncControlAvailability() {
 
     syncARVisibility();
     syncTurntableButton();
+    syncCharButton();
     syncSideUi('graphic');
 }
 
@@ -2183,6 +2237,121 @@ function syncTurntableButton() {
     dom.turntableToggle.classList.toggle('is-active', state.turntableEnabled);
     dom.turntableToggle.setAttribute('aria-pressed', String(state.turntableEnabled));
     dom.turntableToggle.title = state.turntableEnabled ? 'Stop Turntable' : 'Start Turntable';
+}
+
+function syncCharButton() {
+    if (dom.charToggle) {
+        dom.charToggle.classList.toggle('is-active', showCharacter);
+        dom.charToggle.setAttribute('aria-pressed', String(showCharacter));
+        dom.charToggle.title = showCharacter ? 'Hide Height Reference' : 'Show Height Reference';
+    }
+}
+
+function loadCharacterModel() {
+    if (characterModel || characterLoading) return;
+    characterLoading = true;
+    
+    modelLoader.load(
+        '3d/character.glb',
+        (gltf) => {
+            characterModel = gltf.scene;
+            
+            // Place at negative X axis (next to the left side of the flag)
+            characterModel.position.set(-0.9, 0, 0);
+            
+            characterModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            // Setup initial scale and rotation for the show animation
+            characterModel.scale.setScalar(0);
+            characterModel.rotation.y = Math.PI * 2;
+            characterModel.visible = showCharacter;
+            
+            scene.add(characterModel);
+            characterLoading = false;
+            sceneDirty = true;
+            
+            showToast('Reference loaded', '3D character model height reference added.', 'success', 2500);
+            
+            if (showCharacter) {
+                // Focus camera on the combined scene bounds immediately
+                focusCameraView('front');
+
+                characterTween = new TWEEN.Tween({ scale: 0, rotationY: Math.PI * 2 })
+                    .to({ scale: 1, rotationY: 0 }, 800)
+                    .easing(TWEEN.Easing.Cubic.Out)
+                    .onUpdate(({ scale, rotationY }) => {
+                        if (characterModel) {
+                            characterModel.scale.setScalar(scale);
+                            characterModel.rotation.y = rotationY;
+                            sceneDirty = true;
+                        }
+                    })
+                    .onComplete(() => {
+                        characterTween = null;
+                    })
+                    .start();
+            }
+        },
+        undefined,
+        (error) => {
+            console.error("Failed to load character model:", error);
+            characterLoading = false;
+            showToast('Loading failed', 'Could not load the 3D character model.', 'error', 3000);
+        }
+    );
+}
+
+function toggleCharacterVisibility() {
+    showCharacter = !showCharacter;
+    
+    if (characterTween) {
+        characterTween.stop();
+        characterTween = null;
+    }
+    
+    // Trigger front view and stop turntable
+    stopTurntableRotation();
+    focusCameraView('front');
+
+    if (!characterModel) {
+        loadCharacterModel();
+    } else {
+        if (showCharacter) {
+            characterModel.visible = true;
+            characterTween = new TWEEN.Tween({ scale: 0, rotationY: Math.PI * 2 })
+                .to({ scale: 1, rotationY: 0 }, 800)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .onUpdate(({ scale, rotationY }) => {
+                    characterModel.scale.setScalar(scale);
+                    characterModel.rotation.y = rotationY;
+                    sceneDirty = true;
+                })
+                .onComplete(() => {
+                    characterTween = null;
+                })
+                .start();
+        } else {
+            characterTween = new TWEEN.Tween({ scale: 1, rotationY: 0 })
+                .to({ scale: 0, rotationY: Math.PI * 2 }, 800)
+                .easing(TWEEN.Easing.Cubic.InOut)
+                .onUpdate(({ scale, rotationY }) => {
+                    characterModel.scale.setScalar(scale);
+                    characterModel.rotation.y = rotationY;
+                    sceneDirty = true;
+                })
+                .onComplete(() => {
+                    characterModel.visible = false;
+                    characterTween = null;
+                })
+                .start();
+        }
+    }
+    syncCharButton();
 }
 
 function stopTurntableRotation() {
@@ -2689,6 +2858,11 @@ function bindUIEvents() {
         }
     });
 
+    dom.charToggle.addEventListener('click', () => {
+        if (dom.charToggle.disabled) return;
+        toggleCharacterVisibility();
+    });
+
     dom.envToggle.addEventListener('click', () => {
         if (dom.envToggle.disabled) return;
         setEnvPanelOpen(!isEnvPanelOpen());
@@ -2731,6 +2905,12 @@ function bindUIEvents() {
     });
 
     window.addEventListener('resize', handleResize);
+    if (typeof ResizeObserver !== 'undefined') {
+        const resizeObserver = new ResizeObserver(() => {
+            handleResize();
+        });
+        resizeObserver.observe(dom.canvasContainer);
+    }
 }
 
 /* ---------------------------------
@@ -3523,7 +3703,19 @@ function handleResize() {
 /* ---------------------------------
    Render Loop (Updated for VAT)
 --------------------------------- */
+let lastRenderTime = 0;
+
 function renderFrame(_, frame) {
+    const now = performance.now();
+    
+    const targetFps = 60;
+    const minFrameInterval = 1000 / targetFps;
+
+    if (now - lastRenderTime < minFrameInterval - 1) {
+        return;
+    }
+    lastRenderTime = now;
+
     TWEEN.update();
 
     if (state.isInAR) updateARHitTesting(frame);

@@ -51,7 +51,7 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text);
     -webkit-tap-highlight-color: transparent;
-    background: #b0afaf;
+    background: #e3e3e3;
     position: relative;
 }
 
@@ -790,8 +790,11 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
     position: relative;
     display: grid;
     grid-template-columns: repeat(2, 48px);
-    grid-template-rows: repeat(2, 48px);
-    grid-template-areas: "ar env" "turntable play";
+    grid-template-rows: repeat(3, 48px);
+    grid-template-areas: 
+        ". char"
+        "ar env"
+        "turntable play";
     align-items: center;
     justify-content: end;
     gap: 8px;
@@ -803,6 +806,10 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+#char-toggle {
+    grid-area: char;
 }
 
 #env-toggle {
@@ -909,6 +916,7 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
 
 #turntable-toggle,
 #env-toggle,
+#char-toggle,
 #camera-controls button {
     position: relative;
     overflow: hidden;
@@ -917,6 +925,7 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
 
 #turntable-toggle::before,
 #env-toggle::before,
+#char-toggle::before,
 #camera-controls button::before {
     content: '';
     position: absolute;
@@ -935,6 +944,7 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
 
 #turntable-toggle.is-active::before,
 #env-toggle.is-active::before,
+#char-toggle.is-active::before,
 #camera-controls button.is-active::before {
     opacity: 1;
     box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.5) !important;
@@ -943,6 +953,7 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
 
 #turntable-toggle.is-active,
 #env-toggle.is-active,
+#char-toggle.is-active,
 #camera-controls button.is-active {
     background: transparent !important;
     /* Make parent background transparent so ::before is fully visible */
@@ -955,6 +966,7 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
 
 #turntable-toggle.is-active:hover,
 #env-toggle.is-active:hover,
+#char-toggle.is-active:hover,
 #camera-controls button.is-active:hover {
     transform: scale(0.98) !important;
     /* Keep static when hovered while active */
@@ -1002,7 +1014,7 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
     position: absolute;
     right: 0;
     top: auto;
-    bottom: calc(100% + 8px);
+    bottom: 112px;
     z-index: 4;
     width: 175px;
     max-width: calc(100vw - 32px);
@@ -1301,6 +1313,7 @@ body.is-in-ar #stop-ar-btn {
     margin-bottom: 12px;
     font-weight: 600;
     font-size: 13px;
+    gap: 6px;
 }
 
 .selection-price {
@@ -1308,6 +1321,8 @@ body.is-in-ar #stop-ar-btn {
     color: var(--accent);
     font-size: 13.5px;
     font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* ---------------------------------
