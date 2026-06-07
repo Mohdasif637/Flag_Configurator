@@ -15,11 +15,36 @@
 </head>
 
 <body>
+    <!-- Floating Preferences Menu -->
+    <div id="preferences-container" class="preferences-container">
+        <button type="button" id="pref-btn" class="pref-btn" aria-haspopup="true" aria-expanded="false">
+            <span id="pref-btn-text">EN | $</span>
+            <svg class="pref-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div id="pref-dropdown" class="pref-dropdown">
+            <div class="pref-menu-column">
+                <h4 class="pref-menu-title" data-i18n="preferences.language">Language</h4>
+                <ul class="pref-menu-list" id="pref-lang-list">
+                    <li data-value="en" class="pref-menu-item">English</li>
+                    <li data-value="nl" class="pref-menu-item">Nederlands</li>
+                </ul>
+            </div>
+            <div class="pref-menu-divider"></div>
+            <div class="pref-menu-column">
+                <h4 class="pref-menu-title" data-i18n="preferences.currency">Currency</h4>
+                <ul class="pref-menu-list" id="pref-currency-list">
+                    <li data-value="USD" class="pref-menu-item">$ USD</li>
+                    <li data-value="EUR" class="pref-menu-item">€ EUR</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div id="canvas-container">
         <div id="loading-overlay" class="overlay is-visible" aria-live="polite">
             <div class="loading-card">
                 <div class="spinner" aria-hidden="true"></div>
-                <p id="loading-text">Loading 3D preview...</p>
+                <p id="loading-text" data-i18n="toasts.loading_3d">Loading 3D preview...</p>
             </div>
         </div>
     </div>
@@ -31,14 +56,14 @@
                 <div class="total-price-badge">
                     <span class="price-value" id="total-price-value">€0.00</span>
                 </div>
-                <h2>Flag Configurator</h2>
+                <h2 data-i18n="header.title">Flag Configurator</h2>
 
-                <p class="panel-copy">Select your size and layout, upload your design, tweak the 3D preview, and save.
+                <p class="panel-copy" data-i18n="header.description">Select your size and layout, upload your design, tweak the 3D preview, and save.
                 </p>
             </div>
             <div id="ui-panel">
                 <div class="config-section" id="section-size">
-                    <h3 class="section-title" id="size-title">Sizes</h3>
+                    <h3 class="section-title" id="size-title" data-i18n="sections.size">Sizes</h3>
                     <div class="selection-info">
                         <span class="selection-name">Beach flag Convex L</span>
                         <span class="selection-price"></span>
@@ -73,7 +98,7 @@
                 </div>
 
                 <div class="config-section" id="section-printing">
-                    <h3 class="section-title">Printing</h3>
+                    <h3 class="section-title" data-i18n="sections.printing">Printing</h3>
                     <div class="selection-info">
                         <span class="selection-name">Single Sided</span>
                         <span class="selection-price"></span>
@@ -94,7 +119,7 @@
                 <div id="section-direction" class="expandable-section is-visible">
                     <div class="expandable-content">
                         <div class="config-section mb-0">
-                            <h3 class="section-title">Direction</h3>
+                            <h3 class="section-title" data-i18n="sections.direction">Direction</h3>
                             <div class="selection-info">
                                 <span class="selection-name">Right</span>
                             </div>
@@ -121,7 +146,7 @@
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            <span>Graphic Template</span>
+                            <span data-i18n="templates.download_btn">Graphic Template</span>
                         </div>
                         <span id="template-filename" style="font-size: 11px; opacity: 0.7; font-weight: normal; word-break: break-all;">Beach flag-Convex-L-Single Side-Right</span>
                     </a>
@@ -131,40 +156,39 @@
                 <div class="config-section" id="section-graphic">
                     <div class="control-group mb-0">
                         <div class="control-heading">
-                            <label for="graphic-upload">Graphic</label>
-                            <span class="control-hint">PNG, JPG, or PDF</span>
+                            <label for="graphic-upload" data-i18n="sections.graphic">Graphic</label>
+                            <span class="control-hint" data-i18n="upload.hint">PNG, JPG, or PDF</span>
                         </div>
-
                         <label id="graphic-dropzone" class="upload-card" for="graphic-upload" tabindex="0">
                             <div class="upload-progress"></div>
                             <input type="file" id="graphic-upload" class="visually-hidden"
                                 accept="image/png, image/jpeg, image/webp, application/pdf">
                             <div class="upload-card-copy">
-                                <span class="upload-title">Drop graphic here</span>
-                                <span class="upload-subtitle">or click to browse your files</span>
+                                <span class="upload-title" data-i18n="upload.title">Drop graphic here</span>
+                                <span class="upload-subtitle" data-i18n="upload.subtitle">or click to browse your files</span>
                             </div>
                             <div id="graphic-thumb-frame" class="upload-thumb-frame" hidden>
                                 <img id="graphic-thumb" class="upload-thumb" alt="Graphic preview">
                             </div>
                         </label>
-
+ 
                         <div id="graphic-actions-wrapper" class="expandable-section">
                             <div id="graphic-actions" class="upload-actions expandable-content">
                                 <button type="button" id="reset-graphic-tex" class="secondary-btn"
-                                    title="Reset graphic transforms" disabled>Reset</button>
+                                    title="Reset graphic transforms" disabled data-i18n="[title]upload.reset;upload.reset">Reset</button>
                                 <button type="button" id="clear-graphic" class="danger-btn" title="Remove graphic"
-                                    disabled>Remove</button>
+                                    disabled data-i18n="[title]upload.remove;upload.remove">Remove</button>
                             </div>
                         </div>
-
+ 
                         <div id="graphic-transforms-wrapper" class="expandable-section">
                             <div class="expandable-content">
                                 <div id="graphic-transforms" class="transform-controls">
-                                    <label>Scale <input type="range" id="graphic-scale" min="0.1" max="3" step="0.01"
+                                    <label><span data-i18n="upload.scale">Scale</span> <input type="range" id="graphic-scale" min="0.1" max="3" step="0.01"
                                             value="1"></label>
-                                    <label>Pan X <input type="range" id="graphic-x" min="-1" max="1" step="0.01"
+                                    <label><span data-i18n="upload.pan_x">Pan X</span> <input type="range" id="graphic-x" min="-1" max="1" step="0.01"
                                             value="0"></label>
-                                    <label>Pan Y <input type="range" id="graphic-y" min="-1" max="1" step="0.01"
+                                    <label><span data-i18n="upload.pan_y">Pan Y</span> <input type="range" id="graphic-y" min="-1" max="1" step="0.01"
                                             value="0"></label>
                                 </div>
                             </div>
@@ -173,38 +197,37 @@
                 </div>
 
                 <div class="config-section" id="section-pole-cover">
-                    <h3 class="section-title">Pole Cover</h3>
+                    <h3 class="section-title" data-i18n="sections.pole_cover">Pole Cover</h3>
                     <input type="hidden" id="pocket-color" value="#000000">
                     <div class="color-picker-shell">
                         <button type="button" id="pocket-color-trigger" class="color-picker-trigger"
                             aria-expanded="false">
                             <span id="pocket-color-swatch" class="color-picker-swatch" aria-hidden="true"></span>
                             <span class="color-picker-text">
-                                <span class="color-picker-title">Choose pocket color</span>
+                                <span class="color-picker-title" data-i18n="pole_cover.picker_title">Choose pocket color</span>
                                 <span id="pocket-color-value" class="color-picker-value">#000000</span>
                             </span>
                         </button>
                     </div>
                 </div>
-
                 <div class="config-section" id="section-pole">
-                    <h3 class="section-title">Pole</h3>
+                    <h3 class="section-title" data-i18n="sections.pole">Pole</h3>
                     <div class="selection-info">
                         <span class="selection-name">With Pole</span>
                         <span class="selection-price"></span>
                     </div>
                     <div class="carousel-track wrap-track">
                         <button class="config-card is-active" data-category="pole" data-value="With Pole">
-                            <div class="card-icon is-small">Yes</div>
+                            <div class="card-icon is-small" data-i18n="cards.yes">Yes</div>
                         </button>
                         <button class="config-card" data-category="pole" data-value="Without Pole">
-                            <div class="card-icon is-small">No</div>
+                            <div class="card-icon is-small" data-i18n="cards.no">No</div>
                         </button>
                     </div>
                 </div>
-
+ 
                 <div class="config-section" id="section-base">
-                    <h3 class="section-title">Base</h3>
+                    <h3 class="section-title" data-i18n="sections.base">Base</h3>
                     <div class="selection-info">
                         <span class="selection-name">No base</span>
                         <span class="selection-price"></span>
@@ -219,7 +242,7 @@
                         <div class="carousel-track scrollable-track">
                             <button class="config-card is-active" data-category="base" data-value="No base"
                                 data-price="">
-                                <div class="card-icon is-small">None</div>
+                                <div class="card-icon is-small" data-i18n="cards.none">None</div>
                             </button>
                             <button class="config-card" data-category="base" data-value="Luxury cross base"
                                 data-price="">
@@ -252,7 +275,7 @@
                             <path d="M8 13h8"></path>
                             <path d="M8 17h8"></path>
                         </svg>
-                        Save My Design
+                        <span data-i18n="actions.save">Save My Design</span>
                     </button>
                 </div>
             </div>
@@ -261,27 +284,27 @@
 
     <div id="camera-wrapper">
         <div id="camera-controls">
-            <button type="button" id="cam-back" data-view="back" title="Back View">Back</button>
-            <button type="button" id="cam-left" data-view="left" title="Left View">Left</button>
-            <button type="button" id="cam-home" data-view="home" title="Home View">
+            <button type="button" id="cam-back" data-view="back" title="Back View" data-i18n="[title]hud.tooltip_back;hud.back">Back</button>
+            <button type="button" id="cam-left" data-view="left" title="Left View" data-i18n="[title]hud.tooltip_left;hud.left">Left</button>
+            <button type="button" id="cam-home" data-view="home" title="Home View" data-i18n="[title]hud.tooltip_home">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     <polyline points="9 22 9 12 15 12 15 22"></polyline>
                 </svg>
             </button>
-            <button type="button" id="cam-right" data-view="right" title="Right View">Right</button>
-            <button type="button" id="cam-front" data-view="front" title="Front View">Front</button>
+            <button type="button" id="cam-right" data-view="right" title="Right View" data-i18n="[title]hud.tooltip_right;hud.right">Right</button>
+            <button type="button" id="cam-front" data-view="front" title="Front View" data-i18n="[title]hud.tooltip_front;hud.front">Front</button>
         </div>
-
+ 
         <div id="camera-actions">
             <div id="ar-container" hidden></div>
-
-            <button type="button" id="turntable-toggle" title="Toggle Turntable" aria-label="Toggle Turntable">
+ 
+            <button type="button" id="turntable-toggle" title="Toggle Turntable" aria-label="Toggle Turntable" data-i18n="[title]hud.tooltip_turntable;[aria-label]hud.tooltip_turntable">
                 <img class="control-icon" src="icons/rotate.svg" alt="" aria-hidden="true" draggable="false">
             </button>
-
-            <button type="button" id="play-pause" title="Shortcut: Press Spacebar" aria-label="Toggle Play Animation">
+ 
+            <button type="button" id="play-pause" title="Shortcut: Press Spacebar" aria-label="Toggle Play Animation" data-i18n="[title]hud.tooltip_play;[aria-label]hud.tooltip_play">
                 <span class="camera-action-icon is-pause" aria-hidden="true">
                     <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
                         <rect x="6" y="5" width="4" height="14" rx="1.6" fill="currentColor"></rect>
@@ -294,30 +317,29 @@
                     </svg>
                 </span>
             </button>
-
-            <button type="button" id="char-toggle" title="Toggle Height Reference" aria-label="Toggle Height Reference" aria-pressed="false">
+ 
+            <button type="button" id="char-toggle" title="Toggle Height Reference" aria-label="Toggle Height Reference" aria-pressed="false" data-i18n="[title]hud.tooltip_char;[aria-label]hud.tooltip_char">
                 <img class="control-icon" src="icons/character.svg" alt="" aria-hidden="true" draggable="false">
             </button>
-
-            <button type="button" id="env-toggle" title="Environment Settings" aria-label="Environment Settings" aria-expanded="false" aria-controls="env-panel">
+ 
+            <button type="button" id="env-toggle" title="Environment Settings" aria-label="Environment Settings" aria-expanded="false" aria-controls="env-panel" data-i18n="[title]hud.tooltip_env;[aria-label]hud.tooltip_env">
                 <img class="control-icon" src="icons/env.svg" alt="" aria-hidden="true" draggable="false">
             </button>
-
+ 
             <div id="env-panel" hidden>
                 <div class="env-header">
-                    <span>Environment</span>
-                    <button type="button" id="env-reset" title="Reset Environment">Reset</button>
+                    <span data-i18n="env_panel.title">Environment</span>
+                    <button type="button" id="env-reset" title="Reset Environment" data-i18n="[title]env_panel.reset;env_panel.reset">Reset</button>
                 </div>
-                <label>Brightness <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
-                <label>Rotate Light <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0"></label>
+                <label><span data-i18n="env_panel.brightness">Brightness</span> <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
+                <label><span data-i18n="env_panel.rotate">Rotate Light</span> <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0"></label>
             </div>
         </div>
-
     </div>
 
     <div id="ar-overlay">
         <div id="toast-region" aria-live="polite" aria-atomic="true"></div>
-        <button id="stop-ar-btn" type="button" aria-label="Stop AR">STOP AR</button>
+        <button id="stop-ar-btn" type="button" aria-label="Stop AR" data-i18n="[aria-label]ar.stop;ar.stop">STOP AR</button>
     </div>
 
     <script type="importmap">
@@ -328,6 +350,7 @@
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
     <script type="module" src="main.js"></script>
 </body>

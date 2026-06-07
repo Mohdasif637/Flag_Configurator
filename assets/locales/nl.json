@@ -1,0 +1,164 @@
+{
+  "header": {
+    "title": "Vlag Configurator",
+    "description": "Selecteer uw maat en lay-out, upload uw ontwerp, pas de 3D-weergave aan en sla op."
+  },
+  "preferences": {
+    "language": "Taal",
+    "currency": "Valuta"
+  },
+  "sections": {
+    "size": "Maten",
+    "printing": "Bedrukking",
+    "direction": "Richting",
+    "template": "Grafisch Sjabloon",
+    "graphic": "Ontwerp",
+    "pole_cover": "Mastband",
+    "pole": "Mast",
+    "base": "Voet"
+  },
+  "selections": {
+    "size": {
+      "Beach flag Convex XS": "Beachflag Convex XS",
+      "Beach flag Convex S": "Beachflag Convex S",
+      "Beach flag Convex M": "Beachflag Convex M",
+      "Beach flag Convex M-Extra Wide": "Beachflag Convex M-Extra Wide",
+      "Beach flag Convex L": "Beachflag Convex L"
+    },
+    "printing": {
+      "Single Sided": "Enkelzijdig",
+      "Double Sided": "Dubbelzijdig",
+      "Air Textile": "Air Textile"
+    },
+    "direction": {
+      "Right": "Rechts",
+      "Left": "Links"
+    },
+    "pole": {
+      "With Pole": "Met Mast",
+      "Without Pole": "Zonder Mast"
+    },
+    "base": {
+      "No base": "Geen voet",
+      "Luxury cross base": "Luxe kruisvoet",
+      "Cross base-grey": "Kruisvoet, grijs",
+      "Cross base-black": "Kruisvoet, zwart"
+    }
+  },
+  "templates": {
+    "l_ss": "Beachflag-Convex-L-Enkelzijdig-Rechts",
+    "l_ds": "Beachflag-Convex-L-Dubbelzijdig",
+    "xs_ss": "Beachflag-Convex-XS-Enkelzijdig-Rechts",
+    "xs_ds": "Beachflag-Convex-XS-Dubbelzijdig",
+    "download_btn": "Grafisch Sjabloon"
+  },
+  "upload": {
+    "hint": "PNG, JPG, of PDF",
+    "title": "Sleep uw ontwerp hierheen",
+    "subtitle": "of klik om uw bestanden te zoeken",
+    "reset": "Resetten",
+    "remove": "Verwijderen",
+    "scale": "Schaal",
+    "pan_x": "Verschuif X",
+    "pan_y": "Verschuif Y"
+  },
+  "pole_cover": {
+    "picker_title": "Kies mastband kleur"
+  },
+  "cards": {
+    "yes": "Ja",
+    "no": "Nee",
+    "none": "Geen"
+  },
+  "actions": {
+    "save": "Mijn Ontwerp Opslaan",
+    "saving": "Opslaan..."
+  },
+  "hud": {
+    "back": "Achter",
+    "left": "Links",
+    "right": "Rechts",
+    "front": "Voor",
+    "tooltip_back": "Achteraanzicht",
+    "tooltip_left": "Linkeraanzicht",
+    "tooltip_right": "Rechteraanzicht",
+    "tooltip_front": "Vooraanzicht",
+    "tooltip_home": "Startaanzicht",
+    "tooltip_turntable": "Draaitafel Aanzetten/Uitzetten",
+    "tooltip_play": "Sneltoets: Druk op de Spatiebalk",
+    "tooltip_env": "Omgevingsinstellingen",
+    "tooltip_char": "Hoogtereferentie Aanzetten/Uitzetten"
+  },
+  "env_panel": {
+    "title": "Omgeving",
+    "reset": "Resetten",
+    "brightness": "Helderheid",
+    "rotate": "Licht Roteren"
+  },
+  "ar": {
+    "stop": "STOP AR",
+    "start": "Start AR",
+    "unavailable_label": "AR-weergave niet beschikbaar op dit apparaat",
+    "unavailable_title": "AR-weergave niet beschikbaar"
+  },
+  "pdf": {
+    "title": "Probo Configurator - Opgeslagen Ontwerp",
+    "saved_on": "Opgeslagen op: ",
+    "pocket_color": "Mastbandkleur: ",
+    "front_layout": "Voorzijde",
+    "back_layout": "Achterzijde",
+    "filename": "Probo_Vlag_Ontwerp"
+  },
+  "toasts": {
+    "ar_support_resolved_title": "AR Ondersteund",
+    "ar_support_resolved_msg": "Klaar voor AR! Tik op de groene AR-knop aan de rechterkant om de vlag in de echte wereld te plaatsen.",
+    "ar_unsupported_title": "AR niet beschikbaar",
+    "ar_unsupported_msg": "Dit apparaat of deze browser ondersteunt geen AR-weergave.",
+    "ar_active_title": "AR-modus actief",
+    "ar_active_msg": "Beweeg uw apparaat om een oppervlak te vinden, tik vervolgens om te plaatsen. Sleep om te roteren.",
+    "ar_placed_title": "Object geplaatst",
+    "ar_placed_msg": "Tik nogmaals op een ander oppervlak om de vlag te verplaatsen.",
+    "loading_3d": "3D-weergave laden...",
+    "loading_assets": "3D-assets laden...",
+    "loading_pdf_title": "Opslagsysteem Laden",
+    "loading_pdf_msg": "De PDF-opslagmodules voorbereiden...",
+    "load_failed_title": "Laden Mislukt",
+    "load_failed_msg": "Kon de PDF-opslagbibliotheken niet laden. Controleer uw internetverbinding.",
+    "preview_loading_title": "Voorvertoning laadt nog",
+    "preview_loading_msg": "Wacht tot de 3D-weergave klaar is met laden voordat u een ontwerp uploadt.",
+    "env_unavailable_title": "Omgeving niet beschikbaar",
+    "env_unavailable_msg": "Studiolicht kon niet worden geladen. Er wordt doorgegaan met de standaardachtergrond.",
+    "ref_loading_title": "Referentie laden",
+    "ref_loading_msg": "3D-personage hoogtereferentie laden...",
+    "ref_loaded_title": "Referentie geladen",
+    "ref_loaded_msg": "3D-personage hoogtereferentie toegevoegd.",
+    "ref_failed_title": "Laden mislukt",
+    "ref_failed_msg": "Kon het 3D-personage niet laden.",
+    "preview_ready_title": "Voorvertoning gereed",
+    "preview_ready_no_save": "Grafische hulpmiddelen zijn gereed, maar het opslaan van het ontwerp is momenteel niet beschikbaar.",
+    "preview_ready_msg": "Kies een maat en lay-out, upload uw ontwerp, pas de voorvertoning aan en sla op.",
+    "graphic_applied_title": "Ontwerp toegepast",
+    "graphic_applied_msg": "{{label}}-ontwerp is succesvol bijgewerkt.",
+    "graphic_applied_failed": "Het {{label}}-ontwerp kon niet worden verwerkt.",
+    "graphic_removed_title": "Ontwerp verwijderd",
+    "graphic_removed_msg": "{{label}}-ontwerp is verwijderd uit de voorvertoning.",
+    "saving_design_title": "Ontwerp opslaan",
+    "saving_design_msg": "Indelingen voor voor- en achterkant vastleggen voor uw ontwerp.",
+    "design_saved_title": "Ontwerp opgeslagen",
+    "design_saved_msg": "Uw vlagontwerp is succesvol opgeslagen.",
+    "save_failed_title": "Opslaan mislukt",
+    "save_failed_msg": "Kan uw ontwerp niet opslaan. Probeer het opnieuw.",
+    "ar_placement_unavailable_title": "AR-plaatsing niet beschikbaar",
+    "ar_placement_unavailable_msg": "Hit-testing kon niet worden gestart voor deze sessie.",
+    "pdf_error_title": "PDF-fout",
+    "pdf_error_msg": "Kan het PDF-bestand niet lezen of converteren.",
+    "processing_pdf_title": "PDF Verwerken",
+    "processing_pdf_msg": "De eerste pagina van de PDF converteren naar een WebP-afbeelding van hoge kwaliteit.",
+    "processing_image_title": "Afbeelding Verwerken",
+    "processing_image_msg": "De afbeelding formatteren naar een WebP-textuur met hoge getrouwheid.",
+    "image_error_title": "Afbeeldingsfout",
+    "image_error_msg": "Verwerken van de geüploade afbeelding is mislukt.",
+    "unsupported_file_title": "Niet-ondersteund bestand",
+    "unsupported_file_msg": "Upload een PNG-, JPG-, JPEG-, WEBP- of PDF-bestand."
+  }
+}

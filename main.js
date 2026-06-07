@@ -17,6 +17,11 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 --------------------------------- */
 const dom = {
     canvasContainer: document.getElementById('canvas-container'),
+    prefBtn: document.getElementById('pref-btn'),
+    prefBtnText: document.getElementById('pref-btn-text'),
+    prefDropdown: document.getElementById('pref-dropdown'),
+    prefLangList: document.getElementById('pref-lang-list'),
+    prefCurrencyList: document.getElementById('pref-currency-list'),
     loadingOverlay: document.getElementById('loading-overlay'),
     loadingText: document.getElementById('loading-text'),
     uiPanel: document.getElementById('ui-panel'),
@@ -142,7 +147,7 @@ function loadGraphicFromCache() {
         config.yInput.value = '0';
         config.thumb.removeAttribute('src');
         config.thumbFrame.style.display = 'none';
-        config.titleElement.textContent = config.defaultTitle;
+        config.titleElement.textContent = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('upload.title') : config.defaultTitle;
         config.titleElement.removeAttribute('title');
         config.actionsWrapper.style.display = 'none';
         config.transformsWrapper.style.display = 'none';
@@ -164,6 +169,190 @@ export const configState = {
 
 let applyConfigCounter = 0;
 let pricingData = null;
+let currentLanguage = localStorage.getItem('pref-language') || 'en';
+let currentCurrency = localStorage.getItem('pref-currency') || 'USD';
+
+function getCurrencySymbol() {
+    return currentCurrency === 'EUR' ? '€' : '$';
+}
+
+function syncPreferenceMenuUi() {
+    if (dom.prefBtnText) {
+        const displayLang = currentLanguage.toUpperCase();
+        const displaySymbol = getCurrencySymbol();
+        dom.prefBtnText.textContent = `${displayLang} | ${displaySymbol}`;
+    }
+
+    if (dom.prefLangList) {
+        const items = dom.prefLangList.querySelectorAll('.pref-menu-item');
+        items.forEach(item => {
+            const isActive = item.dataset.value === currentLanguage;
+            item.classList.toggle('is-active', isActive);
+        });
+    }
+
+    if (dom.prefCurrencyList) {
+        const items = dom.prefCurrencyList.querySelectorAll('.pref-menu-item');
+        items.forEach(item => {
+            const isActive = item.dataset.value === currentCurrency;
+            item.classList.toggle('is-active', isActive);
+        });
+    }
+}
+
+function setPreferenceDropdownOpen(open) {
+    if (!dom.prefDropdown || !dom.prefBtn) return;
+    dom.prefDropdown.classList.toggle('is-open', open);
+    dom.prefBtn.setAttribute('aria-expanded', String(open));
+}
+
+function translateToastText(text) {
+    if (!window.i18next || !window.i18next.isInitialized) return text;
+    
+    const map = {
+        'AR Supported': 'toasts.ar_support_resolved_title',
+        'Ready for AR! Tap the green AR button on the right to place the flag in the real world.': 'toasts.ar_support_resolved_msg',
+        'AR unavailable': 'toasts.ar_unsupported_title',
+        'This device or browser does not support AR preview.': 'toasts.ar_unsupported_msg',
+        'AR mode active': 'toasts.ar_active_title',
+        'Move your device to find a surface, then tap to place. Drag to rotate.': 'toasts.ar_active_msg',
+        'Object placed': 'toasts.ar_placed_title',
+        'Tap again on another surface if you want to reposition the flag.': 'toasts.ar_placed_msg',
+        'Loading Saving System': 'toasts.loading_pdf_title',
+        'Preparing the PDF saving modules...': 'toasts.loading_pdf_msg',
+        'Load Failed': 'toasts.load_failed_title',
+        'Could not load the PDF saving libraries. Please check your internet connection.': 'toasts.load_failed_msg',
+        'Preview still loading': 'toasts.preview_loading_title',
+        'Please wait for the 3D preview to finish loading before uploading graphic.': 'toasts.preview_loading_msg',
+        'Environment unavailable': 'toasts.env_unavailable_title',
+        'Studio lighting could not be loaded. Continuing with the default background.': 'toasts.env_unavailable_msg',
+        'Loading reference': 'toasts.ref_loading_title',
+        'Loading 3D character model height reference...': 'toasts.ref_loading_msg',
+        'Reference loaded': 'toasts.ref_loaded_title',
+        '3D character model height reference added.': 'toasts.ref_loaded_msg',
+        'Loading failed': 'toasts.ref_failed_title',
+        'Could not load the 3D character model.': 'toasts.ref_failed_msg',
+        'Preview ready': 'toasts.preview_ready_title',
+        'Graphic tools are ready, but design saving is currently unavailable.': 'toasts.preview_ready_no_save',
+        'Pick a size and layout, upload your design, tweak the preview, and save.': 'toasts.preview_ready_msg',
+        'Graphic applied': 'toasts.graphic_applied_title',
+        'Graphic removed': 'toasts.graphic_removed_title',
+        'Saving design': 'toasts.saving_design_title',
+        'Capturing front and back layouts for your design.': 'toasts.saving_design_msg',
+        'Design saved': 'toasts.design_saved_title',
+        'Your custom flag design has been saved successfully.': 'toasts.design_saved_msg',
+        'Save failed': 'toasts.save_failed_title',
+        'Unable to save your design. Please try again.': 'toasts.save_failed_msg',
+        'AR placement unavailable': 'toasts.ar_placement_unavailable_title',
+        'Hit testing could not be started for this session.': 'toasts.ar_placement_unavailable_msg',
+        'PDF error': 'toasts.pdf_error_title',
+        'Failed to read or convert the PDF file.': 'toasts.pdf_error_msg',
+        'Processing PDF': 'toasts.processing_pdf_title',
+        'Converting the first page of the PDF to a high-quality WebP image.': 'toasts.processing_pdf_msg',
+        'Processing Image': 'toasts.processing_image_title',
+        'Formatting the image to a high-fidelity WebP texture.': 'toasts.processing_image_msg',
+        'Image error': 'toasts.image_error_title',
+        'Failed to process the uploaded image.': 'toasts.image_error_msg',
+        'Unsupported file': 'toasts.unsupported_file_title',
+        'Please upload a PNG, JPG, JPEG, WEBP, or PDF file.': 'toasts.unsupported_file_msg'
+    };
+
+    const key = map[text];
+    if (key && window.i18next.exists(key)) {
+        return window.i18next.t(key);
+    }
+
+    if (text && text.includes('graphic has been updated successfully.')) {
+        return window.i18next.t('toasts.graphic_applied_msg', { label: window.i18next.t('sections.graphic') });
+    }
+    if (text && text.includes('graphic could not be processed.')) {
+        return window.i18next.t('toasts.graphic_applied_failed', { label: window.i18next.t('sections.graphic').toLowerCase() });
+    }
+    if (text && text.includes('graphic has been cleared from the preview.')) {
+        return window.i18next.t('toasts.graphic_removed_msg', { label: window.i18next.t('sections.graphic') });
+    }
+
+    return text;
+}
+
+function updateUploadZoneLabels() {
+    const config = sideConfigs.graphic;
+    if (!config) return;
+    if (!config.uploadedTexture) {
+        if (window.i18next && window.i18next.isInitialized) {
+            config.titleElement.textContent = window.i18next.t('upload.title');
+        } else {
+            config.titleElement.textContent = config.defaultTitle;
+        }
+    }
+}
+
+async function initI18n() {
+    try {
+        const [enRes, nlRes] = await Promise.all([
+            fetch('assets/locales/en.json'),
+            fetch('assets/locales/nl.json')
+        ]);
+        const enTranslations = await enRes.json();
+        const nlTranslations = await nlRes.json();
+
+        await window.i18next.init({
+            lng: currentLanguage,
+            fallbackLng: 'en',
+            resources: {
+                en: { translation: enTranslations },
+                nl: { translation: nlTranslations }
+            }
+        });
+
+        syncPreferenceMenuUi();
+
+        updateContentWithTranslations();
+    } catch (error) {
+        console.error('Failed to initialize i18next:', error);
+    }
+}
+
+function updateContentWithTranslations() {
+    if (!window.i18next || !window.i18next.isInitialized) return;
+
+    const elements = document.querySelectorAll('[data-i18n]');
+    elements.forEach(el => {
+        const attrVal = el.getAttribute('data-i18n');
+        if (!attrVal) return;
+
+        const parts = attrVal.split(';');
+        parts.forEach(part => {
+            const match = part.trim().match(/^(?:\[([^\]]+)\])?(.*)$/);
+            if (!match) return;
+
+            const attrName = match[1];
+            const key = match[2];
+            const translation = window.i18next.t(key);
+
+            if (attrName) {
+                el.setAttribute(attrName, translation);
+            } else {
+                el.textContent = translation;
+            }
+        });
+    });
+
+    const sections = document.querySelectorAll('.config-section');
+    sections.forEach(section => {
+        const activeCard = section.querySelector('.config-card.is-active');
+        const nameDisplay = section.querySelector('.selection-name');
+        if (activeCard && nameDisplay) {
+            const category = activeCard.dataset.category;
+            const value = activeCard.dataset.value;
+            if (category && value) {
+                nameDisplay.textContent = formatSelectionName(category, value);
+            }
+        }
+    });
+
+    updateUploadZoneLabels();
+}
 
 async function fetchPricingData() {
     if (pricingData) return pricingData;
@@ -263,7 +452,7 @@ function updateDynamicPrices() {
 
         // Only add price format if we have a valid category we mapped
         if (['size', 'printing', 'pole', 'base'].includes(category)) {
-            const currencySymbol = pricingData.currency || '';
+            const currencySymbol = getCurrencySymbol();
             const formattedPrice = `${currencySymbol} ${cardPrice.toFixed(2)}`.trim();
             card.dataset.price = formattedPrice;
 
@@ -284,7 +473,7 @@ function updateDynamicPrices() {
     const total = sizePrice + printingAddon + poleAddon + basePrice;
     const totalEl = document.getElementById('total-price-value');
     if (totalEl) {
-        const currencySymbol = pricingData.currency || '';
+        const currencySymbol = getCurrencySymbol();
         totalEl.textContent = `${currencySymbol} ${total.toFixed(2)}`.trim();
     }
 }
@@ -836,27 +1025,43 @@ function updateTemplateDownloadLink() {
     };
     const sizeInfo = sizeDimensions[sizeKey] || { file: 'l-75x380cm', display: sizeKey.toUpperCase() };
 
-    // 2. Map printing and direction to suffix and label
+    // 2. Map printing and direction to suffix
     let fileSuffix = '';
-    let displayPrint = '';
 
     if (configState.printing === 'Double Sided') {
         fileSuffix = '-double-sided';
-        displayPrint = 'Double Side';
     } else {
         const dirSuffix = configState.direction.toLowerCase() === 'left' ? '-left' : '-right';
         fileSuffix = `-single-sided${dirSuffix}`;
-        displayPrint = 'Single Side';
     }
 
     // 3. Build URL and Display Name
     const filename = `beachflag-convex-${sizeInfo.file}${fileSuffix}.pdf`;
     const downloadUrl = `https://files.proflags.com/beachflag-convex/${filename}`;
     
-    let displayName = `Beach flag-Convex-${sizeInfo.display}-${displayPrint}`;
-    if (configState.printing !== 'Double Sided') {
-        displayName += `-${configState.direction}`;
+    let sizeText = configState.size;
+    if (window.i18next && window.i18next.isInitialized) {
+        sizeText = window.i18next.t(`selections.size.${configState.size}`);
     }
+    let sizePart = sizeText.replace(/\s+/g, '-');
+
+    let printingText = configState.printing;
+    if (window.i18next && window.i18next.isInitialized) {
+        printingText = window.i18next.t(`selections.printing.${configState.printing}`);
+    }
+    let printingPart = printingText.replace(/\s+/g, '-');
+
+    let directionPart = '';
+    if (configState.printing !== 'Double Sided') {
+        let directionText = configState.direction;
+        if (window.i18next && window.i18next.isInitialized) {
+            directionText = window.i18next.t(`selections.direction.${configState.direction}`);
+        }
+        directionPart = '-' + directionText.replace(/\s+/g, '-');
+    }
+
+    let displayName = `${sizePart}-${printingPart}${directionPart}`;
+    displayName = displayName.replace(/\s+/g, '-');
 
     // 4. Update the DOM
     downloadBtn.href = downloadUrl;
@@ -1043,6 +1248,13 @@ async function runDirectionCameraSequence(direction) {
 }
 
 function formatSelectionName(category, value) {
+    let displayName = value;
+    if (window.i18next && window.i18next.isInitialized) {
+        const key = `selections.${category}.${value}`;
+        if (window.i18next.exists(key)) {
+            displayName = window.i18next.t(key);
+        }
+    }
     if (category === 'size') {
         const sizeDimensions = {
             'Beach flag Convex XS': '60x180cm',
@@ -1053,10 +1265,10 @@ function formatSelectionName(category, value) {
         };
         const dim = sizeDimensions[value];
         if (dim) {
-            return `${value} - ${dim}`;
+            return `${displayName} - ${dim}`;
         }
     }
-    return value;
+    return displayName;
 }
 
 function initConfiguratorUI() {
@@ -1176,6 +1388,7 @@ function initConfiguratorUI() {
 
 window.addEventListener('DOMContentLoaded', async () => {
     await fetchPricingData();
+    await initI18n();
     initConfiguratorUI();
 });
 
@@ -1872,11 +2085,11 @@ function showToast(title, message, tone = 'info', duration = 3200) {
 
         const titleNode = document.createElement('span');
         titleNode.className = 'toast-title';
-        titleNode.textContent = title;
+        titleNode.textContent = translateToastText(title);
 
         const messageNode = document.createElement('span');
         messageNode.className = 'toast-copy';
-        messageNode.textContent = message;
+        messageNode.textContent = translateToastText(message);
 
         toast.append(titleNode, messageNode);
         toast.resolvePromise = resolve;
@@ -2189,8 +2402,9 @@ function syncSideUi(side) {
 function syncARButtonLabel() {
     if (state.arUnsupported || !arButton.isConnected) return;
     if (!arButton.querySelector('[data-ar-icon="true"]')) arButton.innerHTML = arButtonIconMarkup;
-    arButton.setAttribute('aria-label', 'Start AR');
-    arButton.title = 'Start AR';
+    const label = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('ar.start') : 'Start AR';
+    arButton.setAttribute('aria-label', label);
+    arButton.title = label;
 }
 
 function ensureArDisabledFallback() {
@@ -2201,8 +2415,10 @@ function ensureArDisabledFallback() {
     arDisabledFallback.id = 'ARButton';
     arDisabledFallback.className = 'is-ar-disabled';
     arDisabledFallback.innerHTML = arButtonIconMarkup;
-    arDisabledFallback.setAttribute('aria-label', 'AR preview unavailable on this device');
-    arDisabledFallback.title = 'AR preview unavailable';
+    const labelVal = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('ar.unavailable_label') : 'AR preview unavailable on this device';
+    const titleVal = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('ar.unavailable_title') : 'AR preview unavailable';
+    arDisabledFallback.setAttribute('aria-label', labelVal);
+    arDisabledFallback.title = titleVal;
     arDisabledFallback.addEventListener('click', (event) => {
         event.preventDefault();
         showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
@@ -2848,6 +3064,55 @@ function bindUIEvents() {
     dom.generatePdf.addEventListener('click', generatePdfProof);
     dom.turntableToggle.addEventListener('click', toggleTurntable);
 
+    // Toggle preferences dropdown menu
+    if (dom.prefBtn) {
+        dom.prefBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isOpen = dom.prefDropdown.classList.contains('is-open');
+            setPreferenceDropdownOpen(!isOpen);
+        });
+    }
+
+    // Click outside to close preferences dropdown menu
+    document.addEventListener('click', (event) => {
+        if (dom.prefDropdown && dom.prefDropdown.classList.contains('is-open')) {
+            if (!dom.prefDropdown.contains(event.target) && !dom.prefBtn.contains(event.target)) {
+                setPreferenceDropdownOpen(false);
+            }
+        }
+    });
+
+    // Language list items click handlers
+    if (dom.prefLangList) {
+        const langItems = dom.prefLangList.querySelectorAll('.pref-menu-item');
+        langItems.forEach(item => {
+            item.addEventListener('click', async () => {
+                currentLanguage = item.dataset.value;
+                localStorage.setItem('pref-language', currentLanguage);
+                syncPreferenceMenuUi();
+                if (window.i18next && window.i18next.isInitialized) {
+                    await window.i18next.changeLanguage(currentLanguage);
+                    updateContentWithTranslations();
+                    updateDynamicPrices();
+                    updateTemplateDownloadLink();
+                }
+            });
+        });
+    }
+
+    // Currency list items click handlers
+    if (dom.prefCurrencyList) {
+        const currencyItems = dom.prefCurrencyList.querySelectorAll('.pref-menu-item');
+        currencyItems.forEach(item => {
+            item.addEventListener('click', () => {
+                currentCurrency = item.dataset.value;
+                localStorage.setItem('pref-currency', currentCurrency);
+                syncPreferenceMenuUi();
+                updateDynamicPrices();
+            });
+        });
+    }
+
     window.addEventListener('keydown', (event) => {
         const activeTag = document.activeElement?.tagName;
         const isInteractiveFocus = activeTag === 'INPUT' || activeTag === 'BUTTON' || document.activeElement?.classList.contains('upload-card');
@@ -3220,7 +3485,7 @@ function clearGraphic(side, announce = false) {
 
     config.thumb.removeAttribute('src');
     config.input.value = '';
-    config.titleElement.textContent = config.defaultTitle;
+    config.titleElement.textContent = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('upload.title') : config.defaultTitle;
     config.titleElement.removeAttribute('title');
     resetTransformInputs(side);
     saveCurrentGraphicToCache();
@@ -3303,7 +3568,7 @@ async function generatePdfProof() {
 
     state.isExporting = true;
     syncControlAvailability();
-    dom.generatePdf.textContent = 'Saving...';
+    dom.generatePdf.textContent = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('actions.saving') : 'Saving...';
 
     const slowGenerationTimer = setTimeout(() => {
         showToast('Saving design', 'Capturing front and back layouts for your design.', 'info', 3000);
@@ -3324,21 +3589,28 @@ async function generatePdfProof() {
         const backImage = captureProofView(new THREE.Vector3(0, targetCenter.y, -cameraDistance));
 
         sceneRoot.rotation.copy(savedRotation);
+        const pdfTitle = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.title') : 'Probo Configurator - Saved Design';
+        const pdfSavedOn = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.saved_on') : 'Saved on: ';
+        const pdfPocketColor = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.pocket_color') : 'Pocket color: ';
+        const pdfFrontLayout = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.front_layout') : 'Front Layout';
+        const pdfBackLayout = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.back_layout') : 'Back Layout';
+        const pdfFilename = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.filename') : 'Probo_Flag_Design';
+
         doc.setFontSize(22);
         doc.setTextColor(50, 50, 50);
-        doc.text('Probo Configurator - Saved Design', 20, 20);
+        doc.text(pdfTitle, 20, 20);
         doc.setFontSize(12);
-        doc.text(`Saved on: ${new Date().toLocaleDateString()}`, 20, 28);
-        doc.text(`Pocket color: ${normalizeHex(dom.pocketColor.value) || dom.pocketColor.value}`, 20, 36);
+        doc.text(`${pdfSavedOn}${new Date().toLocaleDateString()}`, 20, 28);
+        doc.text(`${pdfPocketColor}${normalizeHex(dom.pocketColor.value) || dom.pocketColor.value}`, 20, 36);
 
         doc.setFontSize(14);
-        doc.text('Front Layout', 20, 45);
+        doc.text(pdfFrontLayout, 20, 45);
         doc.addImage(frontImage, 'JPEG', 20, 50, 110, 110);
 
-        doc.text('Back Layout', 150, 45);
+        doc.text(pdfBackLayout, 150, 45);
         doc.addImage(backImage, 'JPEG', 150, 50, 110, 110);
 
-        doc.save('Probo_Flag_Design.pdf');
+        doc.save(`${pdfFilename}.pdf`);
         showToast('Design saved', 'Your custom flag design has been saved successfully.', 'success');
     } catch (error) {
         console.error(error);
@@ -3346,6 +3618,7 @@ async function generatePdfProof() {
     } finally {
         clearTimeout(slowGenerationTimer);
         dom.generatePdf.innerHTML = pdfButtonMarkup;
+        updateContentWithTranslations();
         state.isExporting = false;
         syncControlAvailability();
     }

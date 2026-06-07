@@ -446,6 +446,11 @@ input:disabled,
     z-index: 40;
 }
 
+.overlay:not(.is-visible) .spinner {
+    display: none;
+    animation: none;
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
@@ -785,13 +790,19 @@ body:has(#loading-overlay.is-visible) #camera-wrapper {
     visibility: hidden;
 }
 
+body:has(#loading-overlay.is-visible) .preferences-container {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
 #camera-actions {
     order: 1;
     position: relative;
     display: grid;
     grid-template-columns: repeat(2, 48px);
     grid-template-rows: repeat(3, 48px);
-    grid-template-areas: 
+    grid-template-areas:
         ". char"
         "ar env"
         "turntable play";
@@ -1524,6 +1535,137 @@ button.config-card[data-category="base"].is-active {
     border-color: rgba(255, 255, 255, 0.18);
 }
 
+
+/* ---------------------------------
+   Floating Preferences Button & Dropdown (Top Right)
+--------------------------------- */
+.preferences-container {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    z-index: 5;
+    display: inline-block;
+}
+
+.pref-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(10, 16, 26, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+}
+
+.pref-btn:hover {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(10, 16, 26, 0.85);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+
+}
+
+.pref-btn[aria-expanded="true"] .pref-chevron {
+    transform: rotate(180deg);
+}
+
+.pref-chevron {
+    transition: transform 0.2s ease;
+}
+
+.pref-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    display: flex;
+    gap: 10px;
+    padding: 10px 10px;
+    background: rgba(10, 16, 26, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pref-dropdown.is-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.pref-menu-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: max-content;
+}
+
+.pref-menu-title {
+    color: rgba(255, 255, 255, 0.4);
+    font-family: 'Outfit', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pref-menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pref-menu-item {
+    color: rgba(255, 255, 255, 0.7);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+}
+
+.pref-menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+}
+
+.pref-menu-item.is-active {
+    background: rgba(0, 102, 204, 0.2);
+    border: 1px solid rgba(0, 102, 204, 0.4);
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+.pref-menu-divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+
 /* ---------------------------------
    Media Queries & Responsive Layout
 --------------------------------- */
@@ -1636,5 +1778,9 @@ button.config-card[data-category="base"].is-active {
     .toast {
         max-width: none;
         min-width: 0;
+    }
+
+    .preferences-container {
+        right: 12px;
     }
 }

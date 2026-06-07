@@ -1,0 +1,164 @@
+{
+  "header": {
+    "title": "Flag Configurator",
+    "description": "Select your size and layout, upload your design, tweak the 3D preview, and save."
+  },
+  "preferences": {
+    "language": "Language",
+    "currency": "Currency"
+  },
+  "sections": {
+    "size": "Sizes",
+    "printing": "Printing",
+    "direction": "Direction",
+    "template": "Graphic Template",
+    "graphic": "Graphic",
+    "pole_cover": "Pole Cover",
+    "pole": "Pole",
+    "base": "Base"
+  },
+  "selections": {
+    "size": {
+      "Beach flag Convex XS": "Beach flag Convex XS",
+      "Beach flag Convex S": "Beach flag Convex S",
+      "Beach flag Convex M": "Beach flag Convex M",
+      "Beach flag Convex M-Extra Wide": "Beach flag Convex M-Extra Wide",
+      "Beach flag Convex L": "Beach flag Convex L"
+    },
+    "printing": {
+      "Single Sided": "Single Sided",
+      "Double Sided": "Double Sided",
+      "Air Textile": "Air Textile"
+    },
+    "direction": {
+      "Right": "Right",
+      "Left": "Left"
+    },
+    "pole": {
+      "With Pole": "With Pole",
+      "Without Pole": "Without Pole"
+    },
+    "base": {
+      "No base": "No base",
+      "Luxury cross base": "Luxury cross base",
+      "Cross base-grey": "Cross base, grey",
+      "Cross base-black": "Cross base, black"
+    }
+  },
+  "templates": {
+    "l_ss": "Beach flag-Convex-L-Single Side-Right",
+    "l_ds": "Beach flag-Convex-L-Double Side",
+    "xs_ss": "Beach flag-Convex-XS-Single Side-Right",
+    "xs_ds": "Beach flag-Convex-XS-Double Side",
+    "download_btn": "Graphic Template"
+  },
+  "upload": {
+    "hint": "PNG, JPG, or PDF",
+    "title": "Drop graphic here",
+    "subtitle": "or click to browse your files",
+    "reset": "Reset",
+    "remove": "Remove",
+    "scale": "Scale",
+    "pan_x": "Pan X",
+    "pan_y": "Pan Y"
+  },
+  "pole_cover": {
+    "picker_title": "Choose pocket color"
+  },
+  "cards": {
+    "yes": "Yes",
+    "no": "No",
+    "none": "None"
+  },
+  "actions": {
+    "save": "Save My Design",
+    "saving": "Saving..."
+  },
+  "hud": {
+    "back": "Back",
+    "left": "Left",
+    "right": "Right",
+    "front": "Front",
+    "tooltip_back": "Back View",
+    "tooltip_left": "Left View",
+    "tooltip_right": "Right View",
+    "tooltip_front": "Front View",
+    "tooltip_home": "Home View",
+    "tooltip_turntable": "Toggle Turntable",
+    "tooltip_play": "Shortcut: Press Spacebar",
+    "tooltip_env": "Environment Settings",
+    "tooltip_char": "Toggle Height Reference"
+  },
+  "env_panel": {
+    "title": "Environment",
+    "reset": "Reset",
+    "brightness": "Brightness",
+    "rotate": "Rotate Light"
+  },
+  "ar": {
+    "stop": "STOP AR",
+    "start": "Start AR",
+    "unavailable_label": "AR preview unavailable on this device",
+    "unavailable_title": "AR preview unavailable"
+  },
+  "pdf": {
+    "title": "Probo Configurator - Saved Design",
+    "saved_on": "Saved on: ",
+    "pocket_color": "Pocket color: ",
+    "front_layout": "Front Layout",
+    "back_layout": "Back Layout",
+    "filename": "Probo_Flag_Design"
+  },
+  "toasts": {
+    "ar_support_resolved_title": "AR Supported",
+    "ar_support_resolved_msg": "Ready for AR! Tap the green AR button on the right to place the flag in the real world.",
+    "ar_unsupported_title": "AR unavailable",
+    "ar_unsupported_msg": "This device or browser does not support AR preview.",
+    "ar_active_title": "AR mode active",
+    "ar_active_msg": "Move your device to find a surface, then tap to place. Drag to rotate.",
+    "ar_placed_title": "Object placed",
+    "ar_placed_msg": "Tap again on another surface if you want to reposition the flag.",
+    "loading_3d": "Loading 3D preview...",
+    "loading_assets": "Loading 3D assets...",
+    "loading_pdf_title": "Loading Saving System",
+    "loading_pdf_msg": "Preparing the PDF saving modules...",
+    "load_failed_title": "Load Failed",
+    "load_failed_msg": "Could not load the PDF saving libraries. Please check your internet connection.",
+    "preview_loading_title": "Preview still loading",
+    "preview_loading_msg": "Please wait for the 3D preview to finish loading before uploading graphic.",
+    "env_unavailable_title": "Environment unavailable",
+    "env_unavailable_msg": "Studio lighting could not be loaded. Continuing with the default background.",
+    "ref_loading_title": "Loading reference",
+    "ref_loading_msg": "Loading 3D character model height reference...",
+    "ref_loaded_title": "Reference loaded",
+    "ref_loaded_msg": "3D character model height reference added.",
+    "ref_failed_title": "Loading failed",
+    "ref_failed_msg": "Could not load the 3D character model.",
+    "preview_ready_title": "Preview ready",
+    "preview_ready_no_save": "Graphic tools are ready, but design saving is currently unavailable.",
+    "preview_ready_msg": "Pick a size and layout, upload your design, tweak the preview, and save.",
+    "graphic_applied_title": "Graphic applied",
+    "graphic_applied_msg": "{{label}} graphic has been updated successfully.",
+    "graphic_applied_failed": "The {{label}} graphic could not be processed.",
+    "graphic_removed_title": "Graphic removed",
+    "graphic_removed_msg": "{{label}} graphic has been cleared from the preview.",
+    "saving_design_title": "Saving design",
+    "saving_design_msg": "Capturing front and back layouts for your design.",
+    "design_saved_title": "Design saved",
+    "design_saved_msg": "Your custom flag design has been saved successfully.",
+    "save_failed_title": "Save failed",
+    "save_failed_msg": "Unable to save your design. Please try again.",
+    "ar_placement_unavailable_title": "AR placement unavailable",
+    "ar_placement_unavailable_msg": "Hit testing could not be started for this session.",
+    "pdf_error_title": "PDF error",
+    "pdf_error_msg": "Failed to read or convert the PDF file.",
+    "processing_pdf_title": "Processing PDF",
+    "processing_pdf_msg": "Converting the first page of the PDF to a high-quality WebP image.",
+    "processing_image_title": "Processing Image",
+    "processing_image_msg": "Formatting the image to a high-fidelity WebP texture.",
+    "image_error_title": "Image error",
+    "image_error_msg": "Failed to process the uploaded image.",
+    "unsupported_file_title": "Unsupported file",
+    "unsupported_file_msg": "Please upload a PNG, JPG, JPEG, WEBP, or PDF file."
+  }
+}
