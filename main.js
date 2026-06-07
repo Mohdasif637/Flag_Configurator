@@ -1436,7 +1436,6 @@ overheadLight.shadow.bias = -0.0001;
 overheadLight.shadow.normalBias = 0.05;
 overheadLight.shadow.radius = 10;
 overheadLight.shadow.blurSamples = 20;
-overheadLight.shadow.camera.updateProjectionMatrix();
 
 lightingGroup.add(overheadLight);
 
@@ -1954,10 +1953,6 @@ function getBaseFocusTargets() {
 async function silentWarmupAllSizes() {
     if (!modelRoot || !vatMaterials.length) return;
 
-    // Temporarily disable shadow map updates during warmup to prevent rendering shadow maps into a 1x1 scissor box (which can corrupt/disable shadows on mobile)
-    const prevShadowMapAutoUpdate = renderer.shadowMap.autoUpdate;
-    renderer.shadowMap.autoUpdate = false;
-
     // Collect all active size codes from the HTML cards
     const sizeCards = Array.from(document.querySelectorAll('.config-card[data-category="size"]'));
     const allSizeCodes = sizeCards
@@ -2027,10 +2022,6 @@ async function silentWarmupAllSizes() {
     if (typeof applyConfigurationToScene === 'function') {
         applyConfigurationToScene(false);
     }
-
-    // Restore original shadow map update state
-    renderer.shadowMap.autoUpdate = prevShadowMapAutoUpdate;
-    renderer.shadowMap.needsUpdate = true;
 }
 
 
@@ -3170,12 +3161,6 @@ function bindUIEvents() {
     });
 
     window.addEventListener('resize', handleResize);
-    if (typeof ResizeObserver !== 'undefined') {
-        const resizeObserver = new ResizeObserver(() => {
-            handleResize();
-        });
-        resizeObserver.observe(dom.canvasContainer);
-    }
 }
 
 /* ---------------------------------
@@ -3840,6 +3825,8 @@ function onARSessionStart() {
     previewStateBeforeAR = capturePreviewState();
 
     if (modelRoot) sceneRoot.visible = false;
+    if (characterModel) characterModel.visible = false; // Hide human reference mesh in AR
+    
     syncControlAvailability();
     showToast('AR mode active', 'Move your device to find a surface, then tap to place. Drag to rotate.', 'info', 10000);
 }
@@ -3850,6 +3837,8 @@ function onARSessionEnd() {
     controls.enabled = true;
     reticle.visible = false;
     resetHitTestState();
+
+    if (characterModel) characterModel.visible = showCharacter; // Restore human reference visibility
 
     schedulePostARRestore();
     syncControlAvailability();
@@ -3980,7 +3969,6 @@ let lastRenderTime = 0;
 
 function renderFrame(_, frame) {
     const now = performance.now();
-    
     const targetFps = 60;
     const minFrameInterval = 1000 / targetFps;
 
