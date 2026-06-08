@@ -1461,6 +1461,8 @@ let targetCenter = new THREE.Vector3(0, 1.8, 0);
 let cameraHome = new THREE.Vector3(2, 2, 6);
 let cameraDistance = 5.5;
 const turntableSpeed = THREE.MathUtils.degToRad(26);
+let turntableAccumulatedAngle = 0;
+let turntableAutoStopEnabled = true;
 let cameraTargets = {
     home: cameraHome.clone(),
     front: new THREE.Vector3(0, targetCenter.y, cameraDistance),
@@ -2078,11 +2080,15 @@ function showToast(title, message, tone = 'info', duration = 3200) {
         titleNode.className = 'toast-title';
         titleNode.textContent = translateToastText(title);
 
-        const messageNode = document.createElement('span');
-        messageNode.className = 'toast-copy';
-        messageNode.textContent = translateToastText(message);
+        toast.append(titleNode);
 
-        toast.append(titleNode, messageNode);
+        if (message) {
+            const messageNode = document.createElement('span');
+            messageNode.className = 'toast-copy';
+            messageNode.textContent = translateToastText(message);
+            toast.append(messageNode);
+        }
+
         toast.resolvePromise = resolve;
 
         dom.toastRegion.insertBefore(toast, dom.toastRegion.firstChild);
@@ -2330,6 +2336,16 @@ async function syncReadyState() {
         state.arSupportedToastShown = true;
         showToast('AR Supported', 'Ready for AR! Tap the green AR button on the right to place the flag in the real world.', 'success', 5000);
     }
+
+    // Auto-pause flag animation after 60 seconds
+    window.setTimeout(() => {
+        if (isPlaying) {
+            isPlaying = false;
+            if (action) action.paused = true;
+            syncPlayPauseButton();
+            showToast('Flag Animation Paused', '', 'info', 3000);
+        }
+    }, 60000);
 }
 
 function syncControlAvailability() {
@@ -2564,6 +2580,7 @@ function toggleCharacterVisibility() {
 function stopTurntableRotation() {
     if (!state.turntableEnabled) return;
     state.turntableEnabled = false;
+    turntableAutoStopEnabled = false;
     syncTurntableButton();
 }
 
@@ -3534,11 +3551,13 @@ function toggleAnimation() {
 function toggleTurntable() {
     if (dom.turntableToggle.disabled) return;
     state.turntableEnabled = !state.turntableEnabled;
+    turntableAutoStopEnabled = false;
     syncTurntableButton();
 }
 
 function syncPlayPauseButton() {
     dom.playPause.classList.toggle('is-paused', !isPlaying);
+    dom.playPause.classList.toggle('is-active', isPlaying);
     dom.playPause.title = isPlaying ? 'Pause Animation' : 'Play Animation';
     dom.playPause.setAttribute('aria-label', isPlaying ? 'Pause Animation' : 'Play Animation');
 }
@@ -3985,7 +4004,25 @@ function renderFrame(_, frame) {
     const delta = timer.getDelta(); // This is the crucial fix for pausing!
 
     if (state.turntableEnabled && !state.isInAR) {
-        sceneRoot.rotation.y += turntableSpeed * delta;
+        const step = turntableSpeed * delta;
+        sceneRoot.rotation.y += step;
+
+        if (turntableAutoStopEnabled) {
+            turntableAccumulatedAngle += Math.abs(step);
+            if (turntableAccumulatedAngle >= Math.PI * 8) {
+                state.turntableEnabled = false;
+                syncTurntableButton();
+                turntableAutoStopEnabled = false;
+                
+                // Trigger home view preset
+                const homeBtn = dom.cameraButtons.find(b => b.dataset.view === 'home');
+                if (homeBtn) {
+                    homeBtn.click();
+                } else {
+                    focusCameraView('home');
+                }
+            }
+        }
     }
 
     // --- UPDATE VAT ANIMATION TIME ---

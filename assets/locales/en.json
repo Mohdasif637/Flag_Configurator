@@ -53,14 +53,16 @@
     "download_btn": "Graphic Template"
   },
   "upload": {
-    "hint": "PNG, JPG, or PDF",
+    "hint": "PDF, JPG or PNG",
     "title": "Drop graphic here",
     "subtitle": "or click to browse your files",
     "reset": "Reset",
     "remove": "Remove",
     "scale": "Scale",
     "pan_x": "Pan X",
-    "pan_y": "Pan Y"
+    "pan_y": "Pan Y",
+    "tooltip_aria": "Template layer information",
+    "template_layers_info": "To preview the graphic properly on the flag, disable the first two layers in the template."
   },
   "pole_cover": {
     "picker_title": "Choose pocket color"

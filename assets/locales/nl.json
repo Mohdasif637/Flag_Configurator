@@ -53,14 +53,16 @@
     "download_btn": "Grafisch Sjabloon"
   },
   "upload": {
-    "hint": "PNG, JPG, of PDF",
+    "hint": "PDF, JPG or PNG",
     "title": "Sleep uw ontwerp hierheen",
     "subtitle": "of klik om uw bestanden te zoeken",
     "reset": "Resetten",
     "remove": "Verwijderen",
     "scale": "Schaal",
     "pan_x": "Verschuif X",
-    "pan_y": "Verschuif Y"
+    "pan_y": "Verschuif Y",
+    "tooltip_aria": "Informatie over sjabloonlagen",
+    "template_layers_info": "Schakel de eerste twee lagen in het sjabloon uit om het ontwerp correct op de vlag te tonen."
   },
   "pole_cover": {
     "picker_title": "Kies mastband kleur"

@@ -156,8 +156,20 @@
                 <div class="config-section" id="section-graphic">
                     <div class="control-group mb-0">
                         <div class="control-heading">
-                            <label for="graphic-upload" data-i18n="sections.graphic">Graphic</label>
-                            <span class="control-hint" data-i18n="upload.hint">PNG, JPG, or PDF</span>
+                            <div class="label-with-info">
+                                <span class="control-label" data-i18n="sections.graphic">Graphic</span>
+                                <div class="info-tooltip-container">
+                                    <button type="button" class="info-tooltip-btn" aria-label="Template layer information" data-i18n="[aria-label]upload.tooltip_aria">
+                                        <svg viewBox="0 0 24 24" class="info-icon" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                        </svg>
+                                    </button>
+                                    <span class="info-tooltip-text" data-i18n="upload.template_layers_info">To preview the graphic properly on the flag, disable the first two layers in the template.</span>
+                                </div>
+                            </div>
+                            <span class="control-hint" data-i18n="upload.hint">PDF, JPG or PNG</span>
                         </div>
                         <label id="graphic-dropzone" class="upload-card" for="graphic-upload" tabindex="0">
                             <div class="upload-progress"></div>
@@ -298,7 +310,9 @@
         </div>
  
         <div id="camera-actions">
-            <div id="ar-container" hidden></div>
+            <button type="button" id="char-toggle" title="Toggle Height Reference" aria-label="Toggle Height Reference" aria-pressed="false" data-i18n="[title]hud.tooltip_char;[aria-label]hud.tooltip_char">
+                <img class="control-icon" src="icons/character.svg" alt="" aria-hidden="true" draggable="false">
+            </button>
  
             <button type="button" id="turntable-toggle" title="Toggle Turntable" aria-label="Toggle Turntable" data-i18n="[title]hud.tooltip_turntable;[aria-label]hud.tooltip_turntable">
                 <img class="control-icon" src="icons/rotate.svg" alt="" aria-hidden="true" draggable="false">
@@ -318,9 +332,7 @@
                 </span>
             </button>
  
-            <button type="button" id="char-toggle" title="Toggle Height Reference" aria-label="Toggle Height Reference" aria-pressed="false" data-i18n="[title]hud.tooltip_char;[aria-label]hud.tooltip_char">
-                <img class="control-icon" src="icons/character.svg" alt="" aria-hidden="true" draggable="false">
-            </button>
+            <div id="ar-container" hidden></div>
  
             <button type="button" id="env-toggle" title="Environment Settings" aria-label="Environment Settings" aria-expanded="false" aria-controls="env-panel" data-i18n="[title]hud.tooltip_env;[aria-label]hud.tooltip_env">
                 <img class="control-icon" src="icons/env.svg" alt="" aria-hidden="true" draggable="false">
