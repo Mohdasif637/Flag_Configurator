@@ -4057,7 +4057,7 @@ function renderFrame(_, frame) {
                         flagActive || 
                         arActive;
 
-    if (needsRender) {
+    if (needsRender && state.modelLoaded) {
         renderer.render(scene, camera);
         sceneDirty = false;
     }
