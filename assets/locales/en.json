@@ -118,6 +118,8 @@
     "ar_unsupported_msg": "This device or browser does not support AR preview.",
     "ar_active_title": "AR mode active",
     "ar_active_msg": "Move your device to find a surface, then tap to place. Drag to rotate.",
+    "ar_suggestion_title": "Curious how it looks in real life?",
+    "ar_suggestion_msg": "View it in AR.",
     "ar_placed_title": "Object placed",
     "ar_placed_msg": "Tap again on another surface if you want to reposition the flag.",
     "loading_3d": "Loading 3D preview...",

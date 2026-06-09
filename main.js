@@ -216,6 +216,8 @@ function translateToastText(text) {
         'This device or browser does not support AR preview.': 'toasts.ar_unsupported_msg',
         'AR mode active': 'toasts.ar_active_title',
         'Move your device to find a surface, then tap to place. Drag to rotate.': 'toasts.ar_active_msg',
+        'Curious how it looks in real life?': 'toasts.ar_suggestion_title',
+        'View it in AR.': 'toasts.ar_suggestion_msg',
         'Object placed': 'toasts.ar_placed_title',
         'Tap again on another surface if you want to reposition the flag.': 'toasts.ar_placed_msg',
         'Loading Saving System': 'toasts.loading_pdf_title',
@@ -1709,6 +1711,7 @@ let environmentTexture = null;
 let action = null;
 let isPlaying = true;
 let accumulatedTime = 0;
+let arSuggestionShown = false;
 
 let pocketColorPickr = null;
 let exportRenderer = null;
@@ -3452,6 +3455,23 @@ async function handleGraphicFile(side, file) {
             focusCameraView(targetView, 800, false);
 
             showToast('Graphic applied', `${config.label} graphic has been updated successfully.`, 'success');
+
+            // Trigger AR suggestion toast and glow animation (once per session on AR-supported devices)
+            if (state.arSupported && !arSuggestionShown) {
+                arSuggestionShown = true;
+                window.setTimeout(() => {
+                    if (!state.isInAR) {
+                        showToast('Curious how it looks in real life?', 'View it in AR.', 'info', 6000);
+                        const btn = document.getElementById('ARButton');
+                        if (btn) {
+                            btn.classList.add('ar-breath-glow');
+                            window.setTimeout(() => {
+                                btn.classList.remove('ar-breath-glow');
+                            }, 20000);
+                        }
+                    }
+                }, 10000);
+            }
         },
         undefined,
         () => {

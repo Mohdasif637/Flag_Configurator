@@ -118,6 +118,8 @@
     "ar_unsupported_msg": "Dit apparaat of deze browser ondersteunt geen AR-weergave.",
     "ar_active_title": "AR-modus actief",
     "ar_active_msg": "Beweeg uw apparaat om een oppervlak te vinden, tik vervolgens om te plaatsen. Sleep om te roteren.",
+    "ar_suggestion_title": "Benieuwd hoe het er in het echt uitziet?",
+    "ar_suggestion_msg": "Bekijk het in AR.",
     "ar_placed_title": "Object geplaatst",
     "ar_placed_msg": "Tik nogmaals op een ander oppervlak om de vlag te verplaatsen.",
     "loading_3d": "3D-weergave laden...",
