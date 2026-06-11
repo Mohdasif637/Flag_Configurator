@@ -74,7 +74,8 @@
   },
   "actions": {
     "save": "Mijn Ontwerp Opslaan",
-    "saving": "Opslaan..."
+    "saving": "Opslaan...",
+    "add_to_cart": "IN WINKELWAGEN"
   },
   "hud": {
     "back": "Achter",
@@ -104,12 +105,13 @@
     "unavailable_title": "AR-weergave niet beschikbaar"
   },
   "pdf": {
-    "title": "Probo Configurator - Opgeslagen Ontwerp",
+    "title": "Vlag Configurator - Opgeslagen Ontwerp",
     "saved_on": "Opgeslagen op: ",
     "pocket_color": "Mastbandkleur: ",
     "front_layout": "Voorzijde",
     "back_layout": "Achterzijde",
-    "filename": "Probo_Vlag_Ontwerp"
+    "filename": "Vlag_Ontwerp",
+    "total_price": "Totaalprijs"
   },
   "toasts": {
     "ar_support_resolved_title": "AR Ondersteund",
@@ -163,6 +165,7 @@
     "image_error_title": "Afbeeldingsfout",
     "image_error_msg": "Verwerken van de geüploade afbeelding is mislukt.",
     "unsupported_file_title": "Niet-ondersteund bestand",
-    "unsupported_file_msg": "Upload een PNG-, JPG-, JPEG-, WEBP- of PDF-bestand."
+    "unsupported_file_msg": "Upload een PNG-, JPG-, JPEG-, WEBP- of PDF-bestand.",
+    "coming_soon": "Binnenkort beschikbaar....."
   }
 }

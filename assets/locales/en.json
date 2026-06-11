@@ -74,7 +74,8 @@
   },
   "actions": {
     "save": "Save My Design",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "add_to_cart": "ADD TO CART"
   },
   "hud": {
     "back": "Back",
@@ -104,12 +105,13 @@
     "unavailable_title": "AR preview unavailable"
   },
   "pdf": {
-    "title": "Probo Configurator - Saved Design",
+    "title": "Flag Configurator - Saved Design",
     "saved_on": "Saved on: ",
     "pocket_color": "Pocket color: ",
     "front_layout": "Front Layout",
     "back_layout": "Back Layout",
-    "filename": "Probo_Flag_Design"
+    "filename": "Flag_Design",
+    "total_price": "Total Price"
   },
   "toasts": {
     "ar_support_resolved_title": "AR Supported",
@@ -163,6 +165,7 @@
     "image_error_title": "Image error",
     "image_error_msg": "Failed to process the uploaded image.",
     "unsupported_file_title": "Unsupported file",
-    "unsupported_file_msg": "Please upload a PNG, JPG, JPEG, WEBP, or PDF file."
+    "unsupported_file_msg": "Please upload a PNG, JPG, JPEG, WEBP, or PDF file.",
+    "coming_soon": "Coming Soon....."
   }
 }

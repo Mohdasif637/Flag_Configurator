@@ -354,6 +354,17 @@ input:disabled,
     gap: 10px;
 }
 
+.action-row {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+}
+
+.action-row button {
+    flex: 1;
+}
+
 .action-stack button {
     display: inline-flex;
     align-items: center;
@@ -369,7 +380,7 @@ input:disabled,
     top: 10px;
     left: 6px;
     z-index: 3;
-    max-height: calc(100vh - 40px);
+    max-height: calc(100% - 20px);
     width: min(345px, calc(100vw - 40px));
     display: flex;
 }
@@ -1776,9 +1787,10 @@ button.config-card[data-category="base"].is-active {
 @media (min-width: 769px) and (max-width: 1100px) {
     #ui-container {
         width: min(300px, calc(100vw - 40px));
-        top: 4px;
-        bottom: 4px;
-        left: 0;
+        top: 10px;
+        bottom: auto;
+        max-height: calc(100% - 20px);
+        left: 6px;
     }
 
     #ui-bg,
@@ -1790,10 +1802,6 @@ button.config-card[data-category="base"].is-active {
     #ui-header-wrapper {
         padding-top: 10px;
         padding-bottom: 8px;
-    }
-
-    #canvas-container {
-        left: 250px;
     }
 }
 

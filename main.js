@@ -31,6 +31,7 @@ const dom = {
     pocketColorSwatch: document.getElementById('pocket-color-swatch'),
     playPause: document.getElementById('play-pause'),
     generatePdf: document.getElementById('generate-pdf'),
+    addToCart: document.getElementById('add-to-cart'),
     cameraWrapper: document.getElementById('camera-wrapper'),
     cameraActions: document.getElementById('camera-actions'),
     turntableToggle: document.getElementById('turntable-toggle'),
@@ -256,7 +257,8 @@ function translateToastText(text) {
         'Image error': 'toasts.image_error_title',
         'Failed to process the uploaded image.': 'toasts.image_error_msg',
         'Unsupported file': 'toasts.unsupported_file_title',
-        'Please upload a PNG, JPG, JPEG, WEBP, or PDF file.': 'toasts.unsupported_file_msg'
+        'Please upload a PNG, JPG, JPEG, WEBP, or PDF file.': 'toasts.unsupported_file_msg',
+        'Coming Soon.....': 'toasts.coming_soon'
     };
 
     const key = map[text];
@@ -515,6 +517,35 @@ function getVisibleMaxDimension() {
     return 1;
 }
 
+function updateVatUniforms(mat, posTex, normTex, frameCount) {
+    if (mat.userData.shader && mat.userData.shader.uniforms) {
+        if (mat.userData.shader.uniforms.posTexture) {
+            mat.userData.shader.uniforms.posTexture.value = posTex;
+        }
+        if (mat.userData.shader.uniforms.normTexture) {
+            mat.userData.shader.uniforms.normTexture.value = normTex;
+        }
+        if (mat.userData.shader.uniforms.uTotalFrames) {
+            mat.userData.shader.uniforms.uTotalFrames.value = frameCount;
+        }
+    }
+    if (mat.userData.compiledShaders) {
+        mat.userData.compiledShaders.forEach(shader => {
+            if (shader && shader.uniforms) {
+                if (shader.uniforms.posTexture) {
+                    shader.uniforms.posTexture.value = posTex;
+                }
+                if (shader.uniforms.normTexture) {
+                    shader.uniforms.normTexture.value = normTex;
+                }
+                if (shader.uniforms.uTotalFrames) {
+                    shader.uniforms.uTotalFrames.value = frameCount;
+                }
+            }
+        });
+    }
+}
+
 export async function applyConfigurationToScene(animateTransition = false, transitionDuration = 800, isBaseSwap = false) {
     sceneDirty = true;
     const currentCounter = ++applyConfigCounter;
@@ -617,17 +648,7 @@ export async function applyConfigurationToScene(animateTransition = false, trans
 
             // Update uniforms for all VAT materials
             vatMaterials.forEach((mat) => {
-                if (mat.userData.shader) {
-                    if (mat.userData.shader.uniforms.posTexture) {
-                        mat.userData.shader.uniforms.posTexture.value = vatTexture;
-                    }
-                    if (mat.userData.shader.uniforms.normTexture) {
-                        mat.userData.shader.uniforms.normTexture.value = normTexture;
-                    }
-                    if (mat.userData.shader.uniforms.uTotalFrames) {
-                        mat.userData.shader.uniforms.uTotalFrames.value = currentVatData.info.frame_count;
-                    }
-                }
+                updateVatUniforms(mat, vatTexture, normTexture, currentVatData.info.frame_count);
             });
         }
 
@@ -1392,6 +1413,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await fetchPricingData();
     await initI18n();
     initConfiguratorUI();
+    handleResize();
 });
 
 /* ---------------------------------
@@ -1422,8 +1444,7 @@ scene.add(lightingGroup);
 const overheadLight = new THREE.DirectionalLight(0xffffff, 0.6);
 overheadLight.position.set(3.5, 6, 5);
 overheadLight.castShadow = true;
-const isMobileDevice = window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
-const shadowResolution = isMobileDevice ? 1024 : 2048;
+const shadowResolution = 2048;
 overheadLight.shadow.mapSize.width = shadowResolution;
 overheadLight.shadow.mapSize.height = shadowResolution;
 
@@ -1533,10 +1554,37 @@ function handleDoubleTapZoom(event) {
             raycastPointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
             raycaster.setFromCamera(raycastPointer, camera);
-            const intersects = raycaster.intersectObject(modelRoot, true);
+            const targets = [];
+            if (modelRoot) targets.push(modelRoot);
+            if (characterModel && characterModel.visible) {
+                targets.push(characterModel);
+            }
+            const intersects = raycaster.intersectObjects(targets, true);
 
+            let hitPoint = null;
             if (intersects.length > 0) {
-                zoomInSmoothly(intersects[0].point);
+                hitPoint = intersects[0].point;
+            } else {
+                // Check expanded bounding boxes to handle near-miss clicks
+                let closestDist = Infinity;
+                targets.forEach(target => {
+                    const box = new THREE.Box3().setFromObject(target);
+                    if (!box.isEmpty()) {
+                        box.expandByScalar(0.2); // Expand hit area by 0.2 meters in world space
+                        const intersectTarget = new THREE.Vector3();
+                        if (raycaster.ray.intersectBox(box, intersectTarget)) {
+                            const dist = raycaster.ray.origin.distanceTo(intersectTarget);
+                            if (dist < closestDist) {
+                                closestDist = dist;
+                                hitPoint = intersectTarget.clone();
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (hitPoint) {
+                zoomInSmoothly(hitPoint);
             }
         }
         lastTapTime = 0;
@@ -1976,14 +2024,7 @@ async function silentWarmupAllSizes() {
 
         // Swap VAT uniforms to this size
         vatMaterials.forEach(mat => {
-            if (mat.userData.shader) {
-                if (mat.userData.shader.uniforms.posTexture)
-                    mat.userData.shader.uniforms.posTexture.value = vatData.positions;
-                if (mat.userData.shader.uniforms.normTexture)
-                    mat.userData.shader.uniforms.normTexture.value = vatData.normals;
-                if (mat.userData.shader.uniforms.uTotalFrames)
-                    mat.userData.shader.uniforms.uTotalFrames.value = vatData.info.frame_count;
-            }
+            updateVatUniforms(mat, vatData.positions, vatData.normals, vatData.info.frame_count);
         });
 
         // Make the VAT meshes for this size visible, hide all others
@@ -2012,14 +2053,7 @@ async function silentWarmupAllSizes() {
         vatTexture = originalVatData.positions;
         normTexture = originalVatData.normals;
         vatMaterials.forEach(mat => {
-            if (mat.userData.shader) {
-                if (mat.userData.shader.uniforms.posTexture)
-                    mat.userData.shader.uniforms.posTexture.value = vatTexture;
-                if (mat.userData.shader.uniforms.normTexture)
-                    mat.userData.shader.uniforms.normTexture.value = normTexture;
-                if (mat.userData.shader.uniforms.uTotalFrames)
-                    mat.userData.shader.uniforms.uTotalFrames.value = originalVatData.info.frame_count;
-            }
+            updateVatUniforms(mat, vatTexture, normTexture, originalVatData.info.frame_count);
         });
     }
 
@@ -2161,7 +2195,7 @@ function initializePocketColorPicker() {
         useAsButton: true,
         autoReposition: true,
         position: 'bottom-middle',
-        closeOnScroll: true,
+        closeOnScroll: false,
         components: {
             preview: true,
             opacity: false,
@@ -3073,6 +3107,11 @@ function bindTransformInputs() {
 function bindUIEvents() {
     dom.playPause.addEventListener('click', toggleAnimation);
     dom.generatePdf.addEventListener('click', generatePdfProof);
+    if (dom.addToCart) {
+        dom.addToCart.addEventListener('click', () => {
+            showToast('Coming Soon.....', '', 'info', 2500);
+        });
+    }
     dom.turntableToggle.addEventListener('click', toggleTurntable);
 
     // Toggle preferences dropdown menu
@@ -3613,28 +3652,199 @@ async function generatePdfProof() {
         const backImage = captureProofView(new THREE.Vector3(0, targetCenter.y, -cameraDistance));
 
         sceneRoot.rotation.copy(savedRotation);
-        const pdfTitle = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.title') : 'Probo Configurator - Saved Design';
+        const pdfTitle = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.title') : 'Flag Configurator - Saved Design';
         const pdfSavedOn = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.saved_on') : 'Saved on: ';
-        const pdfPocketColor = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.pocket_color') : 'Pocket color: ';
         const pdfFrontLayout = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.front_layout') : 'Front Layout';
         const pdfBackLayout = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.back_layout') : 'Back Layout';
-        const pdfFilename = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.filename') : 'Probo_Flag_Design';
+        const pdfFilename = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('pdf.filename') : 'Flag_Design';
 
-        doc.setFontSize(22);
+        function hexToRgb(hex) {
+            const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+            const fullHex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 0, b: 0 };
+        }
+
+        const getTrans = (key, fallback) => {
+            return (window.i18next && window.i18next.isInitialized) ? window.i18next.t(key) : fallback;
+        };
+
+        const lblSize = getTrans('sections.size', 'Size');
+        const valSize = getTrans(`selections.size.${configState.size}`, configState.size);
+
+        const lblPrinting = getTrans('sections.printing', 'Printing');
+        const valPrinting = getTrans(`selections.printing.${configState.printing}`, configState.printing);
+
+        const lblDirection = getTrans('sections.direction', 'Direction');
+        const valDirection = configState.printing === 'Double Sided' ? '-' : getTrans(`selections.direction.${configState.direction}`, configState.direction);
+
+        const lblPole = getTrans('sections.pole', 'Pole');
+        const valPole = getTrans(`selections.pole.${configState.pole}`, configState.pole);
+
+        const lblBase = getTrans('sections.base', 'Base');
+        const valBase = getTrans(`selections.base.${configState.base}`, configState.base);
+
+        const lblPocketColor = getTrans('sections.pole_cover', 'Pocket Color');
+        const valPocketColor = normalizeHex(dom.pocketColor.value) || dom.pocketColor.value;
+
+        // Calculate dynamic prices
+        let sizePrice = 0;
+        let printingAddon = 0;
+        let poleAddon = 0;
+        let basePrice = 0;
+        const currencySymbol = getCurrencySymbol();
+
+        if (pricingData) {
+            const sizeMapping = {
+                'Beach flag Convex XS': 'xs',
+                'Beach flag Convex S': 'S',
+                'Beach flag Convex M': 'M',
+                'Beach flag Convex M-Extra Wide': 'M-Wide',
+                'Beach flag Convex L': 'l'
+            };
+            const sizeKey = sizeMapping[configState.size] || configState.size.split(' ').pop();
+
+            const printingMapping = {
+                'Single Sided': 'singleSided',
+                'Double Sided': 'doubleSided',
+                'Air Textile': 'airTextile'
+            };
+            const printKey = printingMapping[configState.printing] || 'singleSided';
+
+            const baseMapping = {
+                'Luxury cross base': 'Luxury cross base',
+                'Cross base-grey': 'Cross base, grey',
+                'Cross base-black': 'Cross base, black'
+            };
+
+            const flagOnlyTier = pricingData.pricingTiers.flagOnly.find(item => item.size === sizeKey);
+            const hwTier = pricingData.pricingTiers.completeWithHardware.find(item => item.size === sizeKey);
+
+            if (flagOnlyTier) {
+                sizePrice = flagOnlyTier.singleSided;
+                printingAddon = flagOnlyTier[printKey] - flagOnlyTier.singleSided;
+            }
+
+            if (configState.pole === 'With Pole') {
+                if (hwTier && flagOnlyTier) {
+                    poleAddon = hwTier[printKey] - flagOnlyTier[printKey];
+                }
+            }
+
+            if (configState.base !== 'No base') {
+                const mappedBase = baseMapping[configState.base] || configState.base;
+                if (mappedBase && pricingData.pricingTiers.bases[mappedBase]) {
+                    basePrice = pricingData.pricingTiers.bases[mappedBase];
+                }
+            }
+        }
+
+        const totalPrice = sizePrice + printingAddon + poleAddon + basePrice;
+
+        // Print header and date
+        doc.setFontSize(20);
         doc.setTextColor(50, 50, 50);
-        doc.text(pdfTitle, 20, 20);
+        doc.setFont('helvetica', 'bold');
+        doc.text(pdfTitle, 20, 18);
+        doc.setFontSize(10);
+        doc.setTextColor(120, 120, 120);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${pdfSavedOn}${new Date().toLocaleDateString()}`, 20, 26);
+
+        // Print total price in top right
+        const pdfTotalPriceLabel = getTrans('pdf.total_price', 'Total Price') + ':';
+        const pdfTotalPriceVal = `${currencySymbol} ${totalPrice.toFixed(2)}`;
+        doc.setFontSize(11);
+        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'bold');
+        doc.text(pdfTotalPriceLabel, 277, 18, { align: 'right' });
+        doc.setFontSize(20);
+        doc.setTextColor(5, 150, 105); // Match --primary-strong brand color
+        doc.text(pdfTotalPriceVal, 277, 26, { align: 'right' });
+
+        // Print layout labels and front/back views
         doc.setFontSize(12);
-        doc.text(`${pdfSavedOn}${new Date().toLocaleDateString()}`, 20, 28);
-        doc.text(`${pdfPocketColor}${normalizeHex(dom.pocketColor.value) || dom.pocketColor.value}`, 20, 36);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(80, 80, 80);
+        doc.text(pdfFrontLayout, 20, 36);
+        doc.addImage(frontImage, 'JPEG', 20, 40, 105, 105);
 
-        doc.setFontSize(14);
-        doc.text(pdfFrontLayout, 20, 45);
-        doc.addImage(frontImage, 'JPEG', 20, 50, 110, 110);
+        doc.text(pdfBackLayout, 150, 36);
+        doc.addImage(backImage, 'JPEG', 150, 40, 105, 105);
 
-        doc.text(pdfBackLayout, 150, 45);
-        doc.addImage(backImage, 'JPEG', 150, 50, 110, 110);
+        // Draw horizontal divider line
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.5);
+        doc.line(20, 153, 277, 153);
 
-        doc.save(`${pdfFilename}.pdf`);
+        // Print configuration options headers
+        doc.setFontSize(9);
+        doc.setTextColor(130, 130, 130);
+        doc.setFont('helvetica', 'bold');
+        doc.text(lblSize, 20, 161);
+        doc.text(lblPrinting, 75, 161);
+        doc.text(lblDirection, 125, 161);
+        doc.text(lblPole, 165, 161);
+        doc.text(lblBase, 205, 161);
+        doc.text(lblPocketColor, 245, 161);
+
+        // Print configuration options values
+        doc.setFontSize(10);
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.text(valSize, 20, 168);
+        doc.text(valPrinting, 75, 168);
+        doc.text(valDirection, 125, 168);
+        doc.text(valPole, 165, 168);
+        doc.text(valBase, 205, 168);
+        doc.text(valPocketColor, 245, 168);
+
+        // Print individual option prices
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`${currencySymbol} ${sizePrice.toFixed(2)}`, 20, 174);
+        doc.text((printingAddon > 0 ? `+ ${currencySymbol} ${printingAddon.toFixed(2)}` : `${currencySymbol} 0.00`), 75, 174);
+        doc.text('', 125, 174); // Direction has no price
+        doc.text((poleAddon > 0 ? `+ ${currencySymbol} ${poleAddon.toFixed(2)}` : `${currencySymbol} 0.00`), 165, 174);
+        doc.text((basePrice > 0 ? `+ ${currencySymbol} ${basePrice.toFixed(2)}` : `${currencySymbol} 0.00`), 205, 174);
+
+        // Draw pocket color box
+        const rgb = hexToRgb(valPocketColor);
+        doc.setFillColor(rgb.r, rgb.g, rgb.b);
+        doc.rect(245, 171, 12, 6, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.rect(245, 171, 12, 6, 'D');
+
+        let sizeTextPart = configState.size;
+        if (window.i18next && window.i18next.isInitialized) {
+            sizeTextPart = window.i18next.t(`selections.size.${configState.size}`);
+        }
+        let sizePart = sizeTextPart.replace(/\s+/g, '-');
+
+        let printingTextPart = configState.printing;
+        if (window.i18next && window.i18next.isInitialized) {
+            printingTextPart = window.i18next.t(`selections.printing.${configState.printing}`);
+        }
+        let printingPart = printingTextPart.replace(/\s+/g, '-');
+
+        let directionPart = '';
+        if (configState.printing !== 'Double Sided') {
+            let directionTextPart = configState.direction;
+            if (window.i18next && window.i18next.isInitialized) {
+                directionTextPart = window.i18next.t(`selections.direction.${configState.direction}`);
+            }
+            directionPart = '-' + directionTextPart.replace(/\s+/g, '-');
+        }
+
+        let configDetails = `${sizePart}-${printingPart}${directionPart}`;
+        configDetails = configDetails.replace(/\s+/g, '-');
+
+        doc.save(`${pdfFilename}_${configDetails}.pdf`);
         showToast('Design saved', 'Your custom flag design has been saved successfully.', 'success');
     } catch (error) {
         console.error(error);
@@ -3983,8 +4193,17 @@ function handleResize() {
     const width = dom.canvasContainer.clientWidth;
     const height = dom.canvasContainer.clientHeight;
 
+    const isMidRange = window.innerWidth >= 769 && window.innerWidth <= 1100;
+    const shiftX = isMidRange ? 250 : 0;
+
     camera.aspect = width / Math.max(height, 1);
+    if (shiftX > 0) {
+        camera.setViewOffset(width, height, -shiftX / 2.5, 0, width, height);
+    } else {
+        camera.clearViewOffset();
+    }
     camera.updateProjectionMatrix();
+
     renderer.setPixelRatio(getClampedPixelRatio());
     renderer.setSize(width, height);
 
