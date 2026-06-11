@@ -546,6 +546,191 @@ function updateVatUniforms(mat, posTex, normTex, frameCount) {
     }
 }
 
+function createFlagMeasurementGroup(bottomY, topY, lineX, text) {
+    const group = new THREE.Group();
+    group.name = 'flag-measurement';
+
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x10B981,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    // Helper to create a thicker line using a thin cylinder (diamond cross-section)
+    function createThickLine(p1, p2, radius) {
+        const direction = new THREE.Vector3().subVectors(p2, p1);
+        const length = direction.length();
+        
+        // 4 segments is highly efficient and creates a clean 3D line
+        const geom = new THREE.CylinderGeometry(radius, radius, length, 4);
+        const mesh = new THREE.Mesh(geom, material);
+        mesh.raycast = () => {}; // Ignore in raycasting
+        
+        const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+        mesh.position.copy(center);
+        
+        const up = new THREE.Vector3(0, 1, 0);
+        direction.normalize();
+        mesh.quaternion.setFromUnitVectors(up, direction);
+        
+        return mesh;
+    }
+
+    const lineRadius = 0.005;
+    const height = topY - bottomY;
+    const midY = bottomY + height / 2;
+    const gapHalf = 0.14;
+
+    // The vertical line is broken around the text box (from bottomY to midY - gapHalf and midY + gapHalf to topY).
+    const lineSegmentsData = [
+        [new THREE.Vector3(lineX, bottomY, 0), new THREE.Vector3(lineX, midY - gapHalf, 0)],     // Vertical line (bottom half)
+        [new THREE.Vector3(lineX, midY + gapHalf, 0), new THREE.Vector3(lineX, topY, 0)],         // Vertical line (top half)
+        [new THREE.Vector3(lineX, bottomY, 0), new THREE.Vector3(0.1, bottomY, 0)],             // Bottom extension
+        [new THREE.Vector3(lineX, topY, 0), new THREE.Vector3(0.1, topY, 0)],                   // Top extension
+        
+        // Top arrowhead pointing up
+        [new THREE.Vector3(lineX, topY, 0), new THREE.Vector3(lineX - 0.04, topY - 0.08, 0)],
+        [new THREE.Vector3(lineX, topY, 0), new THREE.Vector3(lineX + 0.04, topY - 0.08, 0)],
+        
+        // Bottom arrowhead pointing down
+        [new THREE.Vector3(lineX, bottomY, 0), new THREE.Vector3(lineX - 0.04, bottomY + 0.08, 0)],
+        [new THREE.Vector3(lineX, bottomY, 0), new THREE.Vector3(lineX + 0.04, bottomY + 0.08, 0)]
+    ];
+
+    lineSegmentsData.forEach(([p1, p2]) => {
+        group.add(createThickLine(p1, p2, lineRadius));
+    });
+
+    // 2. High-resolution Sprite for text label
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.clearRect(0, 0, 512, 256);
+    ctx.font = '120px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const textMetrics = ctx.measureText(text);
+    const textWidth = textMetrics.width;
+    
+    const w = textWidth + 32;
+    const h = 168;
+    const x = 256 - w / 2;
+    const y = 128 - h / 2;
+    const r = 24;
+    
+    ctx.fillStyle = 'rgba(16, 24, 30, 0.85)';
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 6;
+    
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, 256, 128);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false
+    });
+    
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(0.48, 0.24, 1.0);
+    sprite.position.set(lineX, midY, 0.05);
+    sprite.raycast = () => {};
+    group.add(sprite);
+
+    return group;
+}
+
+function syncFlagMeasurement() {
+    if (!sceneRoot || !modelRoot) return;
+    
+    const oldGroup = sceneRoot.getObjectByName('flag-measurement');
+    if (oldGroup) {
+        sceneRoot.remove(oldGroup);
+        oldGroup.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach(m => m.dispose());
+            }
+        });
+    }
+
+    const isXS = configState.size === 'Beach flag Convex XS';
+    const isL = configState.size === 'Beach flag Convex L';
+    
+    if (showCharacter && (isXS || isL)) {
+        // Temporarily reset sceneRoot and modelRoot rotations and scales to neutral to calculate correct dimensions
+        const savedSceneRotationY = sceneRoot.rotation.y;
+        const savedModelRotationY = modelRoot.rotation.y;
+        const savedModelScale = modelRoot.scale.clone();
+        
+        sceneRoot.rotation.y = 0;
+        modelRoot.rotation.y = 0;
+        modelRoot.scale.set(1, 1, 1);
+        sceneRoot.updateMatrixWorld(true);
+        modelRoot.updateMatrixWorld(true);
+
+        // Calculate the bounding box of active flag meshes + pole in world coordinates
+        const flagBox = new THREE.Box3();
+        const sizeCode = configState.size.split(' ').pop().toLowerCase();
+        
+        modelRoot.traverse((child) => {
+            if (child.isMesh) {
+                const name = (child.name || '').toLowerCase();
+                const isPole = name.includes('pole');
+                const isSizeMesh = name.includes(`${sizeCode}_vat`) || name.includes(`${sizeCode}_pocket`);
+                
+                // Include pole mesh (always, even if invisible) and size-specific flag meshes (only if visible)
+                if (isPole || (isSizeMesh && child.visible)) {
+                    const childBox = new THREE.Box3().setFromObject(child);
+                    if (!childBox.isEmpty()) {
+                        flagBox.union(childBox);
+                    }
+                }
+            }
+        });
+
+        // Restore original rotations and scales
+        sceneRoot.rotation.y = savedSceneRotationY;
+        modelRoot.rotation.y = savedModelRotationY;
+        modelRoot.scale.copy(savedModelScale);
+        sceneRoot.updateMatrixWorld(true);
+        modelRoot.updateMatrixWorld(true);
+
+        if (!flagBox.isEmpty()) {
+            const bottomY = flagBox.min.y;
+            const topY = flagBox.max.y;
+            // Place measurement line 0.35m to the right of the rightmost edge of the flag system
+            const lineX = flagBox.max.x + 0.35;
+            const labelText = isXS ? '250 cm' : '500 cm';
+            
+            const measurement = createFlagMeasurementGroup(bottomY, topY, lineX, labelText);
+            sceneRoot.add(measurement);
+        }
+    }
+    
+    sceneDirty = true;
+}
+
 export async function applyConfigurationToScene(animateTransition = false, transitionDuration = 800, isBaseSwap = false) {
     sceneDirty = true;
     const currentCounter = ++applyConfigCounter;
@@ -830,6 +1015,19 @@ export async function applyConfigurationToScene(animateTransition = false, trans
     };
 
     if (animateTransition && !state.isInAR) {
+        // Remove existing flag measurement overlay during transition to avoid wrong display
+        const oldGroup = sceneRoot.getObjectByName('flag-measurement');
+        if (oldGroup) {
+            sceneRoot.remove(oldGroup);
+            oldGroup.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    const mats = Array.isArray(child.material) ? child.material : [child.material];
+                    mats.forEach(m => m.dispose());
+                }
+            });
+        }
+
         const currentVisualScale = modelRoot.scale.clone();
         const startRotationY = isBaseSwap ? 0 : (modelRoot.rotation.y || 0);
         const targetRotationY = startRotationY + (isBaseSwap ? Math.PI : Math.PI * 2);
@@ -1001,6 +1199,7 @@ export async function applyConfigurationToScene(animateTransition = false, trans
                 modelRoot.userData.scaleTween = null;
                 controls.enabled = true;
                 controls.update(); // Sync OrbitControls internal state
+                syncFlagMeasurement(); // Recalculate dimensions once the scale is stable
             })
             .start();
 
@@ -1022,6 +1221,9 @@ export async function applyConfigurationToScene(animateTransition = false, trans
 
     // Update the dynamic graphic template download link and subtitle text based on current configuration
     updateTemplateDownloadLink();
+    if (!(animateTransition && !state.isInAR)) {
+        syncFlagMeasurement();
+    }
 }
 
 function updateTemplateDownloadLink() {
@@ -1139,6 +1341,11 @@ function updateDynamicCameraTargets(moveCamera = true) {
             let isVisible = true;
             let current = child;
             while (current) {
+                // Exclude any meshes belonging to measurement groups from the camera focus bounding box
+                if (current.name && (current.name.includes('flag-measurement') || current.name.includes('height-measurement'))) {
+                    isVisible = false;
+                    break;
+                }
                 // If it belongs to characterModel, visible state is determined by showCharacter
                 if (current === characterModel) {
                     if (!showCharacter) {
@@ -2507,6 +2714,124 @@ function syncCharButton() {
     }
 }
 
+function createCharacterMeasurement() {
+    const group = new THREE.Group();
+    group.name = 'height-measurement';
+
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x10B981,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    // Helper to create a thicker line using a thin cylinder (diamond cross-section)
+    function createThickLine(p1, p2, radius) {
+        const direction = new THREE.Vector3().subVectors(p2, p1);
+        const length = direction.length();
+        
+        // 4 segments is highly efficient and creates a clean 3D line
+        const geom = new THREE.CylinderGeometry(radius, radius, length, 4);
+        const mesh = new THREE.Mesh(geom, material);
+        mesh.raycast = () => {}; // Ignore in raycasting
+        
+        const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+        mesh.position.copy(center);
+        
+        const up = new THREE.Vector3(0, 1, 0);
+        direction.normalize();
+        mesh.quaternion.setFromUnitVectors(up, direction);
+        
+        return mesh;
+    }
+
+    // Thickness (radius): 0.005 meters (diameter = 1 cm, which is visually double the thickness of standard 1px lines)
+    const lineRadius = 0.005;
+
+    // Define all point pairs for the dimension lines.
+    // The vertical line is broken around the text box (from y=0 to y=0.79 and y=1.07 to y=1.86).
+    const lineSegmentsData = [
+        [new THREE.Vector3(-0.45, 0, 0), new THREE.Vector3(-0.45, 0.79, 0)],     // Vertical line (bottom half)
+        [new THREE.Vector3(-0.45, 1.07, 0), new THREE.Vector3(-0.45, 1.86, 0)],   // Vertical line (top half)
+        [new THREE.Vector3(-0.45, 0, 0), new THREE.Vector3(-0.1, 0, 0)],       // Bottom extension
+        [new THREE.Vector3(-0.45, 1.86, 0), new THREE.Vector3(-0.1, 1.86, 0)], // Top extension
+        
+        // Top arrowhead pointing up
+        [new THREE.Vector3(-0.45, 1.86, 0), new THREE.Vector3(-0.49, 1.78, 0)],
+        [new THREE.Vector3(-0.45, 1.86, 0), new THREE.Vector3(-0.41, 1.78, 0)],
+        
+        // Bottom arrowhead pointing down
+        [new THREE.Vector3(-0.45, 0, 0), new THREE.Vector3(-0.49, 0.08, 0)],
+        [new THREE.Vector3(-0.45, 0, 0), new THREE.Vector3(-0.41, 0.08, 0)]
+    ];
+
+    lineSegmentsData.forEach(([p1, p2]) => {
+        group.add(createThickLine(p1, p2, lineRadius));
+    });
+
+    // 2. High-resolution Sprite for text label "186 cm"
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    
+    // Clear
+    ctx.clearRect(0, 0, 512, 256);
+    
+    // Configure text font (large font size to avoid pixelation, normal weight)
+    ctx.font = '120px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Measure width to draw a tight, compact bounding rectangle with no extra side space
+    const textMetrics = ctx.measureText('186 cm');
+    const textWidth = textMetrics.width;
+    
+    // Compact bounding box
+    const w = textWidth + 32; // Minimal padding on sides
+    const h = 168;
+    const x = 256 - w / 2;
+    const y = 128 - h / 2;
+    const r = 24;
+    
+    ctx.fillStyle = 'rgba(16, 24, 30, 0.85)';
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 6;
+    
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Draw text
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('186 cm', 256, 128);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false // Render on top of character mesh
+    });
+    
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(0.48, 0.24, 1.0);
+    sprite.position.set(-0.45, 0.93, 0.05); // Centered vertically
+    sprite.raycast = () => {}; // Ignore in double-tap raycasting
+    group.add(sprite);
+
+    return group;
+}
+
 function loadCharacterModel() {
     if (characterModel || characterLoading) return;
     characterLoading = true;
@@ -2531,11 +2856,16 @@ function loadCharacterModel() {
             characterModel.rotation.y = Math.PI * 2;
             characterModel.visible = showCharacter;
             
+            // Add height measurement lines and text label
+            const measurement = createCharacterMeasurement();
+            characterModel.add(measurement);
+            
             scene.add(characterModel);
             characterLoading = false;
             sceneDirty = true;
             
             showToast('Reference loaded', '3D character model height reference added.', 'success', 2500);
+            syncFlagMeasurement();
             
             if (showCharacter) {
                 // Focus camera on the combined scene bounds immediately
@@ -2569,6 +2899,9 @@ function loadCharacterModel() {
 function toggleCharacterVisibility() {
     showCharacter = !showCharacter;
     
+    // Sync the flag measurement first so that it is added/removed before camera targets are recalculated!
+    syncFlagMeasurement();
+    
     if (characterTween) {
         characterTween.stop();
         characterTween = null;
@@ -2587,9 +2920,11 @@ function toggleCharacterVisibility() {
                 .to({ scale: 1, rotationY: 0 }, 800)
                 .easing(TWEEN.Easing.Cubic.Out)
                 .onUpdate(({ scale, rotationY }) => {
-                    characterModel.scale.setScalar(scale);
-                    characterModel.rotation.y = rotationY;
-                    sceneDirty = true;
+                    if (characterModel) {
+                        characterModel.scale.setScalar(scale);
+                        characterModel.rotation.y = rotationY;
+                        sceneDirty = true;
+                    }
                 })
                 .onComplete(() => {
                     characterTween = null;
@@ -2600,12 +2935,14 @@ function toggleCharacterVisibility() {
                 .to({ scale: 0, rotationY: Math.PI * 2 }, 800)
                 .easing(TWEEN.Easing.Cubic.InOut)
                 .onUpdate(({ scale, rotationY }) => {
-                    characterModel.scale.setScalar(scale);
-                    characterModel.rotation.y = rotationY;
-                    sceneDirty = true;
+                    if (characterModel) {
+                        characterModel.scale.setScalar(scale);
+                        characterModel.rotation.y = rotationY;
+                        sceneDirty = true;
+                    }
                 })
                 .onComplete(() => {
-                    characterModel.visible = false;
+                    if (characterModel) characterModel.visible = false;
                     characterTween = null;
                 })
                 .start();
