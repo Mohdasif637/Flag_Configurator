@@ -53,6 +53,7 @@ body {
     -webkit-tap-highlight-color: transparent;
     background: #e3e3e3;
     position: relative;
+    transition: background-color 0.3s ease;
 }
 
 [hidden] {
@@ -496,6 +497,11 @@ input:disabled,
     position: absolute;
     inset: 0;
     z-index: 1;
+    overflow: hidden;
+}
+
+body:has(#loading-overlay.is-visible) #canvas-container {
+    background: #e3e3e3;
 }
 
 #canvas-container canvas {
@@ -1969,6 +1975,11 @@ button.config-card[data-category="base"].is-active {
         overflow: hidden;
     }
 
+    body:has(#loading-overlay.is-visible) {
+        background: #808285;
+        transition: none;
+    }
+
     #canvas-container {
         position: relative;
         height: 52%;
@@ -2247,7 +2258,7 @@ button.config-card[data-category="base"].is-active {
         stroke: var(--accent, #f59e0b);
         stroke-width: 1.5;
         border-radius: 50%;
-        transform-origin: 50px 30px;
+        transform-origin: 40px 30px;
     }
 
     .ripple-1 {
@@ -2283,16 +2294,16 @@ button.config-card[data-category="base"].is-active {
     }
 
     @keyframes rotateAnim {
-        0% { transform: translate(14px, 40px); opacity: 0; }
+        0% { transform: translate(14px, 22px); opacity: 0; }
         15% { opacity: 1; }
-        80% { transform: translate(68px, 40px); opacity: 1; }
+        80% { transform: translate(68px, 22px); opacity: 1; }
         90%, 100% { opacity: 0; }
     }
 
     @keyframes panAnim {
-        0% { transform: translate(50px, 45px); opacity: 0; }
+        0% { transform: translate(43px, 45px); opacity: 0; }
         15% { opacity: 1; }
-        80% { transform: translate(50px, 15px); opacity: 1; }
+        80% { transform: translate(43px, 15px); opacity: 1; }
         90%, 100% { opacity: 0; }
     }
 
@@ -2311,11 +2322,11 @@ button.config-card[data-category="base"].is-active {
     }
 
     @keyframes doubleTapAnim {
-        0%, 100% { transform: translate(50px, 30px) scale(1.1); opacity: 0; }
-        10% { opacity: 1; transform: translate(50px, 30px) scale(0.85); }
-        25% { transform: translate(50px, 30px) scale(1.1); }
-        40% { transform: translate(50px, 30px) scale(0.85); }
-        55%, 85% { opacity: 1; transform: translate(50px, 30px) scale(1.1); }
+        0%, 100% { transform: translate(40px, 30px) scale(1.1); opacity: 0; }
+        10% { opacity: 1; transform: translate(40px, 30px) scale(0.85); }
+        25% { transform: translate(40px, 30px) scale(1.1); }
+        40% { transform: translate(40px, 30px) scale(0.85); }
+        55%, 85% { opacity: 1; transform: translate(40px, 30px) scale(1.1); }
     }
 
     @keyframes rippleAnim1 {

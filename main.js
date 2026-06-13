@@ -1642,6 +1642,7 @@ renderer.xr.enabled = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 dom.canvasContainer.appendChild(renderer.domElement);
+renderer.render(scene, camera); // Initial render to paint the defaultBackground (#e3e3e3)
 
 const sceneRoot = new THREE.Group();
 scene.add(sceneRoot);
@@ -1719,7 +1720,7 @@ let preloadedLottieBuffer = null;
 let isLottiePreloading = false;
 
 const svgRotate = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 16 40 Q 41 32, 66 40" class="gesture-trail" />
+    <path d="M 16 22 Q 41 14, 66 22" class="gesture-trail" />
     <g class="gesture-finger rotate-animation">
         <g transform="scale(1.95)">
             <circle cx="0" cy="0" r="4.5" class="gesture-touch-point" />
@@ -1741,8 +1742,8 @@ const svgPan = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true
 const svgZoom = `<canvas id="dotlottie-canvas" style="width: 80px; height: 80px; display: block;"></canvas>`;
 
 const svgDoubleTap = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="30" r="12" class="gesture-ripple ripple-1" />
-    <circle cx="50" cy="30" r="12" class="gesture-ripple ripple-2" />
+    <circle cx="40" cy="30" r="12" class="gesture-ripple ripple-1" />
+    <circle cx="40" cy="30" r="12" class="gesture-ripple ripple-2" />
     <g class="gesture-finger double-tap-animation">
         <g transform="scale(1.95)">
             <circle cx="0" cy="0" r="4.5" class="gesture-touch-point" />
@@ -2024,8 +2025,10 @@ export async function loadVATData(sizeCode) {
                 dom.loadingOverlay.classList.toggle('is-visible', false);
                 const uiContainer = document.getElementById('ui-container');
                 if (uiContainer && !navGuideState.active) {
+                    const overlay = document.getElementById('nav-coaching-overlay');
+                    const isOverlayVisible = overlay && !overlay.hasAttribute('hidden');
                     const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
-                    const isWelcomeVisible = welcomeScreen && !welcomeScreen.hasAttribute('hidden');
+                    const isWelcomeVisible = isOverlayVisible && welcomeScreen && !welcomeScreen.hasAttribute('hidden');
                     if (!isWelcomeVisible) {
                         uiContainer.classList.remove('is-blurred');
                     }
@@ -2211,8 +2214,10 @@ function setLoadingState(visible, message) {
             uiContainer.classList.add('is-blurred');
         } else {
             if (!navGuideState.active) {
+                const overlay = document.getElementById('nav-coaching-overlay');
+                const isOverlayVisible = overlay && !overlay.hasAttribute('hidden');
                 const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
-                const isWelcomeVisible = welcomeScreen && !welcomeScreen.hasAttribute('hidden');
+                const isWelcomeVisible = isOverlayVisible && welcomeScreen && !welcomeScreen.hasAttribute('hidden');
                 if (!isWelcomeVisible) {
                     uiContainer.classList.remove('is-blurred');
                 }
@@ -4814,6 +4819,11 @@ function initNavCoachingGuide() {
         focusCameraView('front');
         stopTurntableRotation();
         
+        // Pause flag VAT animation
+        isPlaying = false;
+        if (action) action.paused = true;
+        syncPlayPauseButton();
+        
         navGuideState.active = true;
         startNavGuideStep(1);
     });
@@ -4969,6 +4979,11 @@ function completeNavGuideStep() {
                 // Trigger the home view button and start turntable immediately after guide completion
                 focusCameraView('home');
                 startTurntableAutoStart();
+
+                // Play flag VAT animation
+                isPlaying = true;
+                if (action) action.paused = false;
+                syncPlayPauseButton();
 
                 // Wait to vanish the 'guide completed' toast then show 'AR Supported' toast and start VAT timer
                 showToast('Guide Completed', 'You are ready to explore the flag configurator!', 'success').then(() => {
