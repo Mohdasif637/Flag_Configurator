@@ -102,7 +102,9 @@
     "stop": "STOP AR",
     "start": "Start AR",
     "unavailable_label": "AR-weergave niet beschikbaar op dit apparaat",
-    "unavailable_title": "AR-weergave niet beschikbaar"
+    "unavailable_title": "AR-weergave niet beschikbaar",
+    "coaching_title": "Scan je ruimte",
+    "coaching_desc": "Beweeg je apparaat langzaam van links naar rechts om een vlak oppervlak te vinden."
   },
   "pdf": {
     "title": "Vlag Configurator - Opgeslagen Ontwerp",
@@ -167,5 +169,22 @@
     "unsupported_file_title": "Niet-ondersteund bestand",
     "unsupported_file_msg": "Upload een PNG-, JPG-, JPEG-, WEBP- of PDF-bestand.",
     "coming_soon": "Binnenkort beschikbaar....."
+  },
+  "nav_guide": {
+    "welcome_title": "3D Navigatiegids",
+    "welcome_desc": "Wil je een korte interactieve tour om te leren hoe je de 3D-vlag draait, zoomt en verplaatst?",
+    "start_btn": "Start Gids",
+    "skip_btn": "Overslaan",
+    "skip_guide": "Gids Overslaan",
+    "success_text": "Perfect!",
+    "step_of": "Stap {{current}} van {{total}}",
+    "rotate_title": "Draai de Vlag",
+    "rotate_desc": "Sleep met één vinger op het scherm om de 3D-weergave te draaien.",
+    "pan_title": "Weergave Verplaatsen",
+    "pan_desc": "Sleep met twee vingers om de vlag te pannen en verplaatsen.",
+    "zoom_title": "Knijpen om te Zoomen",
+    "zoom_desc": "Knijp met twee vingers naar binnen of buiten om in of uit te zoomen.",
+    "double_tap_title": "Dubbeltikken om te Zoomen",
+    "double_tap_desc": "Tik dubbel op de vlag om snel in of uit te zoomen."
   }
 }

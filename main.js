@@ -11,6 +11,7 @@ import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { Timer } from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
+import { DotLottie } from 'https://cdn.jsdelivr.net/npm/@lottiefiles/dotlottie-web/+esm';
 
 /* ---------------------------------
    DOM Elements & Caching
@@ -585,8 +586,8 @@ function createFlagMeasurementGroup(bottomY, topY, lineX, text) {
     const lineSegmentsData = [
         [new THREE.Vector3(lineX, bottomY, 0), new THREE.Vector3(lineX, midY - gapHalf, 0)],     // Vertical line (bottom half)
         [new THREE.Vector3(lineX, midY + gapHalf, 0), new THREE.Vector3(lineX, topY, 0)],         // Vertical line (top half)
-        [new THREE.Vector3(lineX, bottomY, 0), new THREE.Vector3(0.1, bottomY, 0)],             // Bottom extension
-        [new THREE.Vector3(lineX, topY, 0), new THREE.Vector3(0.1, topY, 0)],                   // Top extension
+        [new THREE.Vector3(lineX, bottomY, 0), new THREE.Vector3(-0.1, bottomY, 0)],             // Bottom extension
+        [new THREE.Vector3(lineX, topY, 0), new THREE.Vector3(-0.1, topY, 0)],                   // Top extension
         
         // Top arrowhead pointing up
         [new THREE.Vector3(lineX, topY, 0), new THREE.Vector3(lineX - 0.04, topY - 0.08, 0)],
@@ -719,8 +720,8 @@ function syncFlagMeasurement() {
         if (!flagBox.isEmpty()) {
             const bottomY = flagBox.min.y;
             const topY = flagBox.max.y;
-            // Place measurement line 0.35m to the right of the rightmost edge of the flag system
-            const lineX = flagBox.max.x + 0.35;
+            // Place measurement line 0.35m to the left of the leftmost edge of the flag system
+            const lineX = flagBox.min.x - 0.35;
             const labelText = isXS ? '250 cm' : '500 cm';
             
             const measurement = createFlagMeasurementGroup(bottomY, topY, lineX, labelText);
@@ -1702,10 +1703,79 @@ let cameraTargets = {
 };
 const exportRenderSize = 2048;
 
+const navGuideState = {
+    active: false,
+    currentStep: 0,
+    startTarget: new THREE.Vector3(),
+    startCameraDistance: 0,
+    startAzimuth: 0,
+    startPolar: 0,
+    hasCompletedCurrentStep: false,
+    userInteracting: false,
+    gestureStarted: false
+};
+
+let preloadedLottieBuffer = null;
+let isLottiePreloading = false;
+
+const svgRotate = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 16 40 Q 41 32, 66 40" class="gesture-trail" />
+    <g class="gesture-finger rotate-animation">
+        <g transform="scale(1.95)">
+            <circle cx="0" cy="0" r="4.5" class="gesture-touch-point" />
+            <path d="M -2 18 L -2 2 C -2 0.9, -1.1 0, 0 0 C 1.1 0, 2 0.9, 2 2 L 2 9 C 2.5 8.2, 3.5 7.5, 4.5 7.5 C 5.5 7.5, 6.5 8.2, 6.5 9.5 L 6.5 11 C 7 10.2, 8 9.5, 9 9.5 C 10 9.5, 11 10.2, 11 11.5 L 11 13 C 11.5 12.2, 12.5 11.5, 13.5 11.5 C 14.5 11.5, 15.5 12.2, 15.5 13.5 L 15.5 21 C 15.5 26, 11.5 30, 6.5 30 C 3 30, 0.5 28.5, -0.5 26.5 L -5.5 22.5 C -6.5 21.5, -6.5 20, -5.5 19 C -4.5 18, -3 18, -2 19 L -2 18 Z" class="gesture-hand" />
+        </g>
+    </g>
+</svg>`;
+
+const svgPan = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <g class="gesture-finger pan-animation">
+        <g transform="scale(1.82)">
+            <circle cx="0" cy="0" r="4.5" class="gesture-touch-point" />
+            <circle cx="4.25" cy="0" r="4.5" class="gesture-touch-point" />
+            <path d="M -2 18 L -2 2 C -2 0.9, -1.1 0, 0 0 C 1.1 0, 2 0.9, 2 2 L 2 9 L 2 2 C 2 0.9, 3.1 0, 4.25 0 C 5.4 0, 6.5 0.9, 6.5 2 L 6.5 11 C 7 10.2, 8 9.5, 9 9.5 C 10 9.5, 11 10.2, 11 11.5 L 11 13 C 11.5 12.2, 12.5 11.5, 13.5 11.5 C 14.5 11.5, 15.5 12.2, 15.5 13.5 L 15.5 21 C 15.5 26, 11.5 30, 6.5 30 C 3 30, 0.5 28.5, -0.5 26.5 L -5.5 22.5 C -6.5 21.5, -6.5 20, -5.5 19 C -4.5 18, -3 18, -2 19 L -2 18 Z" class="gesture-hand" />
+        </g>
+    </g>
+</svg>`;
+
+const svgZoom = `<canvas id="dotlottie-canvas" style="width: 80px; height: 80px; display: block;"></canvas>`;
+
+const svgDoubleTap = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="30" r="12" class="gesture-ripple ripple-1" />
+    <circle cx="50" cy="30" r="12" class="gesture-ripple ripple-2" />
+    <g class="gesture-finger double-tap-animation">
+        <g transform="scale(1.95)">
+            <circle cx="0" cy="0" r="4.5" class="gesture-touch-point" />
+            <path d="M -2 18 L -2 2 C -2 0.9, -1.1 0, 0 0 C 1.1 0, 2 0.9, 2 2 L 2 9 C 2.5 8.2, 3.5 7.5, 4.5 7.5 C 5.5 7.5, 6.5 8.2, 6.5 9.5 L 6.5 11 C 7 10.2, 8 9.5, 9 9.5 C 10 9.5, 11 10.2, 11 11.5 L 11 13 C 11.5 12.2, 12.5 11.5, 13.5 11.5 C 14.5 11.5, 15.5 12.2, 15.5 13.5 L 15.5 21 C 15.5 26, 11.5 30, 6.5 30 C 3 30, 0.5 28.5, -0.5 26.5 L -5.5 22.5 C -6.5 21.5, -6.5 20, -5.5 19 C -4.5 18, -3 18, -2 19 L -2 18 Z" class="gesture-hand" />
+        </g>
+    </g>
+</svg>`;
+
+
 const controls = new OrbitControls(camera, renderer.domElement);
 let controlsDirty = false;
 controls.addEventListener('change', () => {
     controlsDirty = true;
+    if (navGuideState.active && !navGuideState.hasCompletedCurrentStep) {
+        checkNavGuideGesture();
+    }
+});
+controls.addEventListener('start', () => {
+    if (navGuideState.active) {
+        navGuideState.userInteracting = true;
+        if (!navGuideState.gestureStarted) {
+            navGuideState.gestureStarted = true;
+            navGuideState.startTarget.copy(controls.target);
+            navGuideState.startCameraDistance = camera.position.distanceTo(controls.target);
+            navGuideState.startAzimuth = controls.getAzimuthalAngle();
+            navGuideState.startPolar = controls.getPolarAngle();
+        }
+    }
+});
+controls.addEventListener('end', () => {
+    if (navGuideState.active) {
+        navGuideState.userInteracting = false;
+    }
 });
 controls.enableDamping = true;
 controls.mouseButtons = {
@@ -1792,6 +1862,11 @@ function handleDoubleTapZoom(event) {
 
             if (hitPoint) {
                 zoomInSmoothly(hitPoint);
+                
+                // Enforce double-tap step success only if they clicked at the right place (hitPoint found)
+                if (navGuideState.active && navGuideState.currentStep === 4 && !navGuideState.hasCompletedCurrentStep) {
+                    completeNavGuideStep();
+                }
             }
         }
         lastTapTime = 0;
@@ -1947,6 +2022,14 @@ export async function loadVATData(sizeCode) {
         } finally {
             if (state && state.ready) {
                 dom.loadingOverlay.classList.toggle('is-visible', false);
+                const uiContainer = document.getElementById('ui-container');
+                if (uiContainer && !navGuideState.active) {
+                    const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
+                    const isWelcomeVisible = welcomeScreen && !welcomeScreen.hasAttribute('hidden');
+                    if (!isWelcomeVisible) {
+                        uiContainer.classList.remove('is-blurred');
+                    }
+                }
             }
             delete vatLoadPromises[sizeCode];
         }
@@ -2121,6 +2204,21 @@ function createReticle() {
 function setLoadingState(visible, message) {
     dom.loadingText.textContent = message;
     dom.loadingOverlay.classList.toggle('is-visible', visible);
+    
+    const uiContainer = document.getElementById('ui-container');
+    if (uiContainer) {
+        if (visible) {
+            uiContainer.classList.add('is-blurred');
+        } else {
+            if (!navGuideState.active) {
+                const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
+                const isWelcomeVisible = welcomeScreen && !welcomeScreen.hasAttribute('hidden');
+                if (!isWelcomeVisible) {
+                    uiContainer.classList.remove('is-blurred');
+                }
+            }
+        }
+    }
 }
 
 function getNormalizedRotationAngle(angle) {
@@ -2568,6 +2666,9 @@ async function syncReadyState() {
     state.ready = true;
     setLoadingState(false, '');
     syncControlAvailability();
+    
+    // Initialize mobile 3D navigation coaching guide
+    initNavCoachingGuide();
     syncARVisibility();
 
     if (!pdfLibraryAvailable) {
@@ -2576,20 +2677,12 @@ async function syncReadyState() {
         await showToast('Preview ready', 'Pick a size and layout, upload your design, tweak the preview, and save.', 'success');
     }
 
-    if (state.arSupported && !state.arSupportedToastShown) {
-        state.arSupportedToastShown = true;
-        showToast('AR Supported', 'Ready for AR! Tap the green AR button on the right to place the flag in the real world.', 'success', 5000);
+    const guideOverlay = document.getElementById('nav-coaching-overlay');
+    const isGuideActiveOrPending = guideOverlay && !guideOverlay.hasAttribute('hidden');
+    if (!isGuideActiveOrPending) {
+        startPostGuideTimers();
+        showArSupportedToastIfSupported();
     }
-
-    // Auto-pause flag animation after 60 seconds
-    window.setTimeout(() => {
-        if (isPlaying) {
-            isPlaying = false;
-            if (action) action.paused = true;
-            syncPlayPauseButton();
-            showToast('Flag Animation Paused', '', 'info', 3000);
-        }
-    }, 60000);
 }
 
 function syncControlAvailability() {
@@ -4414,6 +4507,13 @@ function onARSessionStart() {
     if (characterModel) characterModel.visible = false; // Hide human reference mesh in AR
     
     syncControlAvailability();
+    
+    // Show AR coaching overlay
+    const coachingOverlay = document.getElementById('ar-coaching-overlay');
+    if (coachingOverlay) {
+        coachingOverlay.classList.add('is-visible');
+    }
+    
     showToast('AR mode active', 'Move your device to find a surface, then tap to place. Drag to rotate.', 'info', 10000);
 }
 
@@ -4423,6 +4523,12 @@ function onARSessionEnd() {
     controls.enabled = true;
     reticle.visible = false;
     resetHitTestState();
+
+    // Hide AR coaching overlay
+    const coachingOverlay = document.getElementById('ar-coaching-overlay');
+    if (coachingOverlay) {
+        coachingOverlay.classList.remove('is-visible');
+    }
 
     if (characterModel) characterModel.visible = showCharacter; // Restore human reference visibility
 
@@ -4456,15 +4562,25 @@ function updateARHitTesting(frame) {
 
     const referenceSpace = renderer.xr.getReferenceSpace();
     const hitTestResults = frame.getHitTestResults(hitTestSource);
+    const coachingOverlay = document.getElementById('ar-coaching-overlay');
 
     if (hitTestResults.length === 0) {
         reticle.visible = false;
+        // If the model hasn't been placed yet, show the coaching overlay when surface is lost
+        if (coachingOverlay && sceneRoot && !sceneRoot.visible) {
+            coachingOverlay.classList.add('is-visible');
+        }
         return;
     }
 
     const pose = hitTestResults[0].getPose(referenceSpace);
     reticle.visible = true;
     reticle.matrix.fromArray(pose.transform.matrix);
+
+    // Hide coaching overlay when a surface is detected
+    if (coachingOverlay) {
+        coachingOverlay.classList.remove('is-visible');
+    }
 }
 
 let arTouchStartX = 0;
@@ -4496,6 +4612,12 @@ function placeModelFromReticle() {
     const placementPosition = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
     sceneRoot.position.copy(placementPosition);
     sceneRoot.visible = true;
+
+    // Hide coaching overlay on placement
+    const coachingOverlay = document.getElementById('ar-coaching-overlay');
+    if (coachingOverlay) {
+        coachingOverlay.classList.remove('is-visible');
+    }
 
     const xrCamera = renderer.xr.getCamera(camera);
     const cameraPosition = new THREE.Vector3();
@@ -4636,5 +4758,264 @@ function renderFrame(_, frame) {
     if (needsRender && state.modelLoaded) {
         renderer.render(scene, camera);
         sceneDirty = false;
+    }
+}
+
+/* ---------------------------------
+   3D Canvas Navigation Coaching Guide
+--------------------------------- */
+function preloadLottieAnimation() {
+    if (preloadedLottieBuffer || isLottiePreloading) return;
+    isLottiePreloading = true;
+    
+    const lottieUrl = "https://lottie.host/57373add-d2b2-40e1-8f5a-ce8c39890929/yacSXj2kVC.lottie";
+    fetch(lottieUrl)
+        .then(response => {
+            if (!response.ok) throw new Error("Network response was not ok");
+            return response.arrayBuffer();
+        })
+        .then(buffer => {
+            preloadedLottieBuffer = buffer;
+        })
+        .catch(err => {
+            console.warn("Failed to prefetch pinch dotLottie animation:", err);
+            isLottiePreloading = false;
+        });
+}
+
+function initNavCoachingGuide() {
+    const isMobile = mobileViewportMediaQuery.matches;
+    const isAlreadyDone = localStorage.getItem('flag_configurator_nav_guide_done') === 'true';
+    if (!isMobile || isAlreadyDone) return;
+
+    // Start prefetching the Lottie animation immediately
+    preloadLottieAnimation();
+
+    const overlay = document.getElementById('nav-coaching-overlay');
+    if (overlay) {
+        overlay.removeAttribute('hidden');
+    }
+
+    // Blur config container during active guide welcome screen
+    const uiContainer = document.getElementById('ui-container');
+    if (uiContainer) {
+        uiContainer.classList.add('is-blurred');
+    }
+
+    document.getElementById('nav-guide-start-btn')?.addEventListener('click', () => {
+        localStorage.setItem('flag_configurator_nav_guide_done', 'true');
+        document.getElementById('nav-coaching-step-welcome')?.setAttribute('hidden', '');
+        document.getElementById('nav-coaching-step-guide')?.removeAttribute('hidden');
+        
+        // Ensure prefetch is triggered if not already
+        preloadLottieAnimation();
+
+        // Trigger front view and stop turntable rotation immediately when user starts guide
+        focusCameraView('front');
+        stopTurntableRotation();
+        
+        navGuideState.active = true;
+        startNavGuideStep(1);
+    });
+
+    const skipGuide = () => {
+        localStorage.setItem('flag_configurator_nav_guide_done', 'true');
+        const overlay = document.getElementById('nav-coaching-overlay');
+        if (overlay) overlay.setAttribute('hidden', '');
+        navGuideState.active = false;
+        
+        // Remove container blur
+        const uiContainer = document.getElementById('ui-container');
+        if (uiContainer) {
+            uiContainer.classList.remove('is-blurred');
+        }
+        
+        // Start timers and show AR Support toast after skipping guide
+        startPostGuideTimers();
+        showArSupportedToastIfSupported();
+    };
+
+    document.getElementById('nav-guide-skip-btn')?.addEventListener('click', skipGuide);
+    document.getElementById('nav-guide-cancel-btn')?.addEventListener('click', skipGuide);
+}
+
+function startNavGuideStep(step) {
+    navGuideState.currentStep = step;
+    navGuideState.hasCompletedCurrentStep = false;
+    navGuideState.gestureStarted = false;
+    navGuideState.userInteracting = false;
+    
+    navGuideState.startTarget.copy(controls.target);
+    navGuideState.startCameraDistance = camera.position.distanceTo(controls.target);
+    navGuideState.startAzimuth = controls.getAzimuthalAngle();
+    navGuideState.startPolar = controls.getPolarAngle();
+
+    updateNavGuideUI();
+}
+
+function updateNavGuideUI() {
+    const step = navGuideState.currentStep;
+    const svgContainer = document.getElementById('nav-coaching-svg-container');
+    if (svgContainer) {
+        if (step === 1) svgContainer.innerHTML = svgRotate;
+        else if (step === 2) svgContainer.innerHTML = svgPan;
+        else if (step === 3) {
+            svgContainer.innerHTML = svgZoom;
+            try {
+                const config = {
+                    autoplay: true,
+                    loop: true,
+                    canvas: document.getElementById("dotlottie-canvas")
+                };
+                
+                if (preloadedLottieBuffer) {
+                    config.data = preloadedLottieBuffer;
+                } else {
+                    config.src = "https://lottie.host/57373add-d2b2-40e1-8f5a-ce8c39890929/yacSXj2kVC.lottie";
+                }
+                
+                new DotLottie(config);
+            } catch (err) {
+                console.error("Failed to initialize pinch dotLottie animation:", err);
+            }
+        }
+        else if (step === 4) svgContainer.innerHTML = svgDoubleTap;
+    }
+
+    const t = (key, def) => (window.i18next && window.i18next.isInitialized) ? window.i18next.t(key) : def;
+
+    const stepNumEl = document.getElementById('nav-coaching-step-num');
+    if (stepNumEl) {
+        stepNumEl.textContent = t('nav_guide.step_of', `Step ${step} of 4`).replace('{{current}}', step).replace('{{total}}', 4);
+    }
+
+    const titleEl = document.getElementById('nav-step-title');
+    const descEl = document.getElementById('nav-step-desc');
+
+    if (step === 1) {
+        if (titleEl) titleEl.textContent = t('nav_guide.rotate_title', 'Rotate the Flag');
+        if (descEl) descEl.textContent = t('nav_guide.rotate_desc', 'Drag with one finger on the screen to rotate the 3D view.');
+    } else if (step === 2) {
+        if (titleEl) titleEl.textContent = t('nav_guide.pan_title', 'Move the View');
+        if (descEl) descEl.textContent = t('nav_guide.pan_desc', 'Drag with two fingers to pan and move the flag.');
+    } else if (step === 3) {
+        if (titleEl) titleEl.textContent = t('nav_guide.zoom_title', 'Pinch to Zoom');
+        if (descEl) descEl.textContent = t('nav_guide.zoom_desc', 'Pinch with two fingers inward or outward to zoom the view.');
+    } else if (step === 4) {
+        if (titleEl) titleEl.textContent = t('nav_guide.double_tap_title', 'Double Tap Zoom');
+        if (descEl) descEl.textContent = t('nav_guide.double_tap_desc', 'Double tap on the flag to quickly zoom in or out.');
+    }
+
+    document.querySelectorAll('.nav-dot').forEach(dot => {
+        const dotStep = parseInt(dot.dataset.step);
+        dot.classList.toggle('active', dotStep === step);
+    });
+}
+
+function checkNavGuideGesture() {
+    if (!navGuideState.active || navGuideState.hasCompletedCurrentStep) return;
+    if (!navGuideState.userInteracting) return;
+
+    const step = navGuideState.currentStep;
+    if (step === 1) {
+        const azimuthDiff = Math.abs(controls.getAzimuthalAngle() - navGuideState.startAzimuth);
+        const polarDiff = Math.abs(controls.getPolarAngle() - navGuideState.startPolar);
+        if (azimuthDiff > 0.08 || polarDiff > 0.08) {
+            completeNavGuideStep();
+        }
+    } else if (step === 2) {
+        const targetDiff = controls.target.distanceTo(navGuideState.startTarget);
+        if (targetDiff > 0.08) {
+            completeNavGuideStep();
+        }
+    } else if (step === 3) {
+        const distance = camera.position.distanceTo(controls.target);
+        const distDiff = Math.abs(distance - navGuideState.startCameraDistance);
+        if (distDiff > 0.15) {
+            completeNavGuideStep();
+        }
+    }
+}
+
+function completeNavGuideStep() {
+    navGuideState.hasCompletedCurrentStep = true;
+    
+    setTimeout(() => {
+        const successEl = document.getElementById('nav-step-success');
+        if (successEl) {
+            successEl.removeAttribute('hidden');
+            successEl.classList.add('is-visible');
+        }
+
+        setTimeout(() => {
+            if (successEl) {
+                successEl.setAttribute('hidden', '');
+                successEl.classList.remove('is-visible');
+            }
+            
+            if (navGuideState.currentStep < 4) {
+                startNavGuideStep(navGuideState.currentStep + 1);
+            } else {
+                const overlay = document.getElementById('nav-coaching-overlay');
+                if (overlay) overlay.setAttribute('hidden', '');
+                navGuideState.active = false;
+                
+                // Remove container blur
+                const uiContainer = document.getElementById('ui-container');
+                if (uiContainer) {
+                    uiContainer.classList.remove('is-blurred');
+                }
+
+                // Trigger the home view button and start turntable immediately after guide completion
+                focusCameraView('home');
+                startTurntableAutoStart();
+
+                // Wait to vanish the 'guide completed' toast then show 'AR Supported' toast and start VAT timer
+                showToast('Guide Completed', 'You are ready to explore the flag configurator!', 'success').then(() => {
+                    showArSupportedToastIfSupported();
+                    startVatAnimationTimer();
+                });
+            }
+        }, 1200);
+    }, 1000);
+}
+
+let autoPauseTimeout = null;
+
+function startTurntableAutoStart() {
+    state.turntableEnabled = true;
+    turntableAutoStopEnabled = true;
+    turntableAccumulatedAngle = 0;
+    syncTurntableButton();
+}
+
+function startVatAnimationTimer() {
+    // Start 60-second auto-pause countdown for flag animation
+    if (autoPauseTimeout) window.clearTimeout(autoPauseTimeout);
+    autoPauseTimeout = window.setTimeout(() => {
+        if (isPlaying) {
+            isPlaying = false;
+            if (action) action.paused = true;
+            syncPlayPauseButton();
+            showToast('Flag Animation Paused', '', 'info', 3000);
+        }
+    }, 60000);
+}
+
+function startPostGuideTimers() {
+    startTurntableAutoStart();
+    startVatAnimationTimer();
+}
+
+function showArSupportedToastIfSupported() {
+    if (state.arSupported && !state.arSupportedToastShown) {
+        const guideOverlay = document.getElementById('nav-coaching-overlay');
+        const isGuideActiveOrPending = guideOverlay && !guideOverlay.hasAttribute('hidden');
+        if (isGuideActiveOrPending) return;
+
+        state.arSupportedToastShown = true;
+        window.setTimeout(() => {
+            showToast('AR Supported', 'Ready for AR! Tap the green AR button on the right to place the flag in the real world.', 'success', 5000);
+        }, 1000);
     }
 }

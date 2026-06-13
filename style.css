@@ -1276,6 +1276,148 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     animation: arBreathGlow 2.5s ease-in-out infinite !important;
 }
 
+/* AR Coaching Overlay styling */
+.ar-coaching-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(8, 13, 22, 0.35);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    z-index: 19;
+}
+
+.ar-coaching-overlay.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ar-coaching-card {
+    background: rgba(10, 16, 26, 0.372);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 30px 24px;
+    width: 290px;
+    max-width: 85%;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transform: scale(0.9);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ar-coaching-overlay.is-visible .ar-coaching-card {
+    transform: scale(1);
+}
+
+.ar-coaching-animation {
+    width: 140px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.coaching-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.grid-ellipse {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 1.5;
+    stroke-dasharray: 4, 4;
+}
+
+.grid-line {
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1;
+    stroke-dasharray: 2, 2;
+}
+
+.scan-cone {
+    fill: url(#scan-gradient);
+    opacity: 0.18;
+    transform-origin: 100px 50px;
+    animation: scanConeMove 3.5s ease-in-out infinite alternate;
+}
+
+.phone-body {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.85);
+    stroke-width: 2;
+}
+
+.phone-screen {
+    fill: rgba(255, 255, 255, 0.04);
+    stroke: rgba(255, 255, 255, 0.2);
+    stroke-width: 1;
+}
+
+.phone-notch {
+    fill: rgba(255, 255, 255, 0.85);
+}
+
+.hand-finger {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.scanning-device {
+    transform-origin: 100px 150px;
+    animation: scanDeviceMove 3.5s ease-in-out infinite alternate;
+}
+
+#ar-coaching-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text, #fff);
+}
+
+#ar-coaching-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes scanDeviceMove {
+    0% {
+        transform: translate(-25px, 0) rotate(-12deg);
+    }
+
+    100% {
+        transform: translate(25px, 0) rotate(12deg);
+    }
+}
+
+@keyframes scanConeMove {
+    0% {
+        transform: translate(-25px, 0) skewX(-12deg);
+    }
+
+    100% {
+        transform: translate(25px, 0) skewX(12deg);
+    }
+}
+
+
 #ar-overlay {
     position: fixed;
     top: 0;
@@ -1304,6 +1446,7 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    z-index: 20;
 }
 
 body.is-in-ar #stop-ar-btn {
@@ -1836,6 +1979,27 @@ button.config-card[data-category="base"].is-active {
         left: 0;
         width: 100%;
         max-height: 48%;
+        position: absolute;
+    }
+
+    #ui-container::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        z-index: 9999;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    #ui-container.is-blurred {
+        pointer-events: none;
+    }
+
+    #ui-container.is-blurred::after {
+        opacity: 1;
     }
 
     #ui-bg {
@@ -1910,5 +2074,355 @@ button.config-card[data-category="base"].is-active {
 
     .preferences-container {
         right: 12px;
+    }
+
+    .nav-coaching-overlay {
+        position: absolute;
+        top: 52%;
+        left: 0;
+        width: 100%;
+        height: 48%;
+        pointer-events: none; /* Let touches fall through to canvas */
+        z-index: 15;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 16px;
+        box-sizing: border-box;
+    }
+
+    .nav-coaching-card {
+        width: 100%;
+        background: rgba(10, 16, 26, 0.85);
+        -webkit-backdrop-filter: blur(20px);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 20px;
+        box-sizing: border-box;
+        text-align: center;
+        color: #fff;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        pointer-events: auto; /* Allow clicks on buttons/actions */
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .nav-coaching-card[hidden] {
+        display: none !important;
+    }
+
+    .nav-coaching-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0;
+        color: var(--text, #fff);
+    }
+
+    .nav-coaching-desc {
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        line-height: 1.45;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .nav-coaching-actions {
+        display: flex;
+        width: 100%;
+        gap: 10px;
+        margin-top: 6px;
+    }
+
+    .nav-btn {
+        flex: 1;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .nav-btn.primary {
+        background: var(--accent, #f59e0b);
+        color: #080d16;
+    }
+
+    .nav-btn.secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-btn:active {
+        transform: scale(0.96);
+    }
+
+    /* Progress indicator styling */
+    .nav-coaching-progress {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.4);
+        margin-bottom: 2px;
+    }
+
+    .nav-coaching-dots {
+        display: flex;
+        gap: 6px;
+    }
+
+    .nav-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transition: all 0.2s ease;
+    }
+
+    .nav-dot.active {
+        background: var(--accent, #f59e0b);
+        transform: scale(1.2);
+    }
+
+    /* Gesture SVG space */
+    .nav-coaching-gesture-container {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .gesture-svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .gesture-screen {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.1);
+        stroke-width: 1.5;
+    }
+
+    .gesture-trail {
+        fill: none;
+        stroke: var(--accent, #f59e0b);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-dasharray: 40;
+        stroke-dashoffset: 40;
+        animation: trailAnim 2.5s ease-in-out infinite;
+    }
+
+    .gesture-touch-point {
+        fill: var(--accent, #f59e0b);
+        filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+    }
+
+    .gesture-hand {
+        fill: #ffffff;
+        stroke: #080d16;
+        stroke-width: 1.5;
+        stroke-linejoin: round;
+    }
+
+    .gesture-ripple {
+        fill: none;
+        stroke: var(--accent, #f59e0b);
+        stroke-width: 1.5;
+        border-radius: 50%;
+        transform-origin: 50px 30px;
+    }
+
+    .ripple-1 {
+        animation: rippleAnim1 2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+    }
+
+    .ripple-2 {
+        animation: rippleAnim2 2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+    }
+
+    /* SVG Keyframes & Animations */
+    .rotate-animation {
+        animation: rotateAnim 2.5s ease-in-out infinite;
+    }
+
+    .pan-animation {
+        animation: panAnim 2.5s ease-in-out infinite;
+    }
+
+    .pinch-left-animation {
+        animation: pinchLeftAnim 2.5s ease-in-out infinite;
+        transform-origin: 0 0;
+    }
+
+    .pinch-right-animation {
+        animation: pinchRightAnim 2.5s ease-in-out infinite;
+        transform-origin: 0 0;
+    }
+
+    .double-tap-animation {
+        animation: doubleTapAnim 2s ease-in-out infinite;
+        transform-origin: 0 0;
+    }
+
+    @keyframes rotateAnim {
+        0% { transform: translate(14px, 40px); opacity: 0; }
+        15% { opacity: 1; }
+        80% { transform: translate(68px, 40px); opacity: 1; }
+        90%, 100% { opacity: 0; }
+    }
+
+    @keyframes panAnim {
+        0% { transform: translate(50px, 45px); opacity: 0; }
+        15% { opacity: 1; }
+        80% { transform: translate(50px, 15px); opacity: 1; }
+        90%, 100% { opacity: 0; }
+    }
+
+    @keyframes pinchLeftAnim {
+        0% { transform: translate(45px, 45px) rotate(-45deg); opacity: 0; }
+        15% { opacity: 1; }
+        80% { transform: translate(32px, 32px) rotate(-45deg); opacity: 1; }
+        90%, 100% { opacity: 0; }
+    }
+
+    @keyframes pinchRightAnim {
+        0% { transform: translate(55px, 55px) rotate(135deg); opacity: 0; }
+        15% { opacity: 1; }
+        80% { transform: translate(68px, 68px) rotate(135deg); opacity: 1; }
+        90%, 100% { opacity: 0; }
+    }
+
+    @keyframes doubleTapAnim {
+        0%, 100% { transform: translate(50px, 30px) scale(1.1); opacity: 0; }
+        10% { opacity: 1; transform: translate(50px, 30px) scale(0.85); }
+        25% { transform: translate(50px, 30px) scale(1.1); }
+        40% { transform: translate(50px, 30px) scale(0.85); }
+        55%, 85% { opacity: 1; transform: translate(50px, 30px) scale(1.1); }
+    }
+
+    @keyframes rippleAnim1 {
+        0%, 9.9% { transform: scale(0.2); opacity: 0; }
+        10% { transform: scale(0.2); opacity: 1; }
+        35% { transform: scale(1.6); opacity: 0; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    @keyframes rippleAnim2 {
+        0%, 39.9% { transform: scale(0.2); opacity: 0; }
+        40% { transform: scale(0.2); opacity: 1; }
+        65% { transform: scale(1.6); opacity: 0; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    @keyframes trailAnim {
+        0% { stroke-dashoffset: 40; }
+        70% { stroke-dashoffset: 0; }
+        90%, 100% { stroke-dashoffset: -40; }
+    }
+
+    /* Success checkmark layout */
+    .nav-step-success {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 16, 26, 0.92);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+        z-index: 5;
+    }
+
+    .nav-step-success.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .success-text {
+        font-family: 'Outfit', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: #10b981;
+    }
+
+    .success-checkmark {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: block;
+        stroke-width: 2.5;
+        stroke: #10b981;
+        stroke-miterlimit: 10;
+        box-shadow: inset 0px 0px 0px #10b981;
+        animation: fillCheckmark .4s ease-in-out .4s forwards, scaleCheckmark .3s ease-in-out .9s both;
+    }
+
+    .checkmark-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 2.5;
+        stroke-miterlimit: 10;
+        stroke: #10b981;
+        fill: none;
+        animation: strokeCheckmark .6s cubic-bezier(0.650, 0.000, 0.450, 1.000) forwards;
+    }
+
+    .checkmark-check {
+        transform-origin: 50% 50%;
+        stroke-dasharray: 48;
+        stroke-dashoffset: 48;
+        animation: strokeCheckmark .3s cubic-bezier(0.650, 0.000, 0.450, 1.000) .8s forwards;
+    }
+
+    @keyframes strokeCheckmark {
+        100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes fillCheckmark {
+        100% { box-shadow: inset 0px 0px 0px 30px rgba(16, 185, 129, 0.1); }
+    }
+
+    @keyframes scaleCheckmark {
+        0%, 100% { transform: none; }
+        50% { transform: scale3d(1.15, 1.15, 1); }
+    }
+
+    .nav-link-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 4px 8px;
+        transition: color 0.2s ease;
+    }
+
+    .nav-link-btn:hover, .nav-link-btn:active {
+        color: rgba(255, 255, 255, 0.88);
     }
 }

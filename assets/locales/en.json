@@ -102,7 +102,9 @@
     "stop": "STOP AR",
     "start": "Start AR",
     "unavailable_label": "AR preview unavailable on this device",
-    "unavailable_title": "AR preview unavailable"
+    "unavailable_title": "AR preview unavailable",
+    "coaching_title": "Scan your space",
+    "coaching_desc": "Move your device side-to-side slowly to find a flat surface."
   },
   "pdf": {
     "title": "Flag Configurator - Saved Design",
@@ -167,5 +169,22 @@
     "unsupported_file_title": "Unsupported file",
     "unsupported_file_msg": "Please upload a PNG, JPG, JPEG, WEBP, or PDF file.",
     "coming_soon": "Coming Soon....."
+  },
+  "nav_guide": {
+    "welcome_title": "3D Navigation Guide",
+    "welcome_desc": "Would you like a quick interactive tour to learn how to rotate, zoom, and move the 3D flag?",
+    "start_btn": "Start Guide",
+    "skip_btn": "Skip",
+    "skip_guide": "Skip Guide",
+    "success_text": "Perfect!",
+    "step_of": "Step {{current}} of {{total}}",
+    "rotate_title": "Rotate the Flag",
+    "rotate_desc": "Drag with one finger on the screen to rotate the 3D view.",
+    "pan_title": "Move the View",
+    "pan_desc": "Drag with two fingers to pan and move the flag.",
+    "zoom_title": "Pinch to Zoom",
+    "zoom_desc": "Pinch with two fingers inward or outward to zoom the view.",
+    "double_tap_title": "Double Tap Zoom",
+    "double_tap_desc": "Double tap on the flag to quickly zoom in or out."
   }
 }
