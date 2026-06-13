@@ -5018,7 +5018,9 @@ function startVatAnimationTimer() {
 }
 
 function startPostGuideTimers() {
-    startTurntableAutoStart();
+    if (state.turntableEnabled) {
+        startTurntableAutoStart();
+    }
     startVatAnimationTimer();
 }
 
@@ -5028,9 +5030,13 @@ function showArSupportedToastIfSupported() {
         const isGuideActiveOrPending = guideOverlay && !guideOverlay.hasAttribute('hidden');
         if (isGuideActiveOrPending) return;
 
+        // If there are still active or vanishing toasts, check again soon
+        if (activeToasts.length > 0 || (dom.toastRegion && dom.toastRegion.children.length > 0)) {
+            window.setTimeout(showArSupportedToastIfSupported, 100);
+            return;
+        }
+
         state.arSupportedToastShown = true;
-        window.setTimeout(() => {
-            showToast('AR Supported', 'Ready for AR! Tap the green AR button on the right to place the flag in the real world.', 'success', 5000);
-        }, 1000);
+        showToast('AR Supported', 'Ready for AR! Tap the green AR button on the right to place the flag in the real world.', 'success', 5000);
     }
 }
