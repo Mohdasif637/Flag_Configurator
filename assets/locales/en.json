@@ -150,6 +150,8 @@
     "graphic_applied_failed": "The {{label}} graphic could not be processed.",
     "graphic_removed_title": "Graphic removed",
     "graphic_removed_msg": "{{label}} graphic has been cleared from the preview.",
+    "template_layers_hidden_title": "Template layers hidden",
+    "template_layers_hidden_msg": "Template guide layers (ProFlags, Safe zones) have been hidden in preview.",
     "saving_design_title": "Saving design",
     "saving_design_msg": "Capturing front and back layouts for your design.",
     "design_saved_title": "Design saved",

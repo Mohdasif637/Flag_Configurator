@@ -150,6 +150,8 @@
     "graphic_applied_failed": "Het {{label}}-ontwerp kon niet worden verwerkt.",
     "graphic_removed_title": "Ontwerp verwijderd",
     "graphic_removed_msg": "{{label}}-ontwerp is verwijderd uit de voorvertoning.",
+    "template_layers_hidden_title": "Sjabloonlagen verborgen",
+    "template_layers_hidden_msg": "Sjabloonrichtlijnen (ProFlags, Safe zones) zijn verborgen in de voorvertoning.",
     "saving_design_title": "Ontwerp opslaan",
     "saving_design_msg": "Indelingen voor voor- en achterkant vastleggen voor uw ontwerp.",
     "design_saved_title": "Ontwerp opgeslagen",

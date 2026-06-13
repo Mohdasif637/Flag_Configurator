@@ -241,6 +241,8 @@ function translateToastText(text) {
         'Pick a size and layout, upload your design, tweak the preview, and save.': 'toasts.preview_ready_msg',
         'Graphic applied': 'toasts.graphic_applied_title',
         'Graphic removed': 'toasts.graphic_removed_title',
+        'Template layers hidden': 'toasts.template_layers_hidden_title',
+        'Template guide layers (ProFlags, Safe zones) have been hidden in preview.': 'toasts.template_layers_hidden_msg',
         'Saving design': 'toasts.saving_design_title',
         'Capturing front and back layouts for your design.': 'toasts.saving_design_msg',
         'Design saved': 'toasts.design_saved_title',
@@ -3790,6 +3792,29 @@ async function handleGraphicFile(side, file) {
             const page = await pdf.getPage(1);
             const viewport = page.getViewport({ scale: 1 });
 
+            // Retrieve and parse optional content groups (layers) to hide templates
+            let optionalContentConfig = null;
+            let hiddenLayersCount = 0;
+            try {
+                optionalContentConfig = await pdf.getOptionalContentConfig();
+                const groups = optionalContentConfig.getGroups();
+                if (groups) {
+                    for (const [id, group] of Object.entries(groups)) {
+                        const nameLower = (group.name || '').trim().toLowerCase();
+                        if (nameLower === 'proflags' || nameLower === 'safe zones' || nameLower === 'safe zone') {
+                            optionalContentConfig.setVisibility(id, false);
+                            hiddenLayersCount++;
+                        }
+                    }
+                }
+            } catch (ocgError) {
+                console.warn('Failed to parse or modify OCG layers:', ocgError);
+            }
+
+            if (hiddenLayersCount > 0) {
+                showToast('Template layers hidden', 'Template guide layers (ProFlags, Safe zones) have been hidden in preview.', 'success', 4000);
+            }
+
             // 1. Try scaling shorter side to 2048 first
             let scale = 2048 / Math.min(viewport.width, viewport.height);
             let scaledViewport = page.getViewport({ scale });
@@ -3799,7 +3824,14 @@ async function handleGraphicFile(side, file) {
             renderCanvas.width = scaledViewport.width;
             renderCanvas.height = scaledViewport.height;
 
-            await page.render({ canvasContext: renderContext, viewport: scaledViewport }).promise;
+            const renderOptions = {
+                canvasContext: renderContext,
+                viewport: scaledViewport
+            };
+            if (optionalContentConfig) {
+                renderOptions.optionalContentConfigPromise = Promise.resolve(optionalContentConfig);
+            }
+            await page.render(renderOptions).promise;
 
             // 2. Check if the cut-off areas contain any actual graphics
             let isCroppedCentered = true;
@@ -3812,7 +3844,14 @@ async function handleGraphicFile(side, file) {
                 renderCanvas.width = scaledViewport.width;
                 renderCanvas.height = scaledViewport.height;
 
-                await page.render({ canvasContext: renderContext, viewport: scaledViewport }).promise;
+                const renderOptionsFallback = {
+                    canvasContext: renderContext,
+                    viewport: scaledViewport
+                };
+                if (optionalContentConfig) {
+                    renderOptionsFallback.optionalContentConfigPromise = Promise.resolve(optionalContentConfig);
+                }
+                await page.render(renderOptionsFallback).promise;
             }
 
             file = await cropAndConvertCanvasToWebP(renderCanvas, isCroppedCentered, file.name);
