@@ -133,10 +133,7 @@ function loadGraphicFromCache() {
         config.xInput.value = cached.panX;
         config.yInput.value = cached.panY;
         config.thumb.src = cached.previewUrl;
-        config.thumbFrame.style.display = 'block';
         config.titleElement.textContent = truncateFileName(cached.fileName, config.titleElement);
-        config.actionsWrapper.style.display = 'flex';
-        config.transformsWrapper.style.display = 'block';
     } else {
         config.uploadedTexture = null;
         config.uploadedFrontTex = null;
@@ -148,11 +145,8 @@ function loadGraphicFromCache() {
         config.xInput.value = '0';
         config.yInput.value = '0';
         config.thumb.removeAttribute('src');
-        config.thumbFrame.style.display = 'none';
         config.titleElement.textContent = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('upload.title') : config.defaultTitle;
         config.titleElement.removeAttribute('title');
-        config.actionsWrapper.style.display = 'none';
-        config.transformsWrapper.style.display = 'none';
     }
     syncSideUi('graphic');
 }
