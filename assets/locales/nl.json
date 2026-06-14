@@ -60,9 +60,7 @@
     "remove": "Verwijderen",
     "scale": "Schaal",
     "pan_x": "Verschuif X",
-    "pan_y": "Verschuif Y",
-    "tooltip_aria": "Informatie over sjabloonlagen",
-    "template_layers_info": "Schakel de eerste twee lagen in het sjabloon uit om het ontwerp correct op de vlag te tonen."
+    "pan_y": "Verschuif Y"
   },
   "pole_cover": {
     "picker_title": "Kies mastband kleur"

@@ -60,9 +60,7 @@
     "remove": "Remove",
     "scale": "Scale",
     "pan_x": "Pan X",
-    "pan_y": "Pan Y",
-    "tooltip_aria": "Template layer information",
-    "template_layers_info": "To preview the graphic properly on the flag, disable the first two layers in the template."
+    "pan_y": "Pan Y"
   },
   "pole_cover": {
     "picker_title": "Choose pocket color"
