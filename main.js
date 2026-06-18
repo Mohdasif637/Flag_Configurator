@@ -1740,7 +1740,7 @@ const svgPan = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true
     </g>
 </svg>`;
 
-const svgZoom = `<canvas id="dotlottie-canvas" style="width: 80px; height: 80px; display: block;"></canvas>`;
+const svgZoom = `<canvas id="dotlottie-canvas" style="width: 120px; height: 120px; display: block;"></canvas>`;
 
 const svgDoubleTap = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <circle cx="40" cy="30" r="12" class="gesture-ripple ripple-1" />
@@ -4849,6 +4849,7 @@ function initNavCoachingGuide() {
         localStorage.setItem('flag_configurator_nav_guide_done', 'true');
         document.getElementById('nav-coaching-step-welcome')?.setAttribute('hidden', '');
         document.getElementById('nav-coaching-step-guide')?.removeAttribute('hidden');
+        document.getElementById('canvas-coaching-overlay')?.removeAttribute('hidden');
         
         // Ensure prefetch is triggered if not already
         preloadLottieAnimation();
@@ -4870,6 +4871,7 @@ function initNavCoachingGuide() {
         localStorage.setItem('flag_configurator_nav_guide_done', 'true');
         const overlay = document.getElementById('nav-coaching-overlay');
         if (overlay) overlay.setAttribute('hidden', '');
+        document.getElementById('canvas-coaching-overlay')?.setAttribute('hidden', '');
         navGuideState.active = false;
         
         // Remove container blur
@@ -5006,6 +5008,7 @@ function completeNavGuideStep() {
             } else {
                 const overlay = document.getElementById('nav-coaching-overlay');
                 if (overlay) overlay.setAttribute('hidden', '');
+                document.getElementById('canvas-coaching-overlay')?.setAttribute('hidden', '');
                 navGuideState.active = false;
                 
                 // Remove container blur

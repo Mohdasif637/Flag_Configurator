@@ -47,6 +47,10 @@
                 <p id="loading-text" data-i18n="toasts.loading_3d">Loading 3D preview...</p>
             </div>
         </div>
+        <!-- Coaching SVG directly over the WebGL Canvas -->
+        <div id="canvas-coaching-overlay" class="canvas-coaching-overlay" hidden>
+            <div id="nav-coaching-svg-container"></div>
+        </div>
     </div>
 
     <div id="ui-container" class="is-blurred">
@@ -419,10 +423,7 @@
                     <span class="nav-dot" data-step="4"></span>
                 </div>
             </div>
-            
-            <div class="nav-coaching-gesture-container">
-                <div id="nav-coaching-svg-container"></div>
-            </div>
+
             
             <h3 id="nav-step-title" class="nav-coaching-title">Rotate the Flag</h3>
             <p id="nav-step-desc" class="nav-coaching-desc">Drag with one finger on the screen to rotate the 3D view.</p>
