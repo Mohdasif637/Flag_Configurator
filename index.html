@@ -43,8 +43,18 @@
     <div id="canvas-container">
         <div id="loading-overlay" class="overlay is-visible" aria-live="polite">
             <div class="loading-card">
-                <div class="spinner" aria-hidden="true"></div>
                 <p id="loading-text" data-i18n="toasts.loading_3d">Loading 3D preview...</p>
+                <script>
+                    (function() {
+                        var lang = localStorage.getItem('pref-language') || 'en';
+                        if (lang === 'nl') {
+                            document.getElementById('loading-text').textContent = '3D-weergave laden...';
+                        }
+                    })();
+                </script>
+                <div class="loading-progress-bar-container">
+                    <div id="loading-progress-bar" class="loading-progress-bar"></div>
+                </div>
             </div>
         </div>
         <!-- Coaching SVG directly over the WebGL Canvas -->

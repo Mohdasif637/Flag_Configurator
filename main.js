@@ -548,6 +548,107 @@ function updateVatUniforms(mat, posTex, normTex, frameCount) {
     }
 }
 
+function drawHumanSilhouettePath(ctx) {
+    ctx.beginPath();
+    
+    // Start at neck right
+    ctx.moveTo(277, 135);
+    
+    // Head: starting from neck right going up and over to neck left (anticlockwise)
+    // Head center is (256, 90), r=45. Angle 1.13 rad (bottom-right) to 2.01 rad (bottom-left) anticlockwise
+    ctx.arc(256, 90, 45, 1.13, 2.01, true);
+    
+    // Shoulder left
+    ctx.quadraticCurveTo(180, 160, 140, 190);
+    
+    // Arm left outer
+    ctx.quadraticCurveTo(115, 330, 105, 470);
+    
+    // Hand left
+    ctx.quadraticCurveTo(100, 500, 120, 500);
+    
+    // Arm left inner
+    ctx.quadraticCurveTo(135, 380, 170, 320);
+    
+    // Torso left / waist
+    ctx.quadraticCurveTo(180, 420, 175, 500);
+    
+    // Hip/Thigh left outer
+    ctx.quadraticCurveTo(165, 600, 160, 700);
+    
+    // Left leg outer to ankle
+    ctx.lineTo(165, 950);
+    
+    // Left foot
+    ctx.quadraticCurveTo(145, 980, 195, 980);
+    
+    // Left leg inner
+    ctx.lineTo(245, 590);
+    
+    // Crotch
+    ctx.lineTo(256, 570);
+    
+    // Right leg inner
+    ctx.lineTo(267, 590);
+    
+    // Right foot
+    ctx.lineTo(317, 980);
+    ctx.quadraticCurveTo(367, 980, 347, 950);
+    
+    // Right leg outer to hip
+    ctx.lineTo(352, 700);
+    ctx.quadraticCurveTo(347, 600, 337, 500);
+    
+    // Waist right
+    ctx.quadraticCurveTo(332, 420, 342, 320);
+    
+    // Arm right inner
+    ctx.quadraticCurveTo(377, 380, 392, 500);
+    
+    // Hand right
+    ctx.quadraticCurveTo(412, 500, 407, 470);
+    
+    // Arm right outer
+    ctx.quadraticCurveTo(397, 330, 372, 190);
+    
+    // Shoulder right to neck
+    ctx.quadraticCurveTo(332, 160, 277, 135);
+    
+    ctx.closePath();
+}
+
+function updateSilhouetteTexture(canvas, ctx, texture, progress) {
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // 1. Draw unfilled state (translucent dark grey)
+    ctx.fillStyle = 'rgba(55, 65, 81, 0.4)';
+    drawHumanSilhouettePath(ctx);
+    ctx.fill();
+    
+    // 2. Draw filled progress state (brand green #10B981) using clipping
+    ctx.save();
+    drawHumanSilhouettePath(ctx);
+    ctx.clip();
+    
+    // Draw fill rectangle from bottom (y=height) up to (1.0 - progress) * height
+    ctx.fillStyle = '#10B981';
+    const fillHeight = progress * height;
+    ctx.fillRect(0, height - fillHeight, width, fillHeight);
+    ctx.restore();
+    
+    // 3. Draw thin outline on top (brand green #10B981)
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 6;
+    drawHumanSilhouettePath(ctx);
+    ctx.stroke();
+    
+    texture.needsUpdate = true;
+}
+
 function createFlagMeasurementGroup(bottomY, topY, lineX, text) {
     const group = new THREE.Group();
     group.name = 'flag-measurement';
@@ -1343,8 +1444,8 @@ function updateDynamicCameraTargets(moveCamera = true) {
             let isVisible = true;
             let current = child;
             while (current) {
-                // Exclude any meshes belonging to measurement groups from the camera focus bounding box
-                if (current.name && (current.name.includes('flag-measurement') || current.name.includes('height-measurement'))) {
+                // Exclude any meshes belonging to measurement groups or loading silhouettes from the camera focus bounding box
+                if (current.name && (current.name.includes('flag-measurement') || current.name.includes('height-measurement') || current.name.includes('character-silhouette'))) {
                     isVisible = false;
                     break;
                 }
@@ -1984,6 +2085,8 @@ const environmentLoader = new HDRLoader();
 const exrLoader = new EXRLoader();
 exrLoader.setDataType(THREE.FloatType);
 
+
+
 let vatTexture = null;
 let normTexture = null;
 const vatMaterials = [];
@@ -2049,6 +2152,8 @@ let characterModel = null;
 let showCharacter = false;
 let characterLoading = false;
 let characterTween = null;
+let silhouetteMesh = null;
+let silhouetteLoadingFinished = false;
 let environmentTexture = null;
 let action = null;
 let isPlaying = true;
@@ -2166,7 +2271,7 @@ bindTransformInputs();
 bindUIEvents();
 initializePocketColorPicker();
 syncControlAvailability();
-setLoadingState(true, 'Loading 3D assets...');
+setLoadingState(true, 'toasts.loading_3d');
 setActiveCameraView('home');
 syncPlayPauseButton();
 
@@ -2205,24 +2310,78 @@ function createReticle() {
     return mesh;
 }
 
-function setLoadingState(visible, message) {
-    dom.loadingText.textContent = message;
-    dom.loadingOverlay.classList.toggle('is-visible', visible);
-    
-    const uiContainer = document.getElementById('ui-container');
-    if (uiContainer) {
-        if (visible) {
-            uiContainer.classList.add('is-blurred');
-        } else {
-            if (!navGuideState.active) {
-                const overlay = document.getElementById('nav-coaching-overlay');
-                const isOverlayVisible = overlay && !overlay.hasAttribute('hidden');
-                const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
-                const isWelcomeVisible = isOverlayVisible && welcomeScreen && !welcomeScreen.hasAttribute('hidden');
-                if (!isWelcomeVisible) {
-                    uiContainer.classList.remove('is-blurred');
+function setLoadingState(visible, messageKeyOrText) {
+    if (visible) {
+        dom.loadingOverlay.classList.add('is-visible');
+        dom.loadingOverlay.style.opacity = '1';
+        
+        const progressBar = document.getElementById('loading-progress-bar');
+        if (progressBar) {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '0%';
+            progressBar.offsetHeight; // Force reflow
+            
+            // Animate smoothly to 80% using a custom ease-out CSS transition (compositor thread)
+            progressBar.style.transition = 'width 4.0s cubic-bezier(0.08, 0.82, 0.17, 1.0)';
+            progressBar.style.width = '80%';
+        }
+        
+        if (messageKeyOrText.includes('toasts.')) {
+            dom.loadingText.setAttribute('data-i18n', messageKeyOrText);
+            if (window.i18next && window.i18next.isInitialized) {
+                dom.loadingText.textContent = window.i18next.t(messageKeyOrText);
+            } else {
+                // Fallback translation if i18next is not ready yet (check localStorage)
+                const activeLang = localStorage.getItem('pref-language') || 'en';
+                if (messageKeyOrText === 'toasts.loading_3d') {
+                    dom.loadingText.textContent = activeLang === 'nl' ? '3D-weergave laden...' : 'Loading 3D preview...';
+                } else if (messageKeyOrText === 'toasts.ref_loading_msg') {
+                    dom.loadingText.textContent = activeLang === 'nl' ? '3D-referentie laden...' : 'Loading 3D character model height reference...';
+                } else {
+                    dom.loadingText.textContent = messageKeyOrText;
                 }
             }
+        } else {
+            dom.loadingText.textContent = messageKeyOrText;
+            dom.loadingText.removeAttribute('data-i18n');
+        }
+        
+        const uiContainer = document.getElementById('ui-container');
+        if (uiContainer) {
+            uiContainer.classList.add('is-blurred');
+        }
+    } else {
+        const progressBar = document.getElementById('loading-progress-bar');
+        if (progressBar) {
+            // Smoothly and quickly fill the remaining progress to 100% via CSS
+            progressBar.style.transition = 'width 0.3s ease-out';
+            progressBar.style.width = '100%';
+            
+            setTimeout(() => {
+                // Fade out loading overlay via CSS transition
+                dom.loadingOverlay.style.opacity = '0';
+                
+                setTimeout(() => {
+                    dom.loadingOverlay.classList.remove('is-visible');
+                    dom.loadingOverlay.style.opacity = '';
+                    progressBar.style.transition = '';
+                    
+                    const uiContainer = document.getElementById('ui-container');
+                    if (uiContainer && !navGuideState.active) {
+                        const overlay = document.getElementById('nav-coaching-overlay');
+                        const isOverlayVisible = overlay && !overlay.hasAttribute('hidden');
+                        const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
+                        const isWelcomeVisible = isOverlayVisible && welcomeScreen && !welcomeScreen.hasAttribute('hidden');
+                        if (!isWelcomeVisible) {
+                            uiContainer.classList.remove('is-blurred');
+                        }
+                    }
+                }, 350); // overlay fade duration
+            }, 300); // 100% fill duration
+        } else {
+            dom.loadingOverlay.classList.remove('is-visible');
+            const uiContainer = document.getElementById('ui-container');
+            if (uiContainer) uiContainer.classList.remove('is-blurred');
         }
     }
 }
@@ -2935,9 +3094,73 @@ function loadCharacterModel() {
     if (characterModel || characterLoading) return;
     characterLoading = true;
     
+    // 1. Create a 2D silhouette plane in the WebGL scene
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    
+    // Width = 0.93m (1.86 / 2), Height = 1.86m
+    const geometry = new THREE.PlaneGeometry(0.93, 1.86);
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide
+    });
+    
+    silhouetteMesh = new THREE.Mesh(geometry, material);
+    silhouetteMesh.name = 'character-silhouette';
+    // Position at same place as character: x = -0.9, y = 1.86/2 = 0.93, z = 0.01 (slightly forward to prevent clipping)
+    silhouetteMesh.position.set(-0.9, 0.93, 0.01);
+    silhouetteMesh.raycast = () => {}; // Ignore raycasting
+    
+    scene.add(silhouetteMesh);
+    sceneDirty = true;
+    
+    // Render initial 0% state
+    updateSilhouetteTexture(canvas, ctx, texture, 0.0);
+    
+    // Start continuous requestAnimationFrame loop to handle smooth loading progress interpolation
+    let targetProgress = 0.0;
+    let currentProgress = 0.0;
+    silhouetteLoadingFinished = false;
+    let isLengthComputable = false;
+    
+    function animateProgress() {
+        if (silhouetteLoadingFinished) return;
+        
+        // If network length is not computable, slowly crawl targetProgress towards 0.8
+        if (!isLengthComputable && targetProgress < 0.8) {
+            targetProgress = Math.min(0.8, targetProgress + 0.003);
+        }
+        
+        // If progress has reached or exceeded 0.8 but loading hasn't finished, slowly crawl targetProgress towards 0.95 asymptotically
+        if (targetProgress >= 0.8 && targetProgress < 0.95) {
+            targetProgress += (0.95 - targetProgress) * 0.002;
+        }
+        
+        // Smoothly interpolate currentProgress towards targetProgress
+        currentProgress += (targetProgress - currentProgress) * 0.08;
+        
+        if (canvas && ctx && texture && silhouetteMesh) {
+            updateSilhouetteTexture(canvas, ctx, texture, currentProgress);
+            sceneDirty = true;
+        }
+        
+        requestAnimationFrame(animateProgress);
+    }
+    
+    requestAnimationFrame(animateProgress);
+
     modelLoader.load(
         '3d/character.glb',
         (gltf) => {
+            silhouetteLoadingFinished = true;
+            
             characterModel = gltf.scene;
             
             // Place at negative X axis (next to the left side of the flag)
@@ -2966,6 +3189,8 @@ function loadCharacterModel() {
             showToast('Reference loaded', '3D character model height reference added.', 'success', 2500);
             syncFlagMeasurement();
             
+            const startProgress = currentProgress;
+
             if (showCharacter) {
                 // Focus camera on the combined scene bounds immediately
                 focusCameraView('front');
@@ -2977,19 +3202,71 @@ function loadCharacterModel() {
                         if (characterModel) {
                             characterModel.scale.setScalar(scale);
                             characterModel.rotation.y = rotationY;
-                            sceneDirty = true;
                         }
+                        
+                        // Sync silhouette fill progress (from startProgress to 1.0) and opacity (from 1.0 to 0.0) with scale
+                        if (silhouetteMesh) {
+                            const currentFill = startProgress + (1.0 - startProgress) * scale;
+                            if (canvas && ctx && texture) {
+                                updateSilhouetteTexture(canvas, ctx, texture, currentFill);
+                            }
+                            if (silhouetteMesh.material) {
+                                silhouetteMesh.material.opacity = 1.0 - scale;
+                            }
+                        }
+                        sceneDirty = true;
                     })
                     .onComplete(() => {
                         characterTween = null;
+                        
+                        // Dispose resources
+                        if (silhouetteMesh) {
+                            scene.remove(silhouetteMesh);
+                            if (silhouetteMesh.geometry) silhouetteMesh.geometry.dispose();
+                            if (silhouetteMesh.material) silhouetteMesh.material.dispose();
+                            silhouetteMesh = null;
+                        }
+                        canvas.width = 1;
+                        canvas.height = 1;
+                        texture.dispose();
                     })
                     .start();
+            } else {
+                // Clean up immediately if character reference was hidden
+                if (silhouetteMesh) {
+                    scene.remove(silhouetteMesh);
+                    if (silhouetteMesh.geometry) silhouetteMesh.geometry.dispose();
+                    if (silhouetteMesh.material) silhouetteMesh.material.dispose();
+                    silhouetteMesh = null;
+                }
+                canvas.width = 1;
+                canvas.height = 1;
+                texture.dispose();
             }
         },
-        undefined,
+        (xhr) => {
+            if (xhr.lengthComputable && xhr.total > 0) {
+                isLengthComputable = true;
+                // Cap loading phase progress at 0.8
+                targetProgress = Math.min(0.8, xhr.loaded / xhr.total);
+            }
+        },
         (error) => {
             console.error("Failed to load character model:", error);
             characterLoading = false;
+            silhouetteLoadingFinished = true;
+            
+            // Clean up and remove silhouette on error
+            if (silhouetteMesh) {
+                scene.remove(silhouetteMesh);
+                if (silhouetteMesh.geometry) silhouetteMesh.geometry.dispose();
+                if (silhouetteMesh.material) {
+                    if (silhouetteMesh.material.map) silhouetteMesh.material.map.dispose();
+                    silhouetteMesh.material.dispose();
+                }
+                silhouetteMesh = null;
+            }
+            
             showToast('Loading failed', 'Could not load the 3D character model.', 'error', 3000);
         }
     );
@@ -3004,6 +3281,19 @@ function toggleCharacterVisibility() {
     if (characterTween) {
         characterTween.stop();
         characterTween = null;
+    }
+    
+    // Clean up silhouette if toggled off mid-load
+    if (!showCharacter && silhouetteMesh) {
+        scene.remove(silhouetteMesh);
+        if (silhouetteMesh.geometry) silhouetteMesh.geometry.dispose();
+        if (silhouetteMesh.material) {
+            if (silhouetteMesh.material.map) silhouetteMesh.material.map.dispose();
+            silhouetteMesh.material.dispose();
+        }
+        silhouetteMesh = null;
+        silhouetteLoadingFinished = true;
+        characterLoading = false;
     }
     
     // Trigger front view and stop turntable

@@ -459,34 +459,29 @@ body:has(#loading-overlay.is-visible) #canvas-container {
 }
 
 .loading-card p {
-    margin: var(--space-3) 0 0;
+    margin: 0;
     font-family: 'Outfit', sans-serif;
     font-size: 14px;
     font-weight: 600;
     color: var(--text);
 }
 
-.spinner {
-    width: 44px;
-    height: 44px;
-    margin: 0 auto;
-    border-radius: 50%;
-    border: 4px solid rgba(16, 185, 129, 0.12);
-    border-top-color: var(--primary);
-    animation: spin 0.75s cubic-bezier(0.42, 0, 0.58, 1) infinite;
-    box-shadow: 0 0 7px rgba(16, 185, 129, 0.05);
-    z-index: 40;
+.loading-progress-bar-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    margin-top: var(--space-4);
+    overflow: hidden;
+    position: relative;
 }
 
-.overlay:not(.is-visible) .spinner {
-    display: none;
-    animation: none;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+.loading-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.1s ease-out;
 }
 
 /* ---------------------------------
@@ -1914,7 +1909,7 @@ button.config-card[data-category="base"].is-active {
         content: "";
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.8);
         border-radius: var(--radius-lg) var(--radius-lg) 0 0;
         z-index: 9999;
         pointer-events: none;
@@ -2010,18 +2005,21 @@ button.config-card[data-category="base"].is-active {
         left: 0;
         width: 100%;
         height: 48%;
-        pointer-events: none; /* Let touches fall through to canvas */
+        pointer-events: none;
+        /* Let touches fall through to canvas */
         z-index: 15;
         display: flex;
         justify-content: center;
-        align-items: flex-start; /* Align coaching cards to top edge */
-        padding: 0 16px 16px 16px; /* Align top card border with top edge */
+        align-items: flex-start;
+        /* Align coaching cards to top edge */
+        padding: 0 16px 16px 16px;
+        /* Align top card border with top edge */
         box-sizing: border-box;
     }
 
     .nav-coaching-card {
         width: 100%;
-        background: rgba(10, 16, 26, 0.85);
+        background: rgba(69, 69, 69, 0.85);
         -webkit-backdrop-filter: blur(20px);
         backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2035,7 +2033,8 @@ button.config-card[data-category="base"].is-active {
         flex-direction: column;
         align-items: center;
         gap: 12px;
-        pointer-events: auto; /* Allow clicks on buttons/actions */
+        pointer-events: auto;
+        /* Allow clicks on buttons/actions */
         position: relative;
         overflow: hidden;
         transition: all 0.3s ease;
@@ -2226,66 +2225,185 @@ button.config-card[data-category="base"].is-active {
     }
 
     @keyframes rotateAnim {
-        0% { transform: translate(14px, 22px); opacity: 0; }
-        15% { opacity: 1; }
-        80% { transform: translate(68px, 22px); opacity: 1; }
-        90%, 100% { opacity: 0; }
+        0% {
+            transform: translate(14px, 22px);
+            opacity: 0;
+        }
+
+        15% {
+            opacity: 1;
+        }
+
+        80% {
+            transform: translate(68px, 22px);
+            opacity: 1;
+        }
+
+        90%,
+        100% {
+            opacity: 0;
+        }
     }
 
     @keyframes panAnim {
-        0% { transform: translate(43px, 45px); opacity: 0; }
-        15% { opacity: 1; }
-        80% { transform: translate(43px, 15px); opacity: 1; }
-        90%, 100% { opacity: 0; }
+        0% {
+            transform: translate(43px, 45px);
+            opacity: 0;
+        }
+
+        15% {
+            opacity: 1;
+        }
+
+        80% {
+            transform: translate(43px, 15px);
+            opacity: 1;
+        }
+
+        90%,
+        100% {
+            opacity: 0;
+        }
     }
 
     @keyframes pinchLeftAnim {
-        0% { transform: translate(45px, 45px) rotate(-45deg); opacity: 0; }
-        15% { opacity: 1; }
-        80% { transform: translate(32px, 32px) rotate(-45deg); opacity: 1; }
-        90%, 100% { opacity: 0; }
+        0% {
+            transform: translate(45px, 45px) rotate(-45deg);
+            opacity: 0;
+        }
+
+        15% {
+            opacity: 1;
+        }
+
+        80% {
+            transform: translate(32px, 32px) rotate(-45deg);
+            opacity: 1;
+        }
+
+        90%,
+        100% {
+            opacity: 0;
+        }
     }
 
     @keyframes pinchRightAnim {
-        0% { transform: translate(55px, 55px) rotate(135deg); opacity: 0; }
-        15% { opacity: 1; }
-        80% { transform: translate(68px, 68px) rotate(135deg); opacity: 1; }
-        90%, 100% { opacity: 0; }
+        0% {
+            transform: translate(55px, 55px) rotate(135deg);
+            opacity: 0;
+        }
+
+        15% {
+            opacity: 1;
+        }
+
+        80% {
+            transform: translate(68px, 68px) rotate(135deg);
+            opacity: 1;
+        }
+
+        90%,
+        100% {
+            opacity: 0;
+        }
     }
 
     @keyframes doubleTapAnim {
-        0%, 100% { transform: translate(40px, 30px) scale(1.1); opacity: 0; }
-        10% { opacity: 1; transform: translate(40px, 30px) scale(0.85); }
-        25% { transform: translate(40px, 30px) scale(1.1); }
-        40% { transform: translate(40px, 30px) scale(0.85); }
-        55%, 85% { opacity: 1; transform: translate(40px, 30px) scale(1.1); }
+
+        0%,
+        100% {
+            transform: translate(40px, 30px) scale(1.1);
+            opacity: 0;
+        }
+
+        10% {
+            opacity: 1;
+            transform: translate(40px, 30px) scale(0.85);
+        }
+
+        25% {
+            transform: translate(40px, 30px) scale(1.1);
+        }
+
+        40% {
+            transform: translate(40px, 30px) scale(0.85);
+        }
+
+        55%,
+        85% {
+            opacity: 1;
+            transform: translate(40px, 30px) scale(1.1);
+        }
     }
 
     @keyframes rippleAnim1 {
-        0%, 9.9% { transform: scale(0.2); opacity: 0; }
-        10% { transform: scale(0.2); opacity: 1; }
-        35% { transform: scale(1.6); opacity: 0; }
-        100% { transform: scale(1.6); opacity: 0; }
+
+        0%,
+        9.9% {
+            transform: scale(0.2);
+            opacity: 0;
+        }
+
+        10% {
+            transform: scale(0.2);
+            opacity: 1;
+        }
+
+        35% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
+
+        100% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
     }
 
     @keyframes rippleAnim2 {
-        0%, 39.9% { transform: scale(0.2); opacity: 0; }
-        40% { transform: scale(0.2); opacity: 1; }
-        65% { transform: scale(1.6); opacity: 0; }
-        100% { transform: scale(1.6); opacity: 0; }
+
+        0%,
+        39.9% {
+            transform: scale(0.2);
+            opacity: 0;
+        }
+
+        40% {
+            transform: scale(0.2);
+            opacity: 1;
+        }
+
+        65% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
+
+        100% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
     }
 
     @keyframes trailAnim {
-        0% { stroke-dashoffset: 40; }
-        70% { stroke-dashoffset: 0; }
-        90%, 100% { stroke-dashoffset: -40; }
+        0% {
+            stroke-dashoffset: 40;
+        }
+
+        70% {
+            stroke-dashoffset: 0;
+        }
+
+        90%,
+        100% {
+            stroke-dashoffset: -40;
+        }
     }
 
     /* Success checkmark layout */
     .nav-step-success {
         position: absolute;
         inset: 0;
-        background: rgba(10, 16, 26, 0.92);
+        background: rgba(69, 69, 69, 0.85);
         -webkit-backdrop-filter: blur(8px);
         backdrop-filter: blur(8px);
         display: flex;
@@ -2341,16 +2459,27 @@ button.config-card[data-category="base"].is-active {
     }
 
     @keyframes strokeCheckmark {
-        100% { stroke-dashoffset: 0; }
+        100% {
+            stroke-dashoffset: 0;
+        }
     }
 
     @keyframes fillCheckmark {
-        100% { box-shadow: inset 0px 0px 0px 30px rgba(16, 185, 129, 0.1); }
+        100% {
+            box-shadow: inset 0px 0px 0px 30px rgba(16, 185, 129, 0.1);
+        }
     }
 
     @keyframes scaleCheckmark {
-        0%, 100% { transform: none; }
-        50% { transform: scale3d(1.15, 1.15, 1); }
+
+        0%,
+        100% {
+            transform: none;
+        }
+
+        50% {
+            transform: scale3d(1.15, 1.15, 1);
+        }
     }
 
     .nav-link-btn {
@@ -2365,7 +2494,8 @@ button.config-card[data-category="base"].is-active {
         transition: color 0.2s ease;
     }
 
-    .nav-link-btn:hover, .nav-link-btn:active {
+    .nav-link-btn:hover,
+    .nav-link-btn:active {
         color: rgba(255, 255, 255, 0.88);
     }
 }
