@@ -440,6 +440,12 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     z-index: 10;
 }
 
+#loading-overlay {
+    background: #e3e3e3;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
 .overlay.is-visible {
     opacity: 1;
     visibility: visible;

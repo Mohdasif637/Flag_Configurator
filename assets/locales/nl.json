@@ -73,6 +73,8 @@
   "actions": {
     "save": "Ontwerp Opslaan",
     "saving": "Opslaan...",
+    "share": "Ontwerp Delen",
+    "sharing": "Delen...",
     "add_to_cart": "IN WINKELWAGEN"
   },
   "hud": {
@@ -173,6 +175,12 @@
     "image_error_msg": "Verwerken van de geüploade afbeelding is mislukt.",
     "unsupported_file_title": "Niet-ondersteund bestand",
     "unsupported_file_msg": "Upload een PNG-, JPG-, JPEG-, WEBP- of PDF-bestand.",
+    "share_copied_title": "Link gekopieerd",
+    "share_copied_msg": "De deellink is naar het klembord gekopieerd.",
+    "share_failed_title": "Delen mislukt",
+    "share_failed_msg": "Kan de deellink niet genereren.",
+    "share_loaded_title": "Ontwerp geladen",
+    "share_loaded_msg": "Het gedeelde vlagontwerp is succesvol geladen.",
     "coming_soon": "Binnenkort beschikbaar....."
   },
   "nav_guide": {

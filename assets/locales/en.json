@@ -73,6 +73,8 @@
   "actions": {
     "save": "Save Design",
     "saving": "Saving...",
+    "share": "Share Design",
+    "sharing": "Sharing...",
     "add_to_cart": "ADD TO CART"
   },
   "hud": {
@@ -173,6 +175,12 @@
     "image_error_msg": "Failed to process the uploaded image.",
     "unsupported_file_title": "Unsupported file",
     "unsupported_file_msg": "Please upload a PNG, JPG, JPEG, WEBP, or PDF file.",
+    "share_copied_title": "Link copied",
+    "share_copied_msg": "The sharing link has been copied to your clipboard.",
+    "share_failed_title": "Share failed",
+    "share_failed_msg": "Unable to generate the sharing link.",
+    "share_loaded_title": "Design loaded",
+    "share_loaded_msg": "The shared custom flag design was loaded successfully.",
     "coming_soon": "Coming Soon....."
   },
   "nav_guide": {

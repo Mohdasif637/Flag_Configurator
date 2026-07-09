@@ -32,6 +32,7 @@ const dom = {
     pocketColorSwatch: document.getElementById('pocket-color-swatch'),
     playPause: document.getElementById('play-pause'),
     generatePdf: document.getElementById('generate-pdf'),
+    shareDesign: document.getElementById('share-design'),
     addToCart: document.getElementById('add-to-cart'),
     cameraWrapper: document.getElementById('camera-wrapper'),
     cameraActions: document.getElementById('camera-actions'),
@@ -55,7 +56,7 @@ let sceneDirty = true; // Initial frame needs drawing
 /* ---------------------------------
    Configuration & Options
 --------------------------------- */
-
+const IMGBB_API_KEY = 'be09b3627886c592e8d7c4bf94518b77';
 
 const sideConfigs = {
     graphic: {
@@ -248,6 +249,12 @@ function translateToastText(text) {
         'Your custom flag design has been saved successfully.': 'toasts.design_saved_msg',
         'Save failed': 'toasts.save_failed_title',
         'Unable to save your design. Please try again.': 'toasts.save_failed_msg',
+        'Link copied': 'toasts.share_copied_title',
+        'The sharing link has been copied to your clipboard.': 'toasts.share_copied_msg',
+        'Share failed': 'toasts.share_failed_title',
+        'Unable to generate the sharing link.': 'toasts.share_failed_msg',
+        'Shared design loaded': 'toasts.share_loaded_title',
+        'The shared custom flag design was loaded successfully.': 'toasts.share_loaded_msg',
         'AR placement unavailable': 'toasts.ar_placement_unavailable_title',
         'Hit testing could not be started for this session.': 'toasts.ar_placement_unavailable_msg',
         'PDF error': 'toasts.pdf_error_title',
@@ -1327,6 +1334,10 @@ export async function applyConfigurationToScene(animateTransition = false, trans
     if (!(animateTransition && !state.isInAR)) {
         syncFlagMeasurement();
     }
+
+    if (!state.ready && modelRoot) {
+        modelRoot.scale.set(0.01, 0.01, 0.01);
+    }
 }
 
 function updateTemplateDownloadLink() {
@@ -1719,10 +1730,102 @@ function initConfiguratorUI() {
     applyConfigurationToScene(false);
 }
 
+async function checkAndLoadSharedDesign() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#share=')) return;
+
+    try {
+        const base64Data = hash.substring(7);
+        const sharedConfig = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
+
+        if (sharedConfig && typeof sharedConfig === 'object') {
+            // Apply configState properties
+            if (sharedConfig.size) configState.size = sharedConfig.size;
+            if (sharedConfig.printing) configState.printing = sharedConfig.printing;
+            if (sharedConfig.direction) configState.direction = sharedConfig.direction;
+            if (sharedConfig.poleCoverColor) configState.poleCoverColor = sharedConfig.poleCoverColor;
+            if (sharedConfig.pole) configState.pole = sharedConfig.pole;
+            if (sharedConfig.base) configState.base = sharedConfig.base;
+
+            // Set pocket color input value if the element exists
+            if (dom.pocketColor) {
+                dom.pocketColor.value = configState.poleCoverColor;
+            }
+
+            // Load custom graphic if present
+            if (sharedConfig.graphic && (sharedConfig.graphic.imageUrl || sharedConfig.graphic.imgData)) {
+                sharedDesignPromise = (async () => {
+                    try {
+                        const targetUrl = sharedConfig.graphic.imageUrl || sharedConfig.graphic.imgData;
+                        const res = await fetch(targetUrl);
+                        const blob = await res.blob();
+                        const previewUrl = URL.createObjectURL(blob);
+
+                        return new Promise((resolve) => {
+                            textureLoader.load(previewUrl, (texture) => {
+                                texture.flipY = false;
+                                texture.colorSpace = THREE.SRGBColorSpace;
+                                texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                                texture.minFilter = THREE.LinearMipmapLinearFilter;
+                                texture.generateMipmaps = true;
+                                texture.wrapS = THREE.RepeatWrapping;
+                                texture.wrapT = THREE.RepeatWrapping;
+                                texture.center.set(0.5, 0.5);
+
+                                const sizeCode = configState.size.split(' ').pop().toLowerCase();
+                                let printing = configState.printing;
+                                if (printing === 'Air Textile') printing = 'Single Sided';
+                                const key = `${sizeCode}_${printing.toLowerCase()}_${configState.direction.toLowerCase()}`;
+
+                                uploadedGraphicsCache[key] = {
+                                    uploadedTexture: texture,
+                                    uploadedFrontTex: texture.clone(),
+                                    uploadedBackTex: texture.clone(),
+                                    previewUrl: previewUrl,
+                                    fileName: sharedConfig.graphic.fileName,
+                                    scale: sharedConfig.graphic.scale,
+                                    panX: sharedConfig.graphic.panX,
+                                    panY: sharedConfig.graphic.panY
+                                };
+
+                                if (state.ready) {
+                                    applyConfigurationToScene(false);
+                                }
+                                resolve(true);
+                            }, undefined, (err) => {
+                                console.error("Three.js TextureLoader failed to load shared design graphic:", err);
+                                resolve(false);
+                            });
+                        });
+                    } catch (err) {
+                        console.error("Failed to load shared design graphic:", err);
+                        return false;
+                    }
+                })();
+            } else {
+                sharedDesignPromise = Promise.resolve(true);
+            }
+
+            loadedSharedDesign = true;
+
+            // Clean the URL hash using history.replaceState to keep URL clean and uncluttered
+            try {
+                history.replaceState("", document.title, window.location.pathname + window.location.search);
+            } catch (err) {
+                console.warn("Could not clean URL hash:", err);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to parse shared design configuration from URL hash:", e);
+    }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
     await fetchPricingData();
     await initI18n();
+    await checkAndLoadSharedDesign();
     initConfiguratorUI();
+    bootstrap();
     handleResize();
 });
 
@@ -2170,6 +2273,9 @@ let envPanelShouldBeOpen = false;
 let postArRestoreTimer = null;
 let previewStateBeforeAR = null;
 
+let loadedSharedDesign = false;
+let sharedDesignPromise = null;
+
 const activeToasts = [];
 
 const state = {
@@ -2266,21 +2372,23 @@ let arDisabledFallback = null;
 /* ---------------------------------
    Bootstrapping
 --------------------------------- */
-bindUploadInputs();
-bindTransformInputs();
-bindUIEvents();
-initializePocketColorPicker();
-syncControlAvailability();
-setLoadingState(true, 'toasts.loading_3d');
-setActiveCameraView('home');
-syncPlayPauseButton();
+function bootstrap() {
+    bindUploadInputs();
+    bindTransformInputs();
+    bindUIEvents();
+    initializePocketColorPicker();
+    syncControlAvailability();
+    setLoadingState(true, 'toasts.loading_3d');
+    setActiveCameraView('home');
+    syncPlayPauseButton();
 
-initializeARSupport();
-loadEnvironment();
-loadModel();
-renderer.xr.addEventListener('sessionstart', onARSessionStart);
-renderer.xr.addEventListener('sessionend', onARSessionEnd);
-renderer.setAnimationLoop(renderFrame);
+    initializeARSupport();
+    loadEnvironment();
+    loadModel();
+    renderer.xr.addEventListener('sessionstart', onARSessionStart);
+    renderer.xr.addEventListener('sessionend', onARSessionEnd);
+    renderer.setAnimationLoop(renderFrame);
+}
 
 /* ---------------------------------
    Utility Functions
@@ -2527,8 +2635,25 @@ async function silentWarmupAllSizes() {
         });
     }
 
-    // Re-apply the active configuration to restore correct visibility/materials
-    if (typeof applyConfigurationToScene === 'function') {
+    // Invalidate configuration cache to force the click macro to trigger a complete layout swap
+    if (modelRoot) {
+        modelRoot.userData.lastConfigStr = null;
+    }
+
+    // Re-apply the active configuration by programmatically clicking the active cards
+    // to force VAT textures, visibility, and layout updates to align cleanly.
+    const activeSizeCard = document.querySelector('.config-card[data-category="size"].is-active');
+    const activePrintingCard = document.querySelector('.config-card[data-category="printing"].is-active');
+    const activeDirectionCard = document.querySelector('.config-card[data-category="direction"].is-active');
+    const activeBaseCard = document.querySelector('.config-card[data-category="base"].is-active');
+
+    let triggered = false;
+    if (activeSizeCard) { activeSizeCard.click(); triggered = true; }
+    if (activePrintingCard) { activePrintingCard.click(); triggered = true; }
+    if (activeDirectionCard) { activeDirectionCard.click(); triggered = true; }
+    if (activeBaseCard) { activeBaseCard.click(); triggered = true; }
+
+    if (!triggered && typeof applyConfigurationToScene === 'function') {
         applyConfigurationToScene(false);
     }
 }
@@ -2828,9 +2953,31 @@ async function syncReadyState() {
         return;
     }
 
+    // Await graphic downloads for shared designs before hiding the loading screen
+    let sharedDesignLoadedToastPromise = null;
+    if (loadedSharedDesign && sharedDesignPromise) {
+        const success = await sharedDesignPromise;
+        if (success) {
+            if (modelRoot) {
+                modelRoot.userData.lastConfigStr = null;
+            }
+            applyConfigurationToScene(false);
+            sharedDesignLoadedToastPromise = () => showToast('Shared design loaded', 'The shared custom flag design was loaded successfully.', 'success');
+        }
+    }
+
     state.ready = true;
     setLoadingState(false, '');
     syncControlAvailability();
+
+    // Smoothly scale up the model from 0.01 to 1.0 with a physical pop-in animation
+    if (modelRoot) {
+        modelRoot.scale.set(0.01, 0.01, 0.01);
+        new TWEEN.Tween(modelRoot.scale)
+            .to({ x: 1, y: 1, z: 1 }, 850)
+            .easing(TWEEN.Easing.Back.Out)
+            .start();
+    }
     
     // Initialize mobile 3D navigation coaching guide
     initNavCoachingGuide();
@@ -2840,6 +2987,11 @@ async function syncReadyState() {
         await showToast('Preview ready', 'Graphic tools are ready, but design saving is currently unavailable.', 'info', 4000);
     } else {
         await showToast('Preview ready', 'Pick a size and layout, upload your design, tweak the preview, and save.', 'success');
+    }
+
+    // Show the shared design loaded toast after the startup toast finishes
+    if (sharedDesignLoadedToastPromise) {
+        await sharedDesignLoadedToastPromise();
     }
 
     const guideOverlay = document.getElementById('nav-coaching-overlay');
@@ -2859,6 +3011,7 @@ function syncControlAvailability() {
     const hasAnimation = Boolean(action || vatMaterials.length > 0);
     dom.playPause.disabled = !baseEnabled || !hasAnimation;
     dom.generatePdf.disabled = !baseEnabled || !pdfLibraryAvailable;
+    if (dom.shareDesign) dom.shareDesign.disabled = !baseEnabled;
 
     dom.cameraButtons.forEach((button) => {
         button.disabled = !baseEnabled;
@@ -3456,6 +3609,7 @@ function loadModel() {
             '3d/convex.glb',
             (gltf) => {
                 modelRoot = gltf.scene;
+                modelRoot.scale.set(0.01, 0.01, 0.01);
                 sceneRoot.add(modelRoot);
                 sceneRoot.visible = !state.isInAR;
 
@@ -3833,6 +3987,9 @@ function bindTransformInputs() {
 function bindUIEvents() {
     dom.playPause.addEventListener('click', toggleAnimation);
     dom.generatePdf.addEventListener('click', generatePdfProof);
+    if (dom.shareDesign) {
+        dom.shareDesign.addEventListener('click', shareCurrentDesign);
+    }
     if (dom.addToCart) {
         dom.addToCart.addEventListener('click', () => {
             showToast('Coming Soon.....', '', 'info', 2500);
@@ -4382,6 +4539,217 @@ function syncPlayPauseButton() {
     dom.playPause.classList.toggle('is-active', isPlaying);
     dom.playPause.title = isPlaying ? 'Pause Animation' : 'Play Animation';
     dom.playPause.setAttribute('aria-label', isPlaying ? 'Pause Animation' : 'Play Animation');
+}
+
+function compressActiveGraphic(callback) {
+    const config = sideConfigs.graphic;
+    if (!config.previewUrl) {
+        callback(null);
+        return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Target max dimension of 256px to keep URL small
+        const maxDim = 256;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+            if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+            } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+            }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Compress as JPEG at 0.6 quality
+        try {
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+            callback(compressedBase64);
+        } catch (e) {
+            console.error("Canvas serialization failed:", e);
+            callback(null);
+        }
+    };
+    img.onerror = () => {
+        console.error("Failed to load graphic for compression");
+        callback(null);
+    };
+    img.src = config.previewUrl;
+}
+
+async function shareCurrentDesign() {
+    if (!state.ready) return;
+
+    if (dom.shareDesign) {
+        dom.shareDesign.disabled = true;
+        const origText = dom.shareDesign.innerHTML;
+        const shareLabel = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('actions.sharing') : 'Sharing...';
+        
+        // Temporarily change label
+        const labelSpan = dom.shareDesign.querySelector('span');
+        if (labelSpan) labelSpan.textContent = shareLabel;
+        
+        const restoreButton = () => {
+            dom.shareDesign.disabled = false;
+            dom.shareDesign.innerHTML = origText;
+        };
+
+        const config = sideConfigs.graphic;
+
+        // Function to create the sharing payload and finalize the share action
+        const finalizeShare = async (graphicData) => {
+            try {
+                const payload = {
+                    size: configState.size,
+                    printing: configState.printing,
+                    direction: configState.direction,
+                    poleCoverColor: configState.poleCoverColor,
+                    pole: configState.pole,
+                    base: configState.base
+                };
+
+                if (graphicData) {
+                    payload.graphic = {
+                        fileName: config.fileName || 'graphic.jpg',
+                        scale: config.scaleInput.value,
+                        panX: config.xInput.value,
+                        panY: config.yInput.value,
+                        ...graphicData // contains either imageUrl or imgData
+                    };
+                }
+
+                const base64Str = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+                const shareUrl = window.location.origin + window.location.pathname + '#share=' + base64Str;
+
+                let finalUrl = shareUrl;
+                try {
+                    const shortUrl = await shortenUrl(shareUrl);
+                    if (shortUrl) {
+                        finalUrl = shortUrl;
+                    }
+                } catch (err) {
+                    console.warn("URL shortening failed:", err);
+                }
+
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: (window.i18next && window.i18next.isInitialized) ? window.i18next.t('title') : '3D Flag Configurator',
+                            text: 'Check out my custom 3D flag design!',
+                            url: finalUrl
+                        });
+                        restoreButton();
+                        return;
+                    } catch (e) {
+                        if (e.name === 'AbortError') {
+                            restoreButton();
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback to Clipboard
+                await navigator.clipboard.writeText(finalUrl);
+                showToast('Link copied', 'The sharing link has been copied to your clipboard.', 'success');
+            } catch (err) {
+                console.error("Sharing failed:", err);
+                showToast('Share failed', 'Unable to generate the sharing link.', 'error');
+            } finally {
+                restoreButton();
+            }
+        };
+
+        // If there's an uploaded graphic, attempt to upload it to ImgBB
+        if (config.previewUrl) {
+            try {
+                if (!IMGBB_API_KEY || IMGBB_API_KEY.includes('YOUR_IMGBB_API_KEY')) {
+                    throw new Error("ImgBB API key is not configured.");
+                }
+
+                const res = await fetch(config.previewUrl);
+                const blob = await res.blob();
+
+                const formData = new FormData();
+                formData.append('image', blob, config.fileName || 'graphic.webp');
+
+                const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data && data.success && data.data && data.data.url) {
+                    // Upload succeeded! Finalize with the CDN image url
+                    await finalizeShare({ imageUrl: data.data.url });
+                } else {
+                    throw new Error(data.error ? data.error.message : 'ImgBB API returned success=false');
+                }
+            } catch (error) {
+                console.warn("High-quality upload failed, falling back to compressed local encoding:", error);
+                
+                // Fallback: compress and encode base64 locally
+                compressActiveGraphic((imgData) => {
+                    if (imgData) {
+                        finalizeShare({ imgData });
+                    } else {
+                        // Graphic exists but compression failed, finalize without graphic
+                        finalizeShare(null);
+                    }
+                });
+            }
+        } else {
+            // No graphic uploaded, finalize design share immediately
+            await finalizeShare(null);
+        }
+    }
+}
+
+function shortenUrl(longUrl) {
+    return new Promise((resolve) => {
+        const callbackName = 'isgd_callback_' + Math.random().toString(36).substring(2, 9);
+        
+        const timeoutId = setTimeout(() => {
+            delete window[callbackName];
+            try { document.head.removeChild(script); } catch (e) {}
+            resolve(null);
+        }, 1500);
+
+        window[callbackName] = (data) => {
+            clearTimeout(timeoutId);
+            delete window[callbackName];
+            try { document.head.removeChild(script); } catch (e) {}
+            
+            if (data && data.shorturl) {
+                resolve(data.shorturl);
+            } else {
+                resolve(null);
+            }
+        };
+        
+        const script = document.createElement('script');
+        script.src = `https://is.gd/create.php?format=json&callback=${callbackName}&url=${encodeURIComponent(longUrl)}`;
+        script.onerror = () => {
+            clearTimeout(timeoutId);
+            delete window[callbackName];
+            try { document.head.removeChild(script); } catch (e) {}
+            resolve(null);
+        };
+        
+        document.head.appendChild(script);
+    });
 }
 
 async function generatePdfProof() {
