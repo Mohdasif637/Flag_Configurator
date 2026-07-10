@@ -4188,30 +4188,46 @@ async function handleGraphicFile(side, file) {
         return false;
     };
 
-    // Helper to crop and convert a scaled canvas to high-fidelity WebP (maximum quality 1.0)
+    // Helper to crop and convert a scaled canvas to high-fidelity WebP
     const cropAndConvertCanvasToWebP = async (renderCanvas, isCroppedCentered, fileName) => {
         const cropCanvas = document.createElement('canvas');
         const cropContext = cropCanvas.getContext('2d');
-        cropCanvas.width = 2048;
-        cropCanvas.height = 2048;
+        
+        let targetSize;
+        if (isCroppedCentered) {
+            targetSize = Math.min(renderCanvas.width, renderCanvas.height);
+        } else {
+            targetSize = Math.max(renderCanvas.width, renderCanvas.height);
+        }
+        targetSize = Math.min(targetSize, 2048);
+
+        cropCanvas.width = targetSize;
+        cropCanvas.height = targetSize;
 
         if (isCroppedCentered) {
-            // Shorter side was scaled to 2048. Extract 2048x2048 center square
-            const sourceX = Math.round((renderCanvas.width - 2048) / 2);
-            const sourceY = Math.round((renderCanvas.height - 2048) / 2);
-            cropContext.drawImage(renderCanvas, sourceX, sourceY, 2048, 2048, 0, 0, 2048, 2048);
+            // Extract center square
+            const sourceX = Math.round((renderCanvas.width - targetSize) / 2);
+            const sourceY = Math.round((renderCanvas.height - targetSize) / 2);
+            cropContext.drawImage(renderCanvas, sourceX, sourceY, targetSize, targetSize, 0, 0, targetSize, targetSize);
         } else {
-            // Larger side was scaled to 2048. Draw centered with white padding on shorter side
+            // Draw centered with white padding on shorter side
             cropContext.fillStyle = '#ffffff';
-            cropContext.fillRect(0, 0, 2048, 2048);
+            cropContext.fillRect(0, 0, targetSize, targetSize);
 
-            const destX = Math.round((2048 - renderCanvas.width) / 2);
-            const destY = Math.round((2048 - renderCanvas.height) / 2);
-            cropContext.drawImage(renderCanvas, destX, destY);
+            let destWidth = renderCanvas.width;
+            let destHeight = renderCanvas.height;
+            if (destWidth > targetSize || destHeight > targetSize) {
+                const scale = targetSize / Math.max(destWidth, destHeight);
+                destWidth *= scale;
+                destHeight *= scale;
+            }
+            const destX = Math.round((targetSize - destWidth) / 2);
+            const destY = Math.round((targetSize - destHeight) / 2);
+            cropContext.drawImage(renderCanvas, 0, 0, renderCanvas.width, renderCanvas.height, destX, destY, destWidth, destHeight);
         }
 
-        // Convert to WebP at a visually lossless quality factor (0.90) to ensure compact file size and perfect details
-        const blob = await new Promise((resolve) => cropCanvas.toBlob(resolve, 'image/webp', 0.90));
+        // Convert to WebP at a visually lossless quality factor (0.70)
+        const blob = await new Promise((resolve) => cropCanvas.toBlob(resolve, 'image/webp', 0.70));
         return new File([blob], fileName.replace(/\.[^/.]+$/, '') + '.webp', { type: 'image/webp' });
     };
 
@@ -4325,8 +4341,11 @@ async function handleGraphicFile(side, file) {
             const img = await loadImageElement(imgUrl);
             URL.revokeObjectURL(imgUrl);
 
-            // 1. Try scaling shorter side to 2048 first
+            // 1. Try scaling shorter side to 2048 first, but do not scale up
             let scale = 2048 / Math.min(img.naturalWidth, img.naturalHeight);
+            if (scale > 1.0) {
+                scale = 1.0;
+            }
             let scaledWidth = img.naturalWidth * scale;
             let scaledHeight = img.naturalHeight * scale;
 
@@ -4343,6 +4362,9 @@ async function handleGraphicFile(side, file) {
                 // Graphic detected in crop area! Fallback to scaling the larger side to prevent graphic cutting
                 isCroppedCentered = false;
                 scale = 2048 / Math.max(img.naturalWidth, img.naturalHeight);
+                if (scale > 1.0) {
+                    scale = 1.0;
+                }
                 scaledWidth = img.naturalWidth * scale;
                 scaledHeight = img.naturalHeight * scale;
 
@@ -4634,22 +4656,12 @@ async function shareCurrentDesign() {
                 const base64Str = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
                 const shareUrl = window.location.origin + window.location.pathname + '#share=' + base64Str;
 
-                let finalUrl = shareUrl;
-                try {
-                    const shortUrl = await shortenUrl(shareUrl);
-                    if (shortUrl) {
-                        finalUrl = shortUrl;
-                    }
-                } catch (err) {
-                    console.warn("URL shortening failed:", err);
-                }
-
                 if (navigator.share) {
                     try {
                         await navigator.share({
                             title: (window.i18next && window.i18next.isInitialized) ? window.i18next.t('title') : '3D Flag Configurator',
                             text: 'Check out my custom 3D flag design!',
-                            url: finalUrl
+                            url: shareUrl
                         });
                         restoreButton();
                         return;
@@ -4662,7 +4674,7 @@ async function shareCurrentDesign() {
                 }
 
                 // Fallback to Clipboard
-                await navigator.clipboard.writeText(finalUrl);
+                await navigator.clipboard.writeText(shareUrl);
                 showToast('Link copied', 'The sharing link has been copied to your clipboard.', 'success');
             } catch (err) {
                 console.error("Sharing failed:", err);
@@ -4698,58 +4710,15 @@ async function shareCurrentDesign() {
                     throw new Error(data.error ? data.error.message : 'ImgBB API returned success=false');
                 }
             } catch (error) {
-                console.warn("High-quality upload failed, falling back to compressed local encoding:", error);
-                
-                // Fallback: compress and encode base64 locally
-                compressActiveGraphic((imgData) => {
-                    if (imgData) {
-                        finalizeShare({ imgData });
-                    } else {
-                        // Graphic exists but compression failed, finalize without graphic
-                        finalizeShare(null);
-                    }
-                });
+                console.warn("Graphic upload failed, sharing layout configurations without custom graphic:", error);
+                showToast('Upload failed', 'Sharing design without custom graphic.', 'warning', 3000);
+                await finalizeShare(null);
             }
         } else {
             // No graphic uploaded, finalize design share immediately
             await finalizeShare(null);
         }
     }
-}
-
-function shortenUrl(longUrl) {
-    return new Promise((resolve) => {
-        const callbackName = 'isgd_callback_' + Math.random().toString(36).substring(2, 9);
-        
-        const timeoutId = setTimeout(() => {
-            delete window[callbackName];
-            try { document.head.removeChild(script); } catch (e) {}
-            resolve(null);
-        }, 1500);
-
-        window[callbackName] = (data) => {
-            clearTimeout(timeoutId);
-            delete window[callbackName];
-            try { document.head.removeChild(script); } catch (e) {}
-            
-            if (data && data.shorturl) {
-                resolve(data.shorturl);
-            } else {
-                resolve(null);
-            }
-        };
-        
-        const script = document.createElement('script');
-        script.src = `https://is.gd/create.php?format=json&callback=${callbackName}&url=${encodeURIComponent(longUrl)}`;
-        script.onerror = () => {
-            clearTimeout(timeoutId);
-            delete window[callbackName];
-            try { document.head.removeChild(script); } catch (e) {}
-            resolve(null);
-        };
-        
-        document.head.appendChild(script);
-    });
 }
 
 async function generatePdfProof() {
