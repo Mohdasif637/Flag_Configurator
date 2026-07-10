@@ -2640,20 +2640,9 @@ async function silentWarmupAllSizes() {
         modelRoot.userData.lastConfigStr = null;
     }
 
-    // Re-apply the active configuration by programmatically clicking the active cards
-    // to force VAT textures, visibility, and layout updates to align cleanly.
-    const activeSizeCard = document.querySelector('.config-card[data-category="size"].is-active');
-    const activePrintingCard = document.querySelector('.config-card[data-category="printing"].is-active');
-    const activeDirectionCard = document.querySelector('.config-card[data-category="direction"].is-active');
-    const activeBaseCard = document.querySelector('.config-card[data-category="base"].is-active');
-
-    let triggered = false;
-    if (activeSizeCard) { activeSizeCard.click(); triggered = true; }
-    if (activePrintingCard) { activePrintingCard.click(); triggered = true; }
-    if (activeDirectionCard) { activeDirectionCard.click(); triggered = true; }
-    if (activeBaseCard) { activeBaseCard.click(); triggered = true; }
-
-    if (!triggered && typeof applyConfigurationToScene === 'function') {
+    // Re-apply the active configuration programmatically to restore correct visibility/materials
+    // without triggering manual-click side effects (such as stopping the turntable or moving camera views).
+    if (typeof applyConfigurationToScene === 'function') {
         applyConfigurationToScene(false);
     }
 }
