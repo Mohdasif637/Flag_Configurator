@@ -70,6 +70,21 @@
     "no": "Nee",
     "none": "Geen"
   },
+  "printing_cards": {
+    "single_sided": "Enkelzijdig",
+    "double_sided": "Dubbelzijdig",
+    "air_textile": "Air-Textile"
+  },
+  "tooltips": {
+    "printing_info_btn": "Materiaalinformatie",
+    "printing_title": "Materiaalvergelijking",
+    "ss_name": "Enkelzijdig",
+    "ss_desc": "Standaard 110g polyester vlaggendoek. Bedrukt aan de voorzijde met 90–95% spiegelbeeld doordruk aan de achterzijde.",
+    "ds_name": "Dubbelzijdig",
+    "ds_desc": "Duurzaam 290g 3-laags blockout-doek met ondoorzichtige kern. Aan beide zijden correct leesbaar zonder doorschijnen.",
+    "air_name": "Air-Textile",
+    "air_desc": "110g geperforeerd mesh-doek voor winderige locaties. De gaatjesstructuur vermindert windbelasting en verlengt de levensduur."
+  },
   "actions": {
     "save": "Ontwerp Opslaan",
     "saving": "Opslaan...",

@@ -15,27 +15,30 @@
 </head>
 
 <body>
-    <!-- Floating Preferences Menu -->
-    <div id="preferences-container" class="preferences-container">
-        <button type="button" id="pref-btn" class="pref-btn" aria-haspopup="true" aria-expanded="false">
-            <span id="pref-btn-text">EN | $</span>
-            <svg class="pref-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-        <div id="pref-dropdown" class="pref-dropdown">
-            <div class="pref-menu-column">
-                <h4 class="pref-menu-title" data-i18n="preferences.language">Language</h4>
-                <ul class="pref-menu-list" id="pref-lang-list">
-                    <li data-value="en" class="pref-menu-item">English</li>
-                    <li data-value="nl" class="pref-menu-item">Nederlands</li>
-                </ul>
-            </div>
-            <div class="pref-menu-divider"></div>
-            <div class="pref-menu-column">
-                <h4 class="pref-menu-title" data-i18n="preferences.currency">Currency</h4>
-                <ul class="pref-menu-list" id="pref-currency-list">
-                    <li data-value="USD" class="pref-menu-item">$ USD</li>
-                    <li data-value="EUR" class="pref-menu-item">€ EUR</li>
-                </ul>
+    <!-- Floating Top-Right Controls (AR Badge & Preferences) -->
+    <div id="top-right-bar" class="top-right-bar">
+        <div id="ar-container" class="ar-badge-container" hidden></div>
+        <div id="preferences-container" class="preferences-container">
+            <button type="button" id="pref-btn" class="pref-btn" aria-haspopup="true" aria-expanded="false">
+                <span id="pref-btn-text">EN | $</span>
+                <svg class="pref-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div id="pref-dropdown" class="pref-dropdown">
+                <div class="pref-menu-column">
+                    <h4 class="pref-menu-title" data-i18n="preferences.language">Language</h4>
+                    <ul class="pref-menu-list" id="pref-lang-list">
+                        <li data-value="en" class="pref-menu-item">English</li>
+                        <li data-value="nl" class="pref-menu-item">Nederlands</li>
+                    </ul>
+                </div>
+                <div class="pref-menu-divider"></div>
+                <div class="pref-menu-column">
+                    <h4 class="pref-menu-title" data-i18n="preferences.currency">Currency</h4>
+                    <ul class="pref-menu-list" id="pref-currency-list">
+                        <li data-value="USD" class="pref-menu-item">$ USD</li>
+                        <li data-value="EUR" class="pref-menu-item">€ EUR</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -112,20 +115,48 @@
                 </div>
 
                 <div class="config-section" id="section-printing">
-                    <h3 class="section-title" data-i18n="sections.printing">Printing</h3>
+                    <div class="section-title-row">
+                        <h3 class="section-title" data-i18n="sections.printing">Printing</h3>
+                        <div class="tooltip-container">
+                            <button type="button" id="printing-info-btn" class="info-tooltip-btn" aria-label="Material information" data-i18n="[aria-label]tooltips.printing_info_btn;[title]tooltips.printing_info_btn" title="Material information" aria-expanded="false" aria-controls="printing-info-popover">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </button>
+                            <div id="printing-info-popover" class="info-tooltip-popover" role="tooltip" hidden>
+                                <div class="tooltip-header" data-i18n="tooltips.printing_title">Material Comparison</div>
+                                <div class="tooltip-content">
+                                    <div class="tooltip-item">
+                                        <div class="tooltip-item-title" data-i18n="tooltips.ss_name">Single-Sided</div>
+                                        <div class="tooltip-item-desc" data-i18n="tooltips.ss_desc">Standard 110g polyester flag fabric. Printed on the front with 90–95% mirror show-through on the back.</div>
+                                    </div>
+                                    <div class="tooltip-item">
+                                        <div class="tooltip-item-title" data-i18n="tooltips.ds_name">Double-Sided</div>
+                                        <div class="tooltip-item-desc" data-i18n="tooltips.ds_desc">Heavy-duty 290g 3-layer blockout fabric with an opaque inner layer. Shows sharp artwork correctly on both sides without transparency.</div>
+                                    </div>
+                                    <div class="tooltip-item">
+                                        <div class="tooltip-item-title" data-i18n="tooltips.air_name">Air-Textile</div>
+                                        <div class="tooltip-item-desc" data-i18n="tooltips.air_desc">110g perforated mesh fabric designed for high wind. Perforations reduce wind resistance and extend flag durability.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="selection-info">
                         <span class="selection-name">Single Sided</span>
                         <span class="selection-price"></span>
                     </div>
-                    <div class="carousel-track wrap-track">
+                    <div class="carousel-track wrap-track printing-track">
                         <button class="config-card is-active" data-category="printing" data-value="Single Sided">
-                            <div class="card-icon is-small">SS</div>
+                            <span class="card-icon is-small card-text-wrap" data-i18n="printing_cards.single_sided">Single-Sided</span>
                         </button>
                         <button class="config-card" data-category="printing" data-value="Double Sided">
-                            <div class="card-icon is-small">DS</div>
+                            <span class="card-icon is-small card-text-wrap" data-i18n="printing_cards.double_sided">Double-Sided</span>
                         </button>
                         <button class="config-card" data-category="printing" data-value="Air Textile">
-                            <div class="card-icon is-small">Air</div>
+                            <span class="card-icon is-small card-text-wrap" data-i18n="printing_cards.air_textile">Air-Textile</span>
                         </button>
                     </div>
                 </div>
@@ -357,8 +388,6 @@
                     </svg>
                 </span>
             </button>
- 
-            <div id="ar-container" hidden></div>
  
             <button type="button" id="env-toggle" title="Environment Settings" aria-label="Environment Settings" aria-expanded="false" aria-controls="env-panel" data-i18n="[title]hud.tooltip_env;[aria-label]hud.tooltip_env">
                 <img class="control-icon" src="icons/env.svg" alt="" aria-hidden="true" draggable="false">

@@ -70,6 +70,21 @@
     "no": "No",
     "none": "None"
   },
+  "printing_cards": {
+    "single_sided": "Single-Sided",
+    "double_sided": "Double-Sided",
+    "air_textile": "Air-Textile"
+  },
+  "tooltips": {
+    "printing_info_btn": "Material information",
+    "printing_title": "Material Comparison",
+    "ss_name": "Single-Sided",
+    "ss_desc": "Standard 110g polyester flag fabric. Printed on the front with 90–95% mirror show-through on the back.",
+    "ds_name": "Double-Sided",
+    "ds_desc": "Heavy-duty 290g 3-layer blockout fabric with an opaque inner layer. Shows sharp artwork correctly on both sides without transparency.",
+    "air_name": "Air-Textile",
+    "air_desc": "110g perforated mesh fabric designed for high wind. Perforations reduce wind resistance and extend flag durability."
+  },
   "actions": {
     "save": "Save Design",
     "saving": "Saving...",

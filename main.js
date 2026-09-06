@@ -47,6 +47,8 @@ const dom = {
     toastRegion: document.getElementById('toast-region'),
     arOverlay: document.getElementById('ar-overlay'),
     stopArBtn: document.getElementById('stop-ar-btn'),
+    printingInfoBtn: document.getElementById('printing-info-btn'),
+    printingInfoPopover: document.getElementById('printing-info-popover'),
     cameraButtons: Array.from(document.querySelectorAll('#camera-controls button'))
 };
 
@@ -2343,7 +2345,8 @@ function loadScript(src) {
 
 const pocketColorPickrLayoutState = { restoreStyleText: null };
 const arButtonIconMarkup = `
-    <img src="icons/ar.svg" alt="" aria-hidden="true" data-ar-icon="true" class="control-icon">
+    <img src="icons/ar.svg" alt="" aria-hidden="true" data-ar-icon="true" class="control-icon ar-icon">
+    <span class="ar-badge-label">AR</span>
 `;
 
 /* ---------------------------------
@@ -3985,6 +3988,64 @@ function bindUIEvents() {
         });
     }
     dom.turntableToggle.addEventListener('click', toggleTurntable);
+ 
+    // Toggle printing info tooltip
+    if (dom.printingInfoBtn && dom.printingInfoPopover) {
+        const togglePrintingTooltip = (forceOpen) => {
+            const shouldOpen = (typeof forceOpen === 'boolean') ? forceOpen : dom.printingInfoPopover.hidden;
+            dom.printingInfoPopover.hidden = !shouldOpen;
+            dom.printingInfoBtn.setAttribute('aria-expanded', String(shouldOpen));
+        };
+ 
+        dom.printingInfoBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            togglePrintingTooltip();
+        });
+ 
+        let tooltipHoverTimer = null;
+        const cancelTooltipTimer = () => {
+            if (tooltipHoverTimer) {
+                clearTimeout(tooltipHoverTimer);
+                tooltipHoverTimer = null;
+            }
+        };
+ 
+        dom.printingInfoBtn.addEventListener('mouseenter', () => {
+            cancelTooltipTimer();
+            togglePrintingTooltip(true);
+        });
+ 
+        dom.printingInfoBtn.addEventListener('mouseleave', () => {
+            cancelTooltipTimer();
+            tooltipHoverTimer = setTimeout(() => {
+                togglePrintingTooltip(false);
+            }, 300);
+        });
+ 
+        dom.printingInfoPopover.addEventListener('mouseenter', () => {
+            cancelTooltipTimer();
+        });
+ 
+        dom.printingInfoPopover.addEventListener('mouseleave', () => {
+            cancelTooltipTimer();
+            tooltipHoverTimer = setTimeout(() => {
+                togglePrintingTooltip(false);
+            }, 300);
+        });
+ 
+        document.addEventListener('click', (event) => {
+            if (!dom.printingInfoPopover.hidden && !dom.printingInfoPopover.contains(event.target) && !dom.printingInfoBtn.contains(event.target)) {
+                togglePrintingTooltip(false);
+            }
+        });
+ 
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !dom.printingInfoPopover.hidden) {
+                togglePrintingTooltip(false);
+                dom.printingInfoBtn.focus();
+            }
+        });
+    }
 
     // Toggle preferences dropdown menu
     if (dom.prefBtn) {
