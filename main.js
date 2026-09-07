@@ -49,6 +49,8 @@ const dom = {
     stopArBtn: document.getElementById('stop-ar-btn'),
     printingInfoBtn: document.getElementById('printing-info-btn'),
     printingInfoPopover: document.getElementById('printing-info-popover'),
+    templateDownloadBtn: document.getElementById('template-download-btn'),
+    templateFilename: document.getElementById('template-filename'),
     cameraButtons: Array.from(document.querySelectorAll('#camera-controls button'))
 };
 
@@ -158,7 +160,7 @@ function loadGraphicFromCache() {
    Configurator State & UI Logic
 --------------------------------- */
 export const configState = {
-    size: 'Beach flag Convex L',
+    size: 'Feather Flag Convex L',
     printing: 'Double Sided',
     direction: 'Right',
     poleCoverColor: '#000000',
@@ -384,11 +386,11 @@ function updateDynamicPrices() {
     if (!pricingData) return;
 
     const sizeMapping = {
-        'Beach flag Convex XS': 'xs',
-        'Beach flag Convex S': 'S',
-        'Beach flag Convex M': 'M',
-        'Beach flag Convex M-Extra Wide': 'M-Wide',
-        'Beach flag Convex L': 'l'
+        'Feather Flag Convex XS': 'xs',
+        'Feather Flag Convex S': 'S',
+        'Feather Flag Convex M': 'M',
+        'Feather Flag Convex M-Extra Wide': 'M-Wide',
+        'Feather Flag Convex L': 'l'
     };
 
     const sizeKey = sizeMapping[configState.size] || configState.size.split(' ').pop();
@@ -786,8 +788,8 @@ function syncFlagMeasurement() {
         });
     }
 
-    const isXS = configState.size === 'Beach flag Convex XS';
-    const isL = configState.size === 'Beach flag Convex L';
+    const isXS = configState.size === 'Feather Flag Convex XS';
+    const isL = configState.size === 'Feather Flag Convex L';
     
     if (showCharacter && (isXS || isL)) {
         // Temporarily reset sceneRoot and modelRoot rotations and scales to neutral to calculate correct dimensions
@@ -1343,17 +1345,17 @@ export async function applyConfigurationToScene(animateTransition = false, trans
 }
 
 function updateTemplateDownloadLink() {
-    const downloadBtn = document.getElementById('template-download-btn');
-    const filenameDisplay = document.getElementById('template-filename');
+    const downloadBtn = dom.templateDownloadBtn || document.getElementById('template-download-btn');
+    const filenameDisplay = dom.templateFilename || document.getElementById('template-filename');
     if (!downloadBtn) return;
 
     // 1. Get size key and map it to filename dimensions
     const sizeMapping = {
-        'Beach flag Convex XS': 'xs',
-        'Beach flag Convex S': 'S',
-        'Beach flag Convex M': 'M',
-        'Beach flag Convex M-Extra Wide': 'M-Wide',
-        'Beach flag Convex L': 'l'
+        'Feather Flag Convex XS': 'xs',
+        'Feather Flag Convex S': 'S',
+        'Feather Flag Convex M': 'M',
+        'Feather Flag Convex M-Extra Wide': 'M-Wide',
+        'Feather Flag Convex L': 'l'
     };
     const sizeKey = sizeMapping[configState.size] || configState.size.split(' ').pop();
     
@@ -1376,9 +1378,9 @@ function updateTemplateDownloadLink() {
         fileSuffix = `-single-sided${dirSuffix}`;
     }
 
-    // 3. Build URL and Display Name
-    const filename = `beachflag-convex-${sizeInfo.file}${fileSuffix}.pdf`;
-    const downloadUrl = `https://files.proflags.com/beachflag-convex/${filename}`;
+    // 3. Build local asset URL and Display Name
+    const filename = `featherflag-convex-${sizeInfo.file}${fileSuffix}.pdf`;
+    const downloadUrl = `./assets/templates/${filename}`;
     
     let sizeText = configState.size;
     if (window.i18next && window.i18next.isInitialized) {
@@ -1404,12 +1406,79 @@ function updateTemplateDownloadLink() {
     let displayName = `${sizePart}-${printingPart}${directionPart}`;
     displayName = displayName.replace(/\s+/g, '-');
 
-    // 4. Update the DOM
+    // 4. Update the DOM without loading or caching the PDF file
     downloadBtn.href = downloadUrl;
     downloadBtn.setAttribute('download', filename);
+    downloadBtn.removeAttribute('target');
+    downloadBtn.removeAttribute('rel');
     if (filenameDisplay) {
         filenameDisplay.textContent = displayName;
     }
+}
+
+async function handleTemplateDownload(event) {
+    if (event) event.preventDefault();
+    const downloadBtn = dom.templateDownloadBtn || document.getElementById('template-download-btn');
+    if (!downloadBtn) return;
+
+    const url = downloadBtn.getAttribute('href');
+    const filename = downloadBtn.getAttribute('download') || 'graphic-template.pdf';
+    if (!url) return;
+
+    // Check if running on local file:// protocol
+    if (window.location.protocol === 'file:') {
+        const isKnownAvailable = filename.includes('-xs-') || filename.includes('-l-');
+        if (isKnownAvailable) {
+            triggerFileDownload(url, filename);
+        } else {
+            showTemplateUnavailableToast();
+        }
+        return;
+    }
+
+    try {
+        // Fast, lightweight HTTP HEAD request with no-store.
+        // Fetches ONLY headers (0 bytes of PDF body loaded into browser memory)
+        // and ensures the template is never stored in the browser's persistent cache.
+        const response = await fetch(url, {
+            method: 'HEAD',
+            cache: 'no-store'
+        });
+
+        if (response.ok) {
+            triggerFileDownload(url, filename);
+        } else {
+            showTemplateUnavailableToast();
+        }
+    } catch (err) {
+        console.warn('[Template Download] HEAD check failed:', err);
+        const isKnownAvailable = filename.includes('-xs-') || filename.includes('-l-');
+        if (isKnownAvailable) {
+            triggerFileDownload(url, filename);
+        } else {
+            showTemplateUnavailableToast();
+        }
+    }
+}
+
+function triggerFileDownload(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function showTemplateUnavailableToast() {
+    const title = (window.i18next && window.i18next.isInitialized)
+        ? window.i18next.t('templates.unavailable_title')
+        : 'Template Coming Soon';
+    const desc = (window.i18next && window.i18next.isInitialized)
+        ? window.i18next.t('templates.unavailable_desc')
+        : 'The graphic template for this size is currently being prepared. Please check back soon.';
+    showToast(title, desc, 'info', 4500);
 }
 
 
@@ -1498,15 +1567,48 @@ function updateDynamicCameraTargets(moveCamera = true) {
     sceneRoot.rotation.copy(currentSceneRotation);
     sceneRoot.updateMatrixWorld(true);
 
+    // Expand bounding box to incorporate character silhouette and height measurement label ("186 cm")
+    if (showCharacter) {
+        // Character is placed at x = -0.9, height measurement sprite label edge reaches x = -1.59m.
+        // We include an invisible bounding box cushion reaching x = -1.68m, height 1.95m.
+        box.expandByPoint(new THREE.Vector3(-1.68, 0, -0.2));
+        box.expandByPoint(new THREE.Vector3(-1.68, 1.95, 0.2));
+        box.expandByPoint(new THREE.Vector3(-0.60, 0, -0.2));
+        box.expandByPoint(new THREE.Vector3(-0.60, 1.95, 0.2));
+        hasVisibleMesh = true;
+    }
+
     if (hasVisibleMesh && !box.isEmpty()) {
+        // Add safety buffer around the composition so meshes never touch screen edges
+        box.expandByPoint(new THREE.Vector3(box.max.x + 0.10, box.max.y + 0.10, box.max.z + 0.10));
+        box.expandByPoint(new THREE.Vector3(box.min.x - 0.05, Math.max(0, box.min.y - 0.05), box.min.z - 0.10));
+
         box.getCenter(targetCenter);
         const size = box.getSize(new THREE.Vector3());
 
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = camera.fov * (Math.PI / 180);
-        let fitDistance = maxDim / (2 * Math.tan(fov / 2));
+        const fovRad = camera.fov * (Math.PI / 180);
+        const aspect = Math.max(camera.aspect, 0.1);
+        const tanVFovHalf = Math.tan(fovRad / 2);
+        const tanHFovHalf = tanVFovHalf * aspect;
 
-        cameraDistance = fitDistance * 1.2;
+        const dxLeft = Math.max(targetCenter.x - box.min.x, 0.1);
+        const dxRight = Math.max(box.max.x - targetCenter.x, 0.1);
+        const dyTop = Math.max(box.max.y - targetCenter.y, 0.1);
+        const dyBottom = Math.max(targetCenter.y - box.min.y, 0.1);
+
+        const isMobile = mobileViewportMediaQuery.matches || window.innerWidth <= 768;
+        // On mobile, the 20% left offset shifts target center leftwards (0.40 left / 0.60 right).
+        // Side buttons on the right take ~15% width. So usable horizontal fractions are ~0.78.
+        // On desktop/tablet, both sides have ~0.92 usable fraction.
+        const horizFrac = isMobile ? 0.78 : 0.92;
+        const maxHalfHoriz = Math.max(dxLeft, dxRight, size.z / 2);
+
+        const dHorizontal = maxHalfHoriz / (tanHFovHalf * horizFrac);
+        const dVertical = Math.max(dyTop, dyBottom) / (tanVFovHalf * 0.95);
+
+        let fitDistance = Math.max(dHorizontal, dVertical);
+        const marginFactor = 1.18;
+        cameraDistance = fitDistance * marginFactor;
 
         cameraTargets.home.set(targetCenter.x + cameraDistance * 0.3, targetCenter.y + size.y * 0.2, targetCenter.z + cameraDistance);
         cameraTargets.front.set(targetCenter.x, targetCenter.y, targetCenter.z + cameraDistance);
@@ -1603,11 +1705,11 @@ function formatSelectionName(category, value) {
     }
     if (category === 'size') {
         const sizeDimensions = {
-            'Beach flag Convex XS': '60x180cm',
-            'Beach flag Convex S': '60x240cm',
-            'Beach flag Convex M': '70x330cm',
-            'Beach flag Convex M-Extra Wide': '90x300cm',
-            'Beach flag Convex L': '75x380cm'
+            'Feather Flag Convex XS': '60x180cm',
+            'Feather Flag Convex S': '60x240cm',
+            'Feather Flag Convex M': '70x330cm',
+            'Feather Flag Convex M-Extra Wide': '90x300cm',
+            'Feather Flag Convex L': '75x380cm'
         };
         const dim = sizeDimensions[value];
         if (dim) {
@@ -1742,7 +1844,17 @@ async function checkAndLoadSharedDesign() {
 
         if (sharedConfig && typeof sharedConfig === 'object') {
             // Apply configState properties
-            if (sharedConfig.size) configState.size = sharedConfig.size;
+            if (sharedConfig.size) {
+                const sizeCode = sharedConfig.size.split(' ').pop();
+                const validSizes = {
+                    'XS': 'Feather Flag Convex XS',
+                    'S': 'Feather Flag Convex S',
+                    'M': 'Feather Flag Convex M',
+                    'Wide': 'Feather Flag Convex M-Extra Wide',
+                    'L': 'Feather Flag Convex L'
+                };
+                configState.size = validSizes[sizeCode] || sharedConfig.size;
+            }
             if (sharedConfig.printing) configState.printing = sharedConfig.printing;
             if (sharedConfig.direction) configState.direction = sharedConfig.direction;
             if (sharedConfig.poleCoverColor) configState.poleCoverColor = sharedConfig.poleCoverColor;
@@ -3511,6 +3623,7 @@ function loadCharacterModel() {
             const startProgress = currentProgress;
 
             if (showCharacter) {
+                updateCameraViewportOffset();
                 // Focus camera on the combined scene bounds immediately
                 focusCameraView('front');
 
@@ -3593,6 +3706,7 @@ function loadCharacterModel() {
 
 function toggleCharacterVisibility() {
     showCharacter = !showCharacter;
+    updateCameraViewportOffset();
     
     // Sync the flag measurement first so that it is added/removed before camera targets are recalculated!
     syncFlagMeasurement();
@@ -3717,6 +3831,12 @@ function setEnvPanelOpen(open) {
     dom.envToggle.classList.toggle('is-active', open);
     dom.envToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
 
+    if (dom.cameraWrapper) {
+        if (open) {
+            dom.cameraWrapper.classList.add('has-env-open');
+        }
+    }
+
     if (open) {
         dom.envPanel.hidden = false;
         window.requestAnimationFrame(() => {
@@ -3727,7 +3847,12 @@ function setEnvPanelOpen(open) {
 
     dom.envPanel.classList.remove('is-open');
     envPanelHideTimer = window.setTimeout(() => {
-        if (!isEnvPanelOpen()) dom.envPanel.hidden = true;
+        if (!isEnvPanelOpen()) {
+            dom.envPanel.hidden = true;
+            if (dom.cameraWrapper) {
+                dom.cameraWrapper.classList.remove('has-env-open');
+            }
+        }
     }, 340);
 }
 
@@ -4162,14 +4287,68 @@ function bindUIEvents() {
         });
     }
     dom.turntableToggle.addEventListener('click', toggleTurntable);
+    if (dom.templateDownloadBtn) {
+        dom.templateDownloadBtn.addEventListener('click', handleTemplateDownload);
+    }
  
     // Toggle printing info tooltip
     if (dom.printingInfoBtn && dom.printingInfoPopover) {
+        if (dom.printingInfoPopover.parentElement !== document.body) {
+            document.body.appendChild(dom.printingInfoPopover);
+        }
+
+        const updatePrintingTooltipPosition = () => {
+            if (!dom.printingInfoBtn || !dom.printingInfoPopover || dom.printingInfoPopover.hidden) return;
+
+            const btnRect = dom.printingInfoBtn.getBoundingClientRect();
+            // If button is offscreen (scrolled out of view in panel), hide popover
+            if (btnRect.bottom < 0 || btnRect.top > window.innerHeight) {
+                togglePrintingTooltip(false);
+                return;
+            }
+
+            const popoverRect = dom.printingInfoPopover.getBoundingClientRect();
+            const popoverWidth = popoverRect.width || 280;
+            const popoverHeight = popoverRect.height || 220;
+
+            let left = btnRect.left;
+            const maxLeft = window.innerWidth - popoverWidth - 12;
+            if (left > maxLeft) {
+                left = maxLeft;
+            }
+            if (left < 12) {
+                left = 12;
+            }
+
+            let top = btnRect.bottom + 8;
+            if (top + popoverHeight > window.innerHeight - 12) {
+                if (btnRect.top - popoverHeight - 8 >= 12) {
+                    top = btnRect.top - popoverHeight - 8;
+                } else {
+                    top = Math.max(12, window.innerHeight - popoverHeight - 12);
+                }
+            }
+
+            dom.printingInfoPopover.style.top = `${Math.round(top)}px`;
+            dom.printingInfoPopover.style.left = `${Math.round(left)}px`;
+        };
+
         const togglePrintingTooltip = (forceOpen) => {
             const shouldOpen = (typeof forceOpen === 'boolean') ? forceOpen : dom.printingInfoPopover.hidden;
             dom.printingInfoPopover.hidden = !shouldOpen;
             dom.printingInfoBtn.setAttribute('aria-expanded', String(shouldOpen));
+            if (shouldOpen) {
+                updatePrintingTooltipPosition();
+                requestAnimationFrame(updatePrintingTooltipPosition);
+            }
         };
+
+        const uiShell = document.getElementById('ui-shell');
+        if (uiShell) {
+            uiShell.addEventListener('scroll', updatePrintingTooltipPosition, { passive: true });
+        }
+        window.addEventListener('scroll', updatePrintingTooltipPosition, { passive: true });
+        window.addEventListener('resize', updatePrintingTooltipPosition, { passive: true });
 
         let lastTouchTime = 0;
         const markTouch = () => {
@@ -4360,11 +4539,11 @@ function bindUIEvents() {
 --------------------------------- */
 function getTargetTextureSize() {
     const sizeMapping = {
-        'Beach flag Convex XS': 3072,
-        'Beach flag Convex S': 2560,
-        'Beach flag Convex M': 2048,
-        'Beach flag Convex M-Extra Wide': 2048,
-        'Beach flag Convex L': 2048
+        'Feather Flag Convex XS': 3072,
+        'Feather Flag Convex S': 2560,
+        'Feather Flag Convex M': 2048,
+        'Feather Flag Convex M-Extra Wide': 2048,
+        'Feather Flag Convex L': 2048
     };
     return sizeMapping[configState.size] || 2048;
 }
@@ -5101,11 +5280,11 @@ async function generatePdfProof() {
 
         if (pricingData) {
             const sizeMapping = {
-                'Beach flag Convex XS': 'xs',
-                'Beach flag Convex S': 'S',
-                'Beach flag Convex M': 'M',
-                'Beach flag Convex M-Extra Wide': 'M-Wide',
-                'Beach flag Convex L': 'l'
+                'Feather Flag Convex XS': 'xs',
+                'Feather Flag Convex S': 'S',
+                'Feather Flag Convex M': 'M',
+                'Feather Flag Convex M-Extra Wide': 'M-Wide',
+                'Feather Flag Convex L': 'l'
             };
             const sizeKey = sizeMapping[configState.size] || configState.size.split(' ').pop();
 
@@ -5618,24 +5797,45 @@ function schedulePostARRestore() {
 /* ---------------------------------
    Render Loop
 --------------------------------- */
+function updateCameraViewportOffset() {
+    const width = dom.canvasContainer ? dom.canvasContainer.clientWidth : window.innerWidth;
+    const height = dom.canvasContainer ? dom.canvasContainer.clientHeight : window.innerHeight;
+
+    const isMobile = mobileViewportMediaQuery.matches || window.innerWidth <= 768;
+    const isMidRange = !isMobile && window.innerWidth >= 769 && window.innerWidth <= 1100;
+    const shiftX = isMidRange ? 250 : 0;
+
+    camera.aspect = width / Math.max(height, 1);
+    if (!state.isInAR) {
+        if (isMobile) {
+            // Mobile view:
+            // Move flag 20% to the left (10% of canvas width) away from the side buttons.
+            const xOffset = Math.round(width * 0.10);
+            camera.setViewOffset(width, height, xOffset, 0, width, height);
+        } else if (shiftX > 0) {
+            camera.setViewOffset(width, height, -shiftX / 2.5, 0, width, height);
+        } else {
+            camera.clearViewOffset();
+        }
+    } else {
+        camera.clearViewOffset();
+    }
+    camera.updateProjectionMatrix();
+}
+
 function handleResize() {
     sceneDirty = true;
     const width = dom.canvasContainer.clientWidth;
     const height = dom.canvasContainer.clientHeight;
 
-    const isMidRange = window.innerWidth >= 769 && window.innerWidth <= 1100;
-    const shiftX = isMidRange ? 250 : 0;
-
-    camera.aspect = width / Math.max(height, 1);
-    if (shiftX > 0) {
-        camera.setViewOffset(width, height, -shiftX / 2.5, 0, width, height);
-    } else {
-        camera.clearViewOffset();
-    }
-    camera.updateProjectionMatrix();
+    updateCameraViewportOffset();
 
     renderer.setPixelRatio(getClampedPixelRatio());
     renderer.setSize(width, height);
+
+    if (typeof updateDynamicCameraTargets === 'function') {
+        updateDynamicCameraTargets(false);
+    }
 
     if (pocketColorPickr?.isOpen()) {
         queuePocketColorPickerLayout();

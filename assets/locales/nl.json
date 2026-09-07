@@ -19,11 +19,11 @@
   },
   "selections": {
     "size": {
-      "Beach flag Convex XS": "Beachflag Convex XS",
-      "Beach flag Convex S": "Beachflag Convex S",
-      "Beach flag Convex M": "Beachflag Convex M",
-      "Beach flag Convex M-Extra Wide": "Beachflag Convex M-Extra Wide",
-      "Beach flag Convex L": "Beachflag Convex L"
+      "Feather Flag Convex XS": "Feather Flag Convex XS",
+      "Feather Flag Convex S": "Feather Flag Convex S",
+      "Feather Flag Convex M": "Feather Flag Convex M",
+      "Feather Flag Convex M-Extra Wide": "Feather Flag Convex M-Extra Wide",
+      "Feather Flag Convex L": "Feather Flag Convex L"
     },
     "printing": {
       "Single Sided": "Enkelzijdig",
@@ -46,11 +46,13 @@
     }
   },
   "templates": {
-    "l_ss": "Beachflag-Convex-L-Enkelzijdig-Rechts",
-    "l_ds": "Beachflag-Convex-L-Dubbelzijdig",
-    "xs_ss": "Beachflag-Convex-XS-Enkelzijdig-Rechts",
-    "xs_ds": "Beachflag-Convex-XS-Dubbelzijdig",
-    "download_btn": "Grafisch Sjabloon"
+    "l_ss": "Feather Flag-Convex-L-Enkelzijdig-Rechts",
+    "l_ds": "Feather Flag-Convex-L-Dubbelzijdig",
+    "xs_ss": "Feather Flag-Convex-XS-Enkelzijdig-Rechts",
+    "xs_ds": "Feather Flag-Convex-XS-Dubbelzijdig",
+    "download_btn": "Grafisch Sjabloon",
+    "unavailable_title": "Sjabloon binnenkort beschikbaar",
+    "unavailable_desc": "Het grafische sjabloon voor dit formaat wordt momenteel voorbereid. Kom binnenkort terug."
   },
   "upload": {
     "hint": "PDF, JPG or PNG",

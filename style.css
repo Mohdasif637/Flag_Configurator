@@ -833,6 +833,11 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     transition: opacity 0.28s ease, visibility 0.28s ease;
 }
 
+#camera-wrapper:has(#env-panel.is-open),
+#camera-wrapper.has-env-open {
+    z-index: 30;
+}
+
 body:has(#loading-overlay.is-visible) #camera-wrapper {
     opacity: 0;
     pointer-events: none;
@@ -1078,7 +1083,7 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     right: 0;
     top: auto;
     bottom: 112px;
-    z-index: 4;
+    z-index: 35;
     width: 175px;
     max-width: calc(100vw - 32px);
     box-sizing: border-box;
@@ -1695,20 +1700,21 @@ body.is-in-ar #stop-ar-btn {
 }
 
 .info-tooltip-popover {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    width: 270px;
-    max-width: calc(100vw - 64px);
-    z-index: 100;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    max-width: calc(100vw - 24px);
+    z-index: 10000;
     background: rgba(15, 23, 42, 0.96);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     border: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
     padding: 12px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
     color: var(--text-contrast);
+    pointer-events: auto;
     animation: tooltipFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2032,6 +2038,10 @@ button.config-card[data-category="base"].is-active {
     transition: opacity 0.28s ease, visibility 0.28s ease;
 }
 
+.top-right-bar:has(.pref-dropdown.is-open) {
+    z-index: 40;
+}
+
 .preferences-container {
     position: relative;
     top: auto;
@@ -2326,7 +2336,6 @@ button.config-card[data-category="base"].is-active {
     }
 
     .info-tooltip-popover {
-        right: -10px;
         width: min(280px, calc(100vw - 32px));
     }
 
@@ -2828,5 +2837,42 @@ button.config-card[data-category="base"].is-active {
     .nav-link-btn:hover,
     .nav-link-btn:active {
         color: rgba(255, 255, 255, 0.88);
+    }
+}
+
+/* ---------------------------------
+   Landscape Mobile & Compact Height HUD Console
+   Arranges camera actions & controls side-by-side to guarantee
+   ample clearance below the AR badge and Language pill
+--------------------------------- */
+@media (min-width: 769px) and (max-width: 1100px) and (max-height: 600px),
+       (max-height: 520px) {
+    #camera-wrapper {
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom, 10px));
+        right: max(14px, env(safe-area-inset-right, 14px));
+        transform: scale(0.74);
+        transform-origin: bottom right;
+    }
+
+    #camera-actions {
+        order: 1;
+        margin-bottom: 0;
+    }
+
+    #camera-controls {
+        order: 2;
+    }
+
+    .top-right-bar {
+        top: max(8px, env(safe-area-inset-top, 8px));
+        right: max(14px, env(safe-area-inset-right, 14px));
+        gap: 6px;
+    }
+
+    #env-panel {
+        bottom: 108px;
     }
 }

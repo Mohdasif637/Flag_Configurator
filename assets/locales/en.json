@@ -19,11 +19,11 @@
   },
   "selections": {
     "size": {
-      "Beach flag Convex XS": "Beach flag Convex XS",
-      "Beach flag Convex S": "Beach flag Convex S",
-      "Beach flag Convex M": "Beach flag Convex M",
-      "Beach flag Convex M-Extra Wide": "Beach flag Convex M-Extra Wide",
-      "Beach flag Convex L": "Beach flag Convex L"
+      "Feather Flag Convex XS": "Feather Flag Convex XS",
+      "Feather Flag Convex S": "Feather Flag Convex S",
+      "Feather Flag Convex M": "Feather Flag Convex M",
+      "Feather Flag Convex M-Extra Wide": "Feather Flag Convex M-Extra Wide",
+      "Feather Flag Convex L": "Feather Flag Convex L"
     },
     "printing": {
       "Single Sided": "Single Sided",
@@ -46,11 +46,13 @@
     }
   },
   "templates": {
-    "l_ss": "Beach flag-Convex-L-Single Side-Right",
-    "l_ds": "Beach flag-Convex-L-Double Side",
-    "xs_ss": "Beach flag-Convex-XS-Single Side-Right",
-    "xs_ds": "Beach flag-Convex-XS-Double Side",
-    "download_btn": "Graphic Template"
+    "l_ss": "Feather Flag-Convex-L-Single Side-Right",
+    "l_ds": "Feather Flag-Convex-L-Double Side",
+    "xs_ss": "Feather Flag-Convex-XS-Single Side-Right",
+    "xs_ds": "Feather Flag-Convex-XS-Double Side",
+    "download_btn": "Graphic Template",
+    "unavailable_title": "Template Coming Soon",
+    "unavailable_desc": "The graphic template for this size is currently being prepared. Please check back soon."
   },
   "upload": {
     "hint": "PDF, JPG or PNG",
