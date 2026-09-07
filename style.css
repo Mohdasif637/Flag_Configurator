@@ -539,26 +539,14 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     top: 0;
     left: 0;
     height: 100%;
-    width: 0;
+    width: 100%;
     background: rgba(16, 185, 129, 0.15);
     pointer-events: none;
     z-index: 0;
-}
-
-.upload-card.is-loading .upload-progress {
-    animation: upload-fill 3s ease-out forwards;
-}
-
-@keyframes upload-fill {
-    0% {
-        width: 0%;
-        opacity: 1;
-    }
-
-    100% {
-        width: 95%;
-        opacity: 1;
-    }
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
 }
 
 .upload-card.is-dragover {
@@ -1477,7 +1465,7 @@ body.is-in-ar #stop-ar-btn {
     max-height: fit-content;
     min-width: 150px;
     max-width: fit-content;
-    padding: 3px 10px;
+    padding: 3px 6px 3px 10px;
     border-radius: 10px;
     background: rgba(18, 27, 22, 0.5);
     color: #fff;
@@ -1488,6 +1476,18 @@ body.is-in-ar #stop-ar-btn {
     transform: translate3d(0, calc(-100% - 18px), 0);
     transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1), transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
     will-change: transform, opacity;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast:active {
+    cursor: grabbing;
 }
 
 .toast.is-visible {
@@ -1516,6 +1516,11 @@ body.is-in-ar #stop-ar-btn {
     border-color: rgba(223, 141, 67, 0.32);
 }
 
+.toast-body {
+    flex: 1;
+    min-width: 0;
+}
+
 .toast-title {
     display: block;
     margin-bottom: 1px;
@@ -1528,6 +1533,40 @@ body.is-in-ar #stop-ar-btn {
     font-size: 12px;
     line-height: 1.35;
     color: rgba(255, 255, 255, 0.88);
+}
+
+.toast-close-btn {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    padding: 0;
+    margin: 0 2px 0 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.65);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: color 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+}
+
+.toast-close-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    transform: scale(1.15);
+}
+
+.toast-close-btn:active {
+    transform: scale(0.9);
+}
+
+.toast-close-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
 }
 
 /* ---------------------------------
@@ -1616,6 +1655,7 @@ body.is-in-ar #stop-ar-btn {
 }
 
 .info-tooltip-btn {
+    position: relative;
     width: 20px;
     height: 20px;
     min-height: 20px;
@@ -1628,7 +1668,17 @@ body.is-in-ar #stop-ar-btn {
     border: 1px solid var(--card-border);
     color: var(--text-contrast);
     cursor: pointer;
+    touch-action: manipulation;
     transition: all 0.2s ease;
+}
+
+.info-tooltip-btn::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
 }
 
 .info-tooltip-btn:hover,
@@ -2254,8 +2304,25 @@ button.config-card[data-category="base"].is-active {
 
     .top-right-bar {
         top: 10px;
+        top: max(10px, env(safe-area-inset-top, 10px));
+        left: 12px;
+        left: max(12px, env(safe-area-inset-left, 12px));
         right: 12px;
+        right: max(12px, env(safe-area-inset-right, 12px));
+        width: auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         gap: 8px;
+        pointer-events: none;
+    }
+
+    .top-right-bar > * {
+        pointer-events: auto;
+    }
+
+    .preferences-container {
+        margin-left: auto;
     }
 
     .info-tooltip-popover {

@@ -2690,6 +2690,149 @@ function truncateFileName(fileName, containerElement) {
 /* ---------------------------------
    Toast System
 --------------------------------- */
+function attachToastSwipeDismiss(toast) {
+    let startX = 0;
+    let startY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let isDragging = false;
+    let activePointerId = null;
+    let lockAxis = null; // 'horizontal' | 'vertical' | null
+
+    const onPointerDown = (e) => {
+        // Ignore if clicking the close button directly
+        if (e.target.closest('.toast-close-btn')) return;
+
+        startX = e.clientX;
+        startY = e.clientY;
+        currentX = 0;
+        currentY = 0;
+        lockAxis = null;
+        isDragging = true;
+        activePointerId = e.pointerId;
+
+        // Pause auto-hide timer while user is interacting
+        if (toast.hideTimer) {
+            window.clearTimeout(toast.hideTimer);
+            toast.hideTimer = null;
+        }
+
+        try {
+            toast.setPointerCapture(e.pointerId);
+        } catch (err) {}
+
+        toast.style.transition = 'none';
+    };
+
+    const onPointerMove = (e) => {
+        if (!isDragging || e.pointerId !== activePointerId) return;
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        // Lock gesture strictly to horizontal or vertical axis once past a small movement deadzone (5px)
+        if (!lockAxis) {
+            if (absX < 5 && absY < 5) return;
+            if (absX >= absY * 1.25) {
+                lockAxis = 'horizontal';
+            } else if (absY >= absX * 1.25) {
+                lockAxis = 'vertical';
+            } else {
+                // Ambiguous diagonal movement: keep locked to zero until direction clarifies
+                return;
+            }
+        }
+
+        if (lockAxis === 'horizontal') {
+            // Strictly horizontal motion: zero vertical movement
+            currentX = deltaX;
+            currentY = 0;
+            const opacity = Math.max(0.15, 1 - (absX / 160));
+            toast.style.transform = `translate3d(${currentX}px, 0, 0)`;
+            toast.style.opacity = opacity;
+        } else if (lockAxis === 'vertical') {
+            // Strictly vertical motion: zero horizontal movement
+            currentX = 0;
+            currentY = deltaY;
+            const opacity = Math.max(0.15, 1 - (absY / 160));
+            toast.style.transform = `translate3d(0, ${currentY}px, 0)`;
+            toast.style.opacity = opacity;
+        }
+    };
+
+    const finishDismiss = (direction) => {
+        toast.style.transition = 'transform 0.22s cubic-bezier(0.2, 0.8, 0.4, 1), opacity 0.2s ease';
+        if (direction === 'right') {
+            toast.style.transform = 'translate3d(140%, 0, 0)';
+        } else if (direction === 'left') {
+            toast.style.transform = 'translate3d(-140%, 0, 0)';
+        } else if (direction === 'down') {
+            toast.style.transform = 'translate3d(0, 140%, 0)';
+        } else {
+            toast.style.transform = 'translate3d(0, -140%, 0)';
+        }
+        toast.style.opacity = '0';
+        dismissToast(toast, true);
+    };
+
+    const restoreToast = () => {
+        toast.style.transition = 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease';
+        toast.style.transform = 'translate3d(0, 0, 0)';
+        toast.style.opacity = '1';
+        toast.hideTimer = window.setTimeout(() => dismissToast(toast), 2500);
+    };
+
+    const onPointerUp = (e) => {
+        if (!isDragging || e.pointerId !== activePointerId) return;
+        isDragging = false;
+        try {
+            if (toast.hasPointerCapture(activePointerId)) {
+                toast.releasePointerCapture(activePointerId);
+            }
+        } catch (err) {}
+
+        const threshold = 35;
+
+        if (lockAxis === 'horizontal') {
+            if (currentX > threshold) {
+                finishDismiss('right');
+            } else if (currentX < -threshold) {
+                finishDismiss('left');
+            } else {
+                restoreToast();
+            }
+        } else if (lockAxis === 'vertical') {
+            if (currentY < -threshold) {
+                finishDismiss('up');
+            } else if (currentY > threshold) {
+                finishDismiss('down');
+            } else {
+                restoreToast();
+            }
+        } else {
+            restoreToast();
+        }
+    };
+
+    const onPointerCancel = (e) => {
+        if (!isDragging || e.pointerId !== activePointerId) return;
+        isDragging = false;
+        try {
+            if (toast.hasPointerCapture(activePointerId)) {
+                toast.releasePointerCapture(activePointerId);
+            }
+        } catch (err) {}
+        restoreToast();
+    };
+
+    toast.addEventListener('pointerdown', onPointerDown);
+    toast.addEventListener('pointermove', onPointerMove);
+    toast.addEventListener('pointerup', onPointerUp);
+    toast.addEventListener('pointercancel', onPointerCancel);
+}
+
 function showToast(title, message, tone = 'info', duration = 3200) {
     return new Promise((resolve) => {
         while (activeToasts.length >= 2) dismissToast(activeToasts[0]);
@@ -2700,18 +2843,42 @@ function showToast(title, message, tone = 'info', duration = 3200) {
         const toast = document.createElement('div');
         toast.className = `toast is-${tone}`;
 
+        const bodyNode = document.createElement('div');
+        bodyNode.className = 'toast-body';
+
         const titleNode = document.createElement('span');
         titleNode.className = 'toast-title';
         titleNode.textContent = translateToastText(title);
-
-        toast.append(titleNode);
+        bodyNode.append(titleNode);
 
         if (message) {
             const messageNode = document.createElement('span');
             messageNode.className = 'toast-copy';
             messageNode.textContent = translateToastText(message);
-            toast.append(messageNode);
+            bodyNode.append(messageNode);
         }
+
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'toast-close-btn';
+        closeBtn.setAttribute('aria-label', 'Dismiss notification');
+        closeBtn.setAttribute('title', 'Dismiss');
+        closeBtn.innerHTML = `
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        `;
+
+        closeBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            dismissToast(toast);
+        });
+
+        toast.append(bodyNode, closeBtn);
+
+        // Attach swipe-to-vanish gesture (left, right, bottom-to-top)
+        attachToastSwipeDismiss(toast);
 
         toast.resolvePromise = resolve;
 
@@ -2744,7 +2911,7 @@ function showToast(title, message, tone = 'info', duration = 3200) {
     });
 }
 
-function dismissToast(toast) {
+function dismissToast(toast, immediate = false) {
     if (!toast || toast.dataset.dismissed === 'true') return;
 
     toast.dataset.dismissed = 'true';
@@ -2753,13 +2920,20 @@ function dismissToast(toast) {
     const toastIndex = activeToasts.indexOf(toast);
     if (toastIndex !== -1) activeToasts.splice(toastIndex, 1);
 
-    toast.classList.remove('is-visible');
-    toast.classList.add('is-hiding');
+    if (immediate) {
+        window.setTimeout(() => {
+            toast.remove();
+            if (toast.resolvePromise) toast.resolvePromise();
+        }, 240);
+    } else {
+        toast.classList.remove('is-visible');
+        toast.classList.add('is-hiding');
 
-    window.setTimeout(() => {
-        toast.remove();
-        if (toast.resolvePromise) toast.resolvePromise();
-    }, 400);
+        window.setTimeout(() => {
+            toast.remove();
+            if (toast.resolvePromise) toast.resolvePromise();
+        }, 320);
+    }
 }
 
 /* ---------------------------------
@@ -3996,12 +4170,25 @@ function bindUIEvents() {
             dom.printingInfoPopover.hidden = !shouldOpen;
             dom.printingInfoBtn.setAttribute('aria-expanded', String(shouldOpen));
         };
- 
+
+        let lastTouchTime = 0;
+        const markTouch = () => {
+            lastTouchTime = Date.now();
+        };
+
+        // Capture touch on the button to detect touch taps vs mouse hovers
+        dom.printingInfoBtn.addEventListener('touchstart', markTouch, { passive: true });
+        dom.printingInfoBtn.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch') {
+                markTouch();
+            }
+        }, { passive: true });
+
         dom.printingInfoBtn.addEventListener('click', (event) => {
             event.stopPropagation();
             togglePrintingTooltip();
         });
- 
+
         let tooltipHoverTimer = null;
         const cancelTooltipTimer = () => {
             if (tooltipHoverTimer) {
@@ -4009,36 +4196,49 @@ function bindUIEvents() {
                 tooltipHoverTimer = null;
             }
         };
- 
+
         dom.printingInfoBtn.addEventListener('mouseenter', () => {
+            // Ignore synthesized mouseenter fired immediately before click on mobile touch
+            if (Date.now() - lastTouchTime < 800) {
+                return;
+            }
             cancelTooltipTimer();
             togglePrintingTooltip(true);
         });
- 
+
         dom.printingInfoBtn.addEventListener('mouseleave', () => {
+            if (Date.now() - lastTouchTime < 800) {
+                return;
+            }
             cancelTooltipTimer();
             tooltipHoverTimer = setTimeout(() => {
                 togglePrintingTooltip(false);
             }, 300);
         });
- 
+
         dom.printingInfoPopover.addEventListener('mouseenter', () => {
+            if (Date.now() - lastTouchTime < 800) {
+                return;
+            }
             cancelTooltipTimer();
         });
- 
+
         dom.printingInfoPopover.addEventListener('mouseleave', () => {
+            if (Date.now() - lastTouchTime < 800) {
+                return;
+            }
             cancelTooltipTimer();
             tooltipHoverTimer = setTimeout(() => {
                 togglePrintingTooltip(false);
             }, 300);
         });
- 
+
         document.addEventListener('click', (event) => {
             if (!dom.printingInfoPopover.hidden && !dom.printingInfoPopover.contains(event.target) && !dom.printingInfoBtn.contains(event.target)) {
                 togglePrintingTooltip(false);
             }
         });
- 
+
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && !dom.printingInfoPopover.hidden) {
                 togglePrintingTooltip(false);
@@ -4158,6 +4358,54 @@ function bindUIEvents() {
 /* ---------------------------------
    Graphic & Transform Handlers
 --------------------------------- */
+function getTargetTextureSize() {
+    const sizeMapping = {
+        'Beach flag Convex XS': 3072,
+        'Beach flag Convex S': 2560,
+        'Beach flag Convex M': 2048,
+        'Beach flag Convex M-Extra Wide': 2048,
+        'Beach flag Convex L': 2048
+    };
+    return sizeMapping[configState.size] || 2048;
+}
+
+let uploadProgressCrawlerId = null;
+let currentUploadProgressRatio = 0;
+
+function setUploadProgress(side, ratio) {
+    const config = sideConfigs[side];
+    if (!config || !config.dropzone) return;
+    const bar = config.dropzone.querySelector('.upload-progress');
+    if (bar) {
+        currentUploadProgressRatio = Math.min(Math.max(ratio, 0), 1);
+        bar.style.transform = `scaleX(${currentUploadProgressRatio})`;
+    }
+}
+
+function startUploadProgressCrawler(side, startProgress, targetMaxProgress = 0.88, creepRate = 0.08) {
+    stopUploadProgressCrawler();
+    setUploadProgress(side, startProgress);
+
+    let lastTime = performance.now();
+    const tick = (now) => {
+        const dt = (now - lastTime) / 1000;
+        lastTime = now;
+        if (currentUploadProgressRatio < targetMaxProgress) {
+            const nextVal = currentUploadProgressRatio + (targetMaxProgress - currentUploadProgressRatio) * (creepRate * dt);
+            setUploadProgress(side, nextVal);
+            uploadProgressCrawlerId = window.requestAnimationFrame(tick);
+        }
+    };
+    uploadProgressCrawlerId = window.requestAnimationFrame(tick);
+}
+
+function stopUploadProgressCrawler() {
+    if (uploadProgressCrawlerId) {
+        window.cancelAnimationFrame(uploadProgressCrawlerId);
+        uploadProgressCrawlerId = null;
+    }
+}
+
 async function handleGraphicFile(side, file) {
     const config = sideConfigs[side];
 
@@ -4175,8 +4423,17 @@ async function handleGraphicFile(side, file) {
 
     if (state.turntableEnabled) stopTurntableRotation();
 
+    const uploadStartTime = performance.now();
+    console.groupCollapsed(`%c[Graphic Upload] ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'color: #10b981; font-weight: bold;');
+    console.log(`[Upload] File: ${file.name}, Size: ${(file.size / 1024).toFixed(1)} KB, Type: ${file.type || 'unknown'}`);
+
     config.dropzone.classList.add('is-loading');
     config.fileName = file.name;
+    setUploadProgress(side, 0.06);
+
+    // Yield control to the browser so the is-loading class is committed and the GPU compositor animation starts
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    await new Promise((resolve) => window.setTimeout(resolve, 20));
 
     const restoreAnimation = () => {
         if (wasPlaying) {
@@ -4186,100 +4443,19 @@ async function handleGraphicFile(side, file) {
         }
     };
 
-    // Helper to check if crop areas contain actual graphics (non-white, non-transparent pixels)
-    const hasGraphicInCropAreas = (context, width, height) => {
-        if (width === 2048 && height === 2048) return false;
+    const targetSize = getTargetTextureSize();
+    console.log(`[Resolution Tier] Selected size: "${configState.size}" -> Target texture: ${targetSize}x${targetSize}px`);
 
-        const sourceX = Math.round((width - 2048) / 2);
-        const sourceY = Math.round((height - 2048) / 2);
+    const destCanvas = document.createElement('canvas');
+    destCanvas.width = targetSize;
+    destCanvas.height = targetSize;
+    const destContext = destCanvas.getContext('2d', { alpha: false });
+    destContext.imageSmoothingEnabled = true;
+    destContext.imageSmoothingQuality = 'high';
 
-        const checkPixel = (r, g, b, a) => {
-            if (a < 5) return false; // Transparent/near-transparent
-            if (r > 250 && g > 250 && b > 250) return false; // White/near-white
-            return true; // Actual graphic content detected!
-        };
-
-        if (height > 2048) {
-            // Check top crop area
-            if (sourceY > 0) {
-                const topData = context.getImageData(0, 0, width, sourceY).data;
-                for (let i = 0; i < topData.length; i += 4) { // Check every single pixel for absolute graphic detection
-                    if (checkPixel(topData[i], topData[i + 1], topData[i + 2], topData[i + 3])) return true;
-                }
-            }
-            // Check bottom crop area
-            const bottomStartY = sourceY + 2048;
-            const bottomHeight = height - bottomStartY;
-            if (bottomHeight > 0) {
-                const bottomData = context.getImageData(0, bottomStartY, width, bottomHeight).data;
-                for (let i = 0; i < bottomData.length; i += 4) {
-                    if (checkPixel(bottomData[i], bottomData[i + 1], bottomData[i + 2], bottomData[i + 3])) return true;
-                }
-            }
-        } else if (width > 2048) {
-            // Check left crop area
-            if (sourceX > 0) {
-                const leftData = context.getImageData(0, 0, sourceX, height).data;
-                for (let i = 0; i < leftData.length; i += 4) {
-                    if (checkPixel(leftData[i], leftData[i + 1], leftData[i + 2], leftData[i + 3])) return true;
-                }
-            }
-            // Check right crop area
-            const rightStartX = sourceX + 2048;
-            const rightWidth = width - rightStartX;
-            if (rightWidth > 0) {
-                const rightData = context.getImageData(rightStartX, 0, rightWidth, height).data;
-                for (let i = 0; i < rightData.length; i += 4) {
-                    if (checkPixel(rightData[i], rightData[i + 1], rightData[i + 2], rightData[i + 3])) return true;
-                }
-            }
-        }
-
-        return false;
-    };
-
-    // Helper to crop and convert a scaled canvas to high-fidelity WebP
-    const cropAndConvertCanvasToWebP = async (renderCanvas, isCroppedCentered, fileName) => {
-        const cropCanvas = document.createElement('canvas');
-        const cropContext = cropCanvas.getContext('2d');
-        
-        let targetSize;
-        if (isCroppedCentered) {
-            targetSize = Math.min(renderCanvas.width, renderCanvas.height);
-        } else {
-            targetSize = Math.max(renderCanvas.width, renderCanvas.height);
-        }
-        targetSize = Math.min(targetSize, 2048);
-
-        cropCanvas.width = targetSize;
-        cropCanvas.height = targetSize;
-
-        if (isCroppedCentered) {
-            // Extract center square
-            const sourceX = Math.round((renderCanvas.width - targetSize) / 2);
-            const sourceY = Math.round((renderCanvas.height - targetSize) / 2);
-            cropContext.drawImage(renderCanvas, sourceX, sourceY, targetSize, targetSize, 0, 0, targetSize, targetSize);
-        } else {
-            // Draw centered with white padding on shorter side
-            cropContext.fillStyle = '#ffffff';
-            cropContext.fillRect(0, 0, targetSize, targetSize);
-
-            let destWidth = renderCanvas.width;
-            let destHeight = renderCanvas.height;
-            if (destWidth > targetSize || destHeight > targetSize) {
-                const scale = targetSize / Math.max(destWidth, destHeight);
-                destWidth *= scale;
-                destHeight *= scale;
-            }
-            const destX = Math.round((targetSize - destWidth) / 2);
-            const destY = Math.round((targetSize - destHeight) / 2);
-            cropContext.drawImage(renderCanvas, 0, 0, renderCanvas.width, renderCanvas.height, destX, destY, destWidth, destHeight);
-        }
-
-        // Convert to WebP at a visually lossless quality factor (0.70)
-        const blob = await new Promise((resolve) => cropCanvas.toBlob(resolve, 'image/webp', 0.70));
-        return new File([blob], fileName.replace(/\.[^/.]+$/, '') + '.webp', { type: 'image/webp' });
-    };
+    // Initialize targetSize x targetSize canvas with pure white background
+    destContext.fillStyle = '#ffffff';
+    destContext.fillRect(0, 0, targetSize, targetSize);
 
     const fileType = file.type;
     const fileExtension = file.name.split('.').pop().toLowerCase();
@@ -4287,97 +4463,134 @@ async function handleGraphicFile(side, file) {
     const isImage = /^image\/(png|jpeg|webp)$/.test(fileType) || ['png', 'jpg', 'jpeg', 'webp'].includes(fileExtension);
 
     if (isPdf) {
+        setUploadProgress(side, 0.16);
+        const tLibStart = performance.now();
         if (typeof pdfjsLib === 'undefined') {
             showToast('Loading PDF System', 'Preparing the PDF processing modules...', 'info', 3000);
             const success = await loadPdfLibraries();
             if (!success) {
+                stopUploadProgressCrawler();
+                destCanvas.width = 0;
+                destCanvas.height = 0;
                 config.dropzone.classList.remove('is-loading');
+                setUploadProgress(side, 0);
                 restoreAnimation();
+                console.error('[Upload] Failed to load PDF libraries');
+                console.groupEnd();
                 return;
             }
         }
-        showToast('Processing PDF', 'Converting the first page of the PDF to a high-quality WebP image.', 'info', 3000);
+        console.log(`[PDF Engine] PDF.js ready in ${(performance.now() - tLibStart).toFixed(1)}ms`);
+
+        showToast('Processing PDF', 'Converting PDF artwork to a high-fidelity WebP texture.', 'info', 3000);
 
         try {
+            const tParseStart = performance.now();
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             const page = await pdf.getPage(1);
             const viewport = page.getViewport({ scale: 1 });
+            console.log(`[PDF Parse] Parsed document (${pdf.numPages} page(s)) in ${(performance.now() - tParseStart).toFixed(1)}ms`);
 
-            // Retrieve and parse optional content groups (layers) to hide templates
-            let optionalContentConfig = null;
-            let hiddenLayersCount = 0;
-            try {
-                optionalContentConfig = await pdf.getOptionalContentConfig();
-                const groups = optionalContentConfig.getGroups();
-                if (groups) {
-                    for (const [id, group] of Object.entries(groups)) {
-                        const nameLower = (group.name || '').trim().toLowerCase();
-                        if (nameLower === 'proflags' || nameLower === 'safe zones' || nameLower === 'safe zone') {
-                            optionalContentConfig.setVisibility(id, false);
-                            hiddenLayersCount++;
-                        }
-                    }
-                }
-            } catch (ocgError) {
-                console.warn('Failed to parse or modify OCG layers:', ocgError);
+            setUploadProgress(side, 0.28);
+
+            const aspect = viewport.width / (viewport.height || 1);
+            console.log(`[PDF Viewport] Page 1 dimensions: ${viewport.width.toFixed(1)} x ${viewport.height.toFixed(1)} pt (Aspect ratio: ${aspect.toFixed(3)})`);
+
+            // Official flag templates (1:1 single-sided, 4:5 or 5:4 double-sided) have aspect ratio between 0.70 and 1.42.
+            // For these templates, scaling the shorter side to targetSize and center-cropping trims empty top/bottom margins,
+            // keeping the graphic at the exact native template scale and alignment designed for the 3D flag mesh.
+            // For extreme banner aspect ratios (e.g. 1:5 banner, aspect < 0.70), we fit inside targetSize to prevent memory explosion.
+            const isNearSquare = aspect >= 0.70 && aspect <= 1.42;
+
+            let pdfScale;
+            if (isNearSquare) {
+                pdfScale = targetSize / Math.min(viewport.width, viewport.height);
+                console.log(`[Processing Mode] Template Center-Crop (Aspect: ${aspect.toFixed(3)}) | Scale: ${pdfScale.toFixed(5)}`);
+            } else {
+                pdfScale = targetSize / Math.max(viewport.width, viewport.height);
+                console.log(`[Processing Mode] Fit-to-Box with Padding (Aspect: ${aspect.toFixed(3)}) | Scale: ${pdfScale.toFixed(5)}`);
             }
 
-            if (hiddenLayersCount > 0) {
-                showToast('Template layers hidden', 'Template guide layers (ProFlags, Safe zones) have been hidden in preview.', 'success', 4000);
-            }
+            const scaledViewport = page.getViewport({ scale: pdfScale });
+            const scaledWidth = Math.round(scaledViewport.width);
+            const scaledHeight = Math.round(scaledViewport.height);
 
-            // 1. Try scaling shorter side to 2048 first
-            let scale = 2048 / Math.min(viewport.width, viewport.height);
-            let scaledViewport = page.getViewport({ scale });
+            const tRenderStart = performance.now();
+            // Start smooth asymptotic progress crawl while CPU is actively rasterizing vector paths
+            startUploadProgressCrawler(side, 0.28, 0.88, 0.07);
 
-            let renderCanvas = document.createElement('canvas');
-            let renderContext = renderCanvas.getContext('2d');
-            renderCanvas.width = scaledViewport.width;
-            renderCanvas.height = scaledViewport.height;
-
-            const renderOptions = {
-                canvasContext: renderContext,
-                viewport: scaledViewport
-            };
-            if (optionalContentConfig) {
-                renderOptions.optionalContentConfigPromise = Promise.resolve(optionalContentConfig);
-            }
-            await page.render(renderOptions).promise;
-
-            // 2. Check if the cut-off areas contain any actual graphics
-            let isCroppedCentered = true;
-            if (hasGraphicInCropAreas(renderContext, renderCanvas.width, renderCanvas.height)) {
-                // Graphic detected in crop area! Fallback to scaling the larger side to prevent graphic cutting
-                isCroppedCentered = false;
-                scale = 2048 / Math.max(viewport.width, viewport.height);
-                scaledViewport = page.getViewport({ scale });
-
-                renderCanvas.width = scaledViewport.width;
-                renderCanvas.height = scaledViewport.height;
-
-                const renderOptionsFallback = {
-                    canvasContext: renderContext,
+            if (scaledWidth === targetSize && scaledHeight === targetSize) {
+                // Exact 1:1 square template: Render directly onto destination canvas
+                const renderOptions = {
+                    canvasContext: destContext,
                     viewport: scaledViewport
                 };
-                if (optionalContentConfig) {
-                    renderOptionsFallback.optionalContentConfigPromise = Promise.resolve(optionalContentConfig);
+                await page.render(renderOptions).promise;
+            } else {
+                // Render onto an intermediate canvas (capped safely, never exceeding safe buffer bounds)
+                const intermediateCanvas = document.createElement('canvas');
+                intermediateCanvas.width = scaledWidth;
+                intermediateCanvas.height = scaledHeight;
+                const intermediateContext = intermediateCanvas.getContext('2d', { alpha: false });
+                intermediateContext.imageSmoothingEnabled = true;
+                intermediateContext.imageSmoothingQuality = 'high';
+                intermediateContext.fillStyle = '#ffffff';
+                intermediateContext.fillRect(0, 0, scaledWidth, scaledHeight);
+
+                const renderOptions = {
+                    canvasContext: intermediateContext,
+                    viewport: scaledViewport
+                };
+                await page.render(renderOptions).promise;
+
+                if (isNearSquare) {
+                    // Center-crop middle targetSize x targetSize square, trimming outer blank margins
+                    const cropX = Math.round((scaledWidth - targetSize) / 2);
+                    const cropY = Math.round((scaledHeight - targetSize) / 2);
+                    destContext.drawImage(intermediateCanvas, cropX, cropY, targetSize, targetSize, 0, 0, targetSize, targetSize);
+                } else {
+                    // Center onto the targetSize x targetSize canvas with white padding
+                    const destX = Math.round((targetSize - scaledWidth) / 2);
+                    const destY = Math.round((targetSize - scaledHeight) / 2);
+                    destContext.drawImage(intermediateCanvas, 0, 0, scaledWidth, scaledHeight, destX, destY, scaledWidth, scaledHeight);
                 }
-                await page.render(renderOptionsFallback).promise;
+
+                // Immediately release intermediate GPU buffer
+                intermediateCanvas.width = 0;
+                intermediateCanvas.height = 0;
             }
 
-            file = await cropAndConvertCanvasToWebP(renderCanvas, isCroppedCentered, file.name);
+            stopUploadProgressCrawler();
+            setUploadProgress(side, 0.90);
+            console.log(`[Rasterize] Completed in ${(performance.now() - tRenderStart).toFixed(1)}ms (${scaledWidth}x${scaledHeight}px buffer)`);
+
+            // Export to high-fidelity WebP (quality 0.95 for razor-sharp vector text and zero compression ringing)
+            const tEncodeStart = performance.now();
+            const blob = await new Promise((resolve) => destCanvas.toBlob(resolve, 'image/webp', 0.95));
+            destCanvas.width = 0;
+            destCanvas.height = 0;
+            setUploadProgress(side, 0.96);
+            console.log(`[WebP Encode] Output size: ${(blob.size / 1024).toFixed(1)} KB (Quality: 0.95) in ${(performance.now() - tEncodeStart).toFixed(1)}ms`);
+
+            file = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.webp', { type: 'image/webp' });
         } catch (error) {
-            console.error('PDF conversion failed:', error);
+            console.error('[Upload] PDF conversion failed:', error);
+            console.groupEnd();
+            stopUploadProgressCrawler();
+            destCanvas.width = 0;
+            destCanvas.height = 0;
             config.dropzone.classList.remove('is-loading');
+            setUploadProgress(side, 0);
             restoreAnimation();
             showToast('PDF error', 'Failed to read or convert the PDF file.', 'error', 4200);
             return;
         }
     } else if (isImage) {
-        // High-fidelity image processing: scale by shorter side first, analyze, and fallback if graphics are in margins
         showToast('Processing Image', 'Formatting the image to a high-fidelity WebP texture.', 'info', 1800);
+        setUploadProgress(side, 0.20);
         try {
+            const tImgStart = performance.now();
             const loadImageElement = (src) => {
                 return new Promise((resolve, reject) => {
                     const img = new Image();
@@ -4390,55 +4603,78 @@ async function handleGraphicFile(side, file) {
             const imgUrl = URL.createObjectURL(file);
             const img = await loadImageElement(imgUrl);
             URL.revokeObjectURL(imgUrl);
+            setUploadProgress(side, 0.50);
+            console.log(`[Image Load] Loaded natural dimensions: ${img.naturalWidth} x ${img.naturalHeight} in ${(performance.now() - tImgStart).toFixed(1)}ms`);
 
-            // 1. Try scaling shorter side to 2048 first, but do not scale up
-            let scale = 2048 / Math.min(img.naturalWidth, img.naturalHeight);
-            if (scale > 1.0) {
-                scale = 1.0;
+            const aspect = img.naturalWidth / (img.naturalHeight || 1);
+            const isNearSquare = aspect >= 0.70 && aspect <= 1.42;
+
+            if (isNearSquare) {
+                // Near-square template: scale shorter side up to targetSize (never upscaling if smaller) and center-crop
+                let imgScale = targetSize / Math.min(img.naturalWidth, img.naturalHeight);
+                if (imgScale > 1.0) imgScale = 1.0;
+
+                const scaledWidth = Math.round(img.naturalWidth * imgScale);
+                const scaledHeight = Math.round(img.naturalHeight * imgScale);
+                const sourceW = Math.min(scaledWidth, targetSize);
+                const sourceH = Math.min(scaledHeight, targetSize);
+                const sourceX = Math.round((img.naturalWidth - sourceW / imgScale) / 2);
+                const sourceY = Math.round((img.naturalHeight - sourceH / imgScale) / 2);
+                const destX = Math.round((targetSize - sourceW) / 2);
+                const destY = Math.round((targetSize - sourceH) / 2);
+
+                console.log(`[Image Mode] Template Center-Crop | Scale: ${imgScale.toFixed(5)}`);
+                destContext.drawImage(img, sourceX, sourceY, sourceW / imgScale, sourceH / imgScale, destX, destY, sourceW, sourceH);
+            } else {
+                // Fit-in-box with white padding (never upscaling smaller images)
+                let imgScale = targetSize / Math.max(img.naturalWidth, img.naturalHeight);
+                if (imgScale > 1.0) imgScale = 1.0;
+
+                const destWidth = Math.round(img.naturalWidth * imgScale);
+                const destHeight = Math.round(img.naturalHeight * imgScale);
+                const destX = Math.round((targetSize - destWidth) / 2);
+                const destY = Math.round((targetSize - destHeight) / 2);
+
+                console.log(`[Image Mode] Fit-in-Box with Padding | Scale: ${imgScale.toFixed(5)}`);
+                destContext.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, destX, destY, destWidth, destHeight);
             }
-            let scaledWidth = img.naturalWidth * scale;
-            let scaledHeight = img.naturalHeight * scale;
 
-            let renderCanvas = document.createElement('canvas');
-            let renderContext = renderCanvas.getContext('2d');
-            renderCanvas.width = scaledWidth;
-            renderCanvas.height = scaledHeight;
+            setUploadProgress(side, 0.88);
 
-            renderContext.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+            // Export to high-fidelity WebP (quality 0.95)
+            const tEncodeStart = performance.now();
+            const blob = await new Promise((resolve) => destCanvas.toBlob(resolve, 'image/webp', 0.95));
+            destCanvas.width = 0;
+            destCanvas.height = 0;
+            setUploadProgress(side, 0.96);
+            console.log(`[WebP Encode] Output size: ${(blob.size / 1024).toFixed(1)} KB (Quality: 0.95) in ${(performance.now() - tEncodeStart).toFixed(1)}ms`);
 
-            // 2. Check if the cut-off areas contain any actual graphics
-            let isCroppedCentered = true;
-            if (hasGraphicInCropAreas(renderContext, renderCanvas.width, renderCanvas.height)) {
-                // Graphic detected in crop area! Fallback to scaling the larger side to prevent graphic cutting
-                isCroppedCentered = false;
-                scale = 2048 / Math.max(img.naturalWidth, img.naturalHeight);
-                if (scale > 1.0) {
-                    scale = 1.0;
-                }
-                scaledWidth = img.naturalWidth * scale;
-                scaledHeight = img.naturalHeight * scale;
-
-                renderCanvas.width = scaledWidth;
-                renderCanvas.height = scaledHeight;
-
-                renderContext.drawImage(img, 0, 0, scaledWidth, scaledHeight);
-            }
-
-            file = await cropAndConvertCanvasToWebP(renderCanvas, isCroppedCentered, file.name);
+            file = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.webp', { type: 'image/webp' });
         } catch (error) {
-            console.error('Image processing failed:', error);
+            console.error('[Upload] Image processing failed:', error);
+            console.groupEnd();
+            stopUploadProgressCrawler();
+            destCanvas.width = 0;
+            destCanvas.height = 0;
             config.dropzone.classList.remove('is-loading');
+            setUploadProgress(side, 0);
             restoreAnimation();
             showToast('Image error', 'Failed to process the uploaded image.', 'error', 4200);
             return;
         }
     } else {
+        destCanvas.width = 0;
+        destCanvas.height = 0;
         config.dropzone.classList.remove('is-loading');
+        setUploadProgress(side, 0);
         restoreAnimation();
+        console.warn('[Upload] Unsupported file type:', fileType);
+        console.groupEnd();
         showToast('Unsupported file', 'Please upload a PNG, JPG, JPEG, WEBP, or PDF file.', 'error', 3800);
         return;
     }
 
+    const tTexStart = performance.now();
     const textureUrl = URL.createObjectURL(file);
 
     textureLoader.load(
@@ -4476,7 +4712,14 @@ async function handleGraphicFile(side, file) {
             saveCurrentGraphicToCache();
             if (modelRoot) modelRoot.userData.lastConfigStr = null;
             applyConfigurationToScene(false);
-            config.dropzone.classList.remove('is-loading');
+
+            // Complete progress smoothly to 100% then reset
+            setUploadProgress(side, 1.0);
+            window.setTimeout(() => {
+                config.dropzone.classList.remove('is-loading');
+                setUploadProgress(side, 0);
+            }, 350);
+
             syncSideUi(side);
             config.titleElement.textContent = truncateFileName(config.fileName, config.titleElement);
             config.input.value = '';
@@ -4503,13 +4746,21 @@ async function handleGraphicFile(side, file) {
                     }
                 }, 10000);
             }
+
+            console.log(`[Three.js] Texture applied to 3D scene in ${(performance.now() - tTexStart).toFixed(1)}ms`);
+            console.log(`%c[Graphic Upload] Completed successfully in ${(performance.now() - uploadStartTime).toFixed(1)}ms`, 'color: #10b981; font-weight: bold;');
+            console.groupEnd();
         },
         undefined,
         () => {
             URL.revokeObjectURL(textureUrl);
             config.input.value = '';
+            stopUploadProgressCrawler();
             config.dropzone.classList.remove('is-loading');
+            setUploadProgress(side, 0);
             restoreAnimation();
+            console.error('[Upload] Three.js texture loading failed');
+            console.groupEnd();
             showToast('Upload failed', `The ${config.label.toLowerCase()} graphic could not be processed.`, 'error', 4200);
         }
     );
