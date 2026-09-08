@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
   // Use relative base path so the app works on GitHub Pages and any sub-path
   base: './',
   plugins: [
+    basicSsl(),
     viteStaticCopy({
       targets: [
         { src: '3d', dest: '' },
@@ -27,6 +29,7 @@ export default defineConfig({
     }
   },
   server: {
+    host: true,
     port: 3000,
     open: true
   }

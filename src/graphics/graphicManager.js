@@ -4,12 +4,14 @@ import { dom } from '../ui/domElements.js';
 import { configState, state } from '../state/configState.js';
 import { sideConfigs, saveCurrentGraphicToCache, syncSideUi } from './graphicConfig.js';
 import { textureLoader } from '../models/loaders.js';
-import { resetTransformInputs, updateTextureTransforms } from './textureCompositor.js';
+import { resetTransformInputs, updateTextureTransforms, resetTransforms } from './textureCompositor.js';
 import { setGizmoActive, discardGizmoChanges } from './gizmo.js';
 import { showToast } from '../ui/toast.js';
 import { truncateFileName } from '../utils/helpers.js';
 import { loadPdfLibraries } from '../features/pdfExport.js';
 import { eventBus } from '../state/eventBus.js';
+import { modelRoot, applyConfigurationToScene } from '../models/flagModel.js';
+import { focusCameraView } from '../core/cameraTransitions.js';
 
 let uploadProgressCrawlerId = null;
 let currentUploadProgressRatio = 0;
@@ -293,6 +295,8 @@ export async function handleGraphicFile(side, file) {
             resetTransformInputs(side);
             updateTextureTransforms(side);
             saveCurrentGraphicToCache();
+            if (modelRoot) modelRoot.userData.lastConfigStr = null;
+            applyConfigurationToScene(false);
 
             setUploadProgress(side, 1.0);
             window.setTimeout(() => {
@@ -305,6 +309,9 @@ export async function handleGraphicFile(side, file) {
                 config.titleElement.textContent = truncateFileName(config.fileName, config.titleElement);
             }
             if (config.input) config.input.value = '';
+
+            const targetView = (configState.direction === 'Left') ? 'back' : 'front';
+            focusCameraView(targetView, 800, false);
 
             eventBus.emit('graphic:applied', side);
             setGizmoActive(true);
@@ -368,6 +375,8 @@ export function clearGraphic(side = 'graphic', announce = false) {
     }
     resetTransformInputs(side);
     saveCurrentGraphicToCache();
+    if (modelRoot) modelRoot.userData.lastConfigStr = null;
+    applyConfigurationToScene(false);
     syncSideUi(side);
 
     eventBus.emit('graphic:cleared', side);

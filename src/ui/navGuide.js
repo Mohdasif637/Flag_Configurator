@@ -1,6 +1,14 @@
+import * as THREE from 'three';
 import { DotLottie } from '@lottiefiles/dotlottie-web';
 import { camera, controls } from '../core/camera.js';
 import { focusCameraView, stopTurntableRotation } from '../core/cameraTransitions.js';
+import {
+    startPostGuideTimers,
+    showArSupportedToastIfSupported,
+    startTurntableAutoStart,
+    startVatAnimationTimer,
+    setAnimationPlaying
+} from '../core/renderLoop.js';
 import { mobileViewportMediaQuery } from './domElements.js';
 import { showToast } from './toast.js';
 import { eventBus } from '../state/eventBus.js';
@@ -8,7 +16,7 @@ import { eventBus } from '../state/eventBus.js';
 export const navGuideState = {
     active: false,
     currentStep: 0,
-    startTarget: null,
+    startTarget: new THREE.Vector3(),
     startCameraDistance: 0,
     startAzimuth: 0,
     startPolar: 0,
@@ -76,7 +84,7 @@ export function preloadLottieAnimation() {
  * Initializes the mobile 3D navigation coaching tour.
  */
 export function initNavCoachingGuide() {
-    const isMobile = mobileViewportMediaQuery.matches;
+    const isMobile = mobileViewportMediaQuery.matches || window.innerWidth <= 768;
     const isAlreadyDone = localStorage.getItem('flag_configurator_nav_guide_done') === 'true';
     if (!isMobile || isAlreadyDone) return;
 
@@ -97,7 +105,7 @@ export function initNavCoachingGuide() {
         focusCameraView('front');
         stopTurntableRotation();
         
-        eventBus.emit('animation:pause');
+        setAnimationPlaying(false);
 
         navGuideState.active = true;
         startNavGuideStep(1);
@@ -112,13 +120,16 @@ export function initNavCoachingGuide() {
 
         const container = document.getElementById('ui-container');
         if (container) container.classList.remove('is-blurred');
+
+        startPostGuideTimers();
+        showArSupportedToastIfSupported();
     };
 
     document.getElementById('nav-guide-skip-btn')?.addEventListener('click', skipGuide);
     document.getElementById('nav-guide-cancel-btn')?.addEventListener('click', skipGuide);
 
     controls.addEventListener('change', () => {
-        if (navGuideState.active) {
+        if (navGuideState.active && !navGuideState.hasCompletedCurrentStep) {
             checkNavGuideGesture();
         }
     });
@@ -126,6 +137,13 @@ export function initNavCoachingGuide() {
     controls.addEventListener('start', () => {
         if (navGuideState.active) {
             navGuideState.userInteracting = true;
+            if (!navGuideState.gestureStarted) {
+                navGuideState.gestureStarted = true;
+                navGuideState.startTarget.copy(controls.target);
+                navGuideState.startCameraDistance = camera.position.distanceTo(controls.target);
+                navGuideState.startAzimuth = controls.getAzimuthalAngle();
+                navGuideState.startPolar = controls.getPolarAngle();
+            }
         }
     });
 
@@ -148,7 +166,7 @@ function startNavGuideStep(step) {
     navGuideState.gestureStarted = false;
     navGuideState.userInteracting = false;
     
-    navGuideState.startTarget = controls.target.clone();
+    navGuideState.startTarget.copy(controls.target);
     navGuideState.startCameraDistance = camera.position.distanceTo(controls.target);
     navGuideState.startAzimuth = controls.getAzimuthalAngle();
     navGuideState.startPolar = controls.getPolarAngle();
@@ -266,9 +284,13 @@ export function completeNavGuideStep() {
                 if (uiContainer) uiContainer.classList.remove('is-blurred');
 
                 focusCameraView('home');
-                eventBus.emit('animation:play');
+                startTurntableAutoStart();
+                setAnimationPlaying(true);
 
-                showToast('Guide Completed', 'You are ready to explore the flag configurator!', 'success');
+                showToast('Guide Completed', 'You are ready to explore the flag configurator!', 'success').then(() => {
+                    showArSupportedToastIfSupported();
+                    startVatAnimationTimer();
+                });
             }
         }, 1200);
     }, 1000);

@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
-import { scene, sceneRoot, renderer, reticle, markSceneDirty } from '../core/scene.js';
-import { camera, controls } from '../core/camera.js';
+import * as TWEEN from 'three/addons/libs/tween.module.js';
+import { scene, sceneRoot, renderer, reticle, defaultBackground, markSceneDirty } from '../core/scene.js';
+import { camera, controls, cameraHome, targetCenter, setActiveCameraView } from '../core/camera.js';
+import { syncTurntableButton } from '../core/cameraTransitions.js';
 import { dom, mobileViewportMediaQuery } from '../ui/domElements.js';
 import { state } from '../state/configState.js';
 import { showToast } from '../ui/toast.js';
+import { modelRoot, characterModel, showCharacter } from '../models/flagModel.js';
+import { syncControlAvailability, handleResize } from '../ui/uiController.js';
 
 let hitTestSource = null;
 let hitTestSourceRequested = false;
@@ -16,6 +20,13 @@ let arTouchStartX = 0;
 let arTouchStartRotationY = 0;
 let arIsDragging = false;
 let arHasDragged = false;
+
+const arButtonIconMarkup = `
+    <img src="icons/ar.svg" alt="" aria-hidden="true" data-ar-icon="true" class="control-icon ar-icon">
+    <span class="ar-badge-label">AR</span>
+`;
+
+let arDisabledFallback = null;
 
 /**
  * Initializes WebXR AR support detection and ARButton creation.
@@ -32,11 +43,65 @@ export function initializeARSupport() {
             if (supported) {
                 state.arSupported = true;
                 setupARButton();
+                syncARVisibility();
             } else {
                 markARUnsupported();
             }
         })
         .catch(() => markARUnsupported());
+}
+
+export function syncARButtonLabel() {
+    if (state.arUnsupported || !arButton || !arButton.isConnected) return;
+    if (!arButton.querySelector('[data-ar-icon="true"]')) arButton.innerHTML = arButtonIconMarkup;
+    const label = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('ar.start') : 'Start AR';
+    arButton.setAttribute('aria-label', label);
+    arButton.title = label;
+}
+
+export function ensureArDisabledFallback() {
+    if (arDisabledFallback?.isConnected) return;
+
+    arDisabledFallback = document.createElement('button');
+    arDisabledFallback.type = 'button';
+    arDisabledFallback.id = 'ARButton';
+    arDisabledFallback.className = 'is-ar-disabled';
+    arDisabledFallback.innerHTML = arButtonIconMarkup;
+    const labelVal = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('ar.unavailable_label') : 'AR preview unavailable on this device';
+    const titleVal = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('ar.unavailable_title') : 'AR preview unavailable';
+    arDisabledFallback.setAttribute('aria-label', labelVal);
+    arDisabledFallback.title = titleVal;
+    arDisabledFallback.addEventListener('click', (event) => {
+        event.preventDefault();
+        showToast('AR unavailable', 'This device or browser does not support AR preview.', 'info', 3600);
+    });
+    dom.arContainer.appendChild(arDisabledFallback);
+}
+
+export function syncARVisibility() {
+    if (!dom.arContainer) return;
+    const showContainer = state.ready && state.arSupportResolved;
+    dom.arContainer.hidden = !showContainer;
+    if (!showContainer) return;
+
+    if (state.arUnsupported) {
+        if (arButton && arButton.isConnected) arButton.remove();
+        ensureArDisabledFallback();
+        return;
+    }
+
+    if (arDisabledFallback?.isConnected) {
+        arDisabledFallback.remove();
+        arDisabledFallback = null;
+    }
+
+    if (arButton && !arButton.isConnected) dom.arContainer.appendChild(arButton);
+
+    if (arButton) {
+        arButton.hidden = false;
+        arButton.disabled = state.modelFailed || state.isExporting || state.isInAR;
+        syncARButtonLabel();
+    }
 }
 
 function setupARButton() {
@@ -45,12 +110,17 @@ function setupARButton() {
     arButton = ARButton.createButton(renderer, {
         requiredFeatures: ['hit-test'],
         optionalFeatures: ['dom-overlay'],
-        domOverlay: { root: document.body }
+        domOverlay: { root: dom.arOverlay }
     });
 
     arButton.id = 'ARButton';
+    arButton.hidden = true;
+    dom.arContainer.hidden = true;
     dom.arContainer.appendChild(arButton);
-    dom.arContainer.hidden = false;
+    syncARButtonLabel();
+
+    const arButtonLabelObserver = new MutationObserver(syncARButtonLabel);
+    arButtonLabelObserver.observe(arButton, { childList: true, characterData: true, subtree: true });
 
     if (dom.stopArBtn) {
         dom.stopArBtn.addEventListener('click', () => {
@@ -90,7 +160,74 @@ function markARUnsupported() {
     state.arUnsupported = true;
     state.arSupportResolved = true;
     state.arSupported = false;
-    if (dom.arContainer) dom.arContainer.hidden = true;
+    syncARVisibility();
+}
+
+export function capturePreviewState() {
+    const activeViewButton = dom.cameraButtons.find((button) => button.classList.contains('is-active'));
+    return {
+        activeView: activeViewButton?.dataset.view ?? null,
+        turntableEnabled: state.turntableEnabled,
+        cameraPosition: camera.position.clone(),
+        cameraQuaternion: camera.quaternion.clone(),
+        cameraZoom: camera.zoom,
+        cameraFov: camera.fov,
+        cameraNear: camera.near,
+        cameraFar: camera.far,
+        controlsTarget: controls.target.clone(),
+        sceneRootPosition: sceneRoot.position.clone(),
+        sceneRootRotation: sceneRoot.rotation.clone()
+    };
+}
+
+export function restorePreviewState(previewState = null) {
+    const snapshot = previewState ?? {
+        activeView: 'home',
+        turntableEnabled: true,
+        cameraPosition: cameraHome.clone(),
+        cameraQuaternion: new THREE.Quaternion(),
+        cameraZoom: 1,
+        cameraFov: 45,
+        cameraNear: 0.1,
+        cameraFar: 100,
+        controlsTarget: targetCenter.clone(),
+        sceneRootPosition: new THREE.Vector3(),
+        sceneRootRotation: new THREE.Euler()
+    };
+
+    TWEEN.removeAll();
+    controls.enabled = true;
+    sceneRoot.visible = true;
+    sceneRoot.position.copy(snapshot.sceneRootPosition);
+    sceneRoot.rotation.copy(snapshot.sceneRootRotation);
+    camera.position.copy(snapshot.cameraPosition);
+    camera.quaternion.copy(snapshot.cameraQuaternion);
+    camera.zoom = snapshot.cameraZoom;
+    camera.fov = snapshot.cameraFov;
+    camera.near = snapshot.cameraNear;
+    camera.far = snapshot.cameraFar;
+    camera.updateProjectionMatrix();
+    controls.target.copy(snapshot.controlsTarget);
+    controls.update();
+    controls.saveState();
+    state.turntableEnabled = snapshot.turntableEnabled;
+    syncTurntableButton();
+    setActiveCameraView(snapshot.activeView);
+}
+
+function schedulePostARRestore() {
+    const restorePreview = () => {
+        handleResize();
+        restorePreviewState(previewStateBeforeAR);
+    };
+
+    window.clearTimeout(postArRestoreTimer);
+    restorePreview();
+
+    window.requestAnimationFrame(() => {
+        restorePreview();
+        postArRestoreTimer = window.setTimeout(() => restorePreview(), mobileViewportMediaQuery.matches ? 320 : 140);
+    });
 }
 
 function onARSessionStart() {
@@ -99,8 +236,13 @@ function onARSessionStart() {
     controls.enabled = false;
     reticle.visible = false;
     window.clearTimeout(postArRestoreTimer);
+    previewStateBeforeAR = capturePreviewState();
 
-    sceneRoot.visible = false;
+    scene.background = null;
+    if (modelRoot) sceneRoot.visible = false;
+    if (characterModel) characterModel.visible = false;
+
+    syncControlAvailability();
 
     const coachingOverlay = document.getElementById('ar-coaching-overlay');
     if (coachingOverlay) {
@@ -117,13 +259,17 @@ function onARSessionEnd() {
     reticle.visible = false;
     resetHitTestState();
 
+    scene.background = defaultBackground;
+
     const coachingOverlay = document.getElementById('ar-coaching-overlay');
     if (coachingOverlay) {
         coachingOverlay.classList.remove('is-visible');
     }
 
-    sceneRoot.visible = true;
-    markSceneDirty();
+    if (characterModel) characterModel.visible = showCharacter;
+
+    schedulePostARRestore();
+    syncControlAvailability();
 }
 
 function resetHitTestState() {

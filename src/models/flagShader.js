@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { vatMaterials, updateVatUniforms } from './vatLoader.js';
+import { vatMaterials, updateVatUniforms, getVatTextures, vatCache } from './vatLoader.js';
+import { configState } from '../state/configState.js';
 
 /**
  * Injects Vertex Animation Texture (VAT) vertex transformation and normal unpacking
@@ -21,10 +22,17 @@ export function injectVATShader(material, { posTexture, normTexture, frameCount 
     material.userData.shaderInjected = true;
 
     material.onBeforeCompile = (shader) => {
-        shader.uniforms.posTexture = { value: posTexture };
-        shader.uniforms.normTexture = { value: normTexture };
+        const currentTextures = getVatTextures();
+        const currentSizeCode = (configState.size || '').split(' ').pop().toLowerCase();
+        const currentVatData = vatCache[currentSizeCode];
+        const activeFrameCount = currentVatData ? currentVatData.info.frame_count : frameCount;
+        const activePosTex = currentTextures.positions || posTexture;
+        const activeNormTex = currentTextures.normals || normTexture;
+
+        shader.uniforms.posTexture = { value: activePosTex };
+        shader.uniforms.normTexture = { value: activeNormTex };
         shader.uniforms.uTime = { value: 0 };
-        shader.uniforms.uTotalFrames = { value: frameCount };
+        shader.uniforms.uTotalFrames = { value: activeFrameCount };
         shader.uniforms.uFps = { value: fps };
 
         material.userData.shader = shader;
@@ -101,9 +109,15 @@ export function injectDepthVATShader(depthMaterial, { posTexture, frameCount = 1
     }
 
     depthMaterial.onBeforeCompile = (shader) => {
-        shader.uniforms.posTexture = { value: posTexture };
+        const currentTextures = getVatTextures();
+        const currentSizeCode = (configState.size || '').split(' ').pop().toLowerCase();
+        const currentVatData = vatCache[currentSizeCode];
+        const activeFrameCount = currentVatData ? currentVatData.info.frame_count : frameCount;
+        const activePosTex = currentTextures.positions || posTexture;
+
+        shader.uniforms.posTexture = { value: activePosTex };
         shader.uniforms.uTime = { value: 0 };
-        shader.uniforms.uTotalFrames = { value: frameCount };
+        shader.uniforms.uTotalFrames = { value: activeFrameCount };
         shader.uniforms.uFps = { value: fps };
 
         depthMaterial.userData.shader = shader;

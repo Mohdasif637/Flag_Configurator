@@ -8,6 +8,7 @@ import { sideConfigs, saveCurrentGraphicToCache } from './graphicConfig.js';
 import { updateTextureTransforms } from './textureCompositor.js';
 import { showToast } from '../ui/toast.js';
 import { eventBus } from '../state/eventBus.js';
+import { modelRoot } from '../models/flagModel.js';
 
 let moveableInstance = null;
 let isMoveableInteracting = false;
@@ -58,11 +59,11 @@ export function updateTransformBadges() {
 }
 
 function getActiveFlagMesh() {
-    const modelRoot = window.__FLAG_MODEL_ROOT__;
-    if (!modelRoot || !modelRoot.userData || !modelRoot.userData.flagMeshes) return null;
+    const root = modelRoot || window.__FLAG_MODEL_ROOT__;
+    if (!root || !root.userData || !root.userData.flagMeshes) return null;
     const sizeCode = configState.size.split(' ').pop();
     const sizePrefix = sizeCode.toLowerCase();
-    const meshes = modelRoot.userData.flagMeshes[sizePrefix];
+    const meshes = root.userData.flagMeshes[sizePrefix];
     if (!meshes) return null;
     const isBack = (configState.direction === 'Left');
     const mesh = isBack ? (meshes.back || meshes.front) : meshes.front;

@@ -4,7 +4,7 @@ import { scene, sceneRoot, renderer, markSceneDirty } from '../core/scene.js';
 import { camera, controls, targetCenter, cameraTargets, cameraDistance } from '../core/camera.js';
 import { updateDynamicCameraTargets, focusCameraView, currentCameraSequenceId } from '../core/cameraTransitions.js';
 import { modelLoader } from './loaders.js';
-import { loadVATData, vatCache, vatMaterials, updateVatUniforms } from './vatLoader.js';
+import { loadVATData, vatCache, vatMaterials, updateVatUniforms, setVatTextures } from './vatLoader.js';
 import { injectVATShader, injectDepthVATShader } from './flagShader.js';
 import { setPocketMaterial, flagMaterialsCache } from './materials.js';
 import { dom } from '../ui/domElements.js';
@@ -398,11 +398,37 @@ export function updateTemplateDownloadLink() {
 
     const filename = `featherflag-convex-${sizeInfo.file}${fileSuffix}.pdf`;
     const downloadUrl = `./assets/templates/${filename}`;
-    
+
+    let sizeText = configState.size;
+    if (window.i18next && window.i18next.isInitialized) {
+        sizeText = window.i18next.t(`selections.size.${configState.size}`);
+    }
+    const sizePart = sizeText.replace(/\s+/g, '-');
+
+    let printingText = configState.printing;
+    if (window.i18next && window.i18next.isInitialized) {
+        printingText = window.i18next.t(`selections.printing.${configState.printing}`);
+    }
+    const printingPart = printingText.replace(/\s+/g, '-');
+
+    let directionPart = '';
+    if (configState.printing !== 'Double Sided') {
+        let directionText = configState.direction;
+        if (window.i18next && window.i18next.isInitialized) {
+            directionText = window.i18next.t(`selections.direction.${configState.direction}`);
+        }
+        directionPart = '-' + directionText.replace(/\s+/g, '-');
+    }
+
+    let displayName = `${sizePart}-${printingPart}${directionPart}`;
+    displayName = displayName.replace(/\s+/g, '-');
+
     downloadBtn.href = downloadUrl;
     downloadBtn.setAttribute('download', filename);
+    downloadBtn.removeAttribute('target');
+    downloadBtn.removeAttribute('rel');
     if (filenameDisplay) {
-        filenameDisplay.textContent = filename;
+        filenameDisplay.textContent = displayName;
     }
 }
 
@@ -492,6 +518,7 @@ export async function applyConfigurationToScene(animateTransition = false, trans
 
     const performSwap = () => {
         if (currentVatData) {
+            setVatTextures(currentVatData.positions, currentVatData.normals);
             vatMaterials.forEach((mat) => {
                 updateVatUniforms(mat, currentVatData.positions, currentVatData.normals, currentVatData.info.frame_count);
             });
@@ -834,6 +861,7 @@ export async function silentWarmupAllSizes() {
         const vatData = vatCache[sizeCode.toLowerCase()];
         if (!vatData) continue;
 
+        setVatTextures(vatData.positions, vatData.normals);
         vatMaterials.forEach(mat => {
             updateVatUniforms(mat, vatData.positions, vatData.normals, vatData.info.frame_count);
         });
@@ -857,6 +885,7 @@ export async function silentWarmupAllSizes() {
 
     const originalVatData = vatCache[originalSizeCode.toLowerCase()];
     if (originalVatData) {
+        setVatTextures(originalVatData.positions, originalVatData.normals);
         vatMaterials.forEach(mat => {
             updateVatUniforms(mat, originalVatData.positions, originalVatData.normals, originalVatData.info.frame_count);
         });
@@ -878,6 +907,9 @@ export async function silentWarmupAllSizes() {
 export async function loadFlagModels() {
     const initialSizeCode = configState.size.split(' ').pop();
     const vatData = await loadVATData(initialSizeCode);
+    if (vatData) {
+        setVatTextures(vatData.positions, vatData.normals);
+    }
 
     return new Promise((resolve, reject) => {
         modelLoader.load(

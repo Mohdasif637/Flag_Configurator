@@ -1,5 +1,5 @@
 import { dom } from '../ui/domElements.js';
-import { configState, getCurrentConfigKey } from '../state/configState.js';
+import { configState, state, getCurrentConfigKey } from '../state/configState.js';
 import { truncateFileName } from '../utils/helpers.js';
 
 export const IMGBB_API_KEY = 'be09b3627886c592e8d7c4bf94518b77';
@@ -67,19 +67,29 @@ export function saveCurrentGraphicToCache() {
 export function syncSideUi(side = 'graphic') {
     const config = sideConfigs[side];
     if (!config) return;
-    const hasTexture = Boolean(config.uploadedTexture);
+    const canInteract = state.ready && !state.modelFailed && !state.isExporting && !state.isInAR;
+    const hasUpload = Boolean(config.uploadedTexture);
 
-    if (config.actionsWrapper) {
-        config.actionsWrapper.classList.toggle('has-texture', hasTexture);
-    }
+    if (config.input) config.input.disabled = !canInteract;
+    if (config.resetButton) config.resetButton.disabled = !canInteract || !hasUpload;
+    if (config.clearButton) config.clearButton.disabled = !canInteract || !hasUpload;
+
+    if (config.actionsWrapper) config.actionsWrapper.classList.toggle('is-visible', hasUpload);
+    if (config.transformsWrapper) config.transformsWrapper.classList.toggle('is-visible', hasUpload);
+
     if (config.thumbFrame) {
-        config.thumbFrame.classList.toggle('is-visible', hasTexture);
+        config.thumbFrame.hidden = !config.previewUrl;
+        config.thumbFrame.classList.toggle('is-visible', hasUpload);
     }
+    if (config.subtitleElement) config.subtitleElement.hidden = hasUpload;
     if (config.dropzone) {
-        config.dropzone.classList.toggle('has-texture', hasTexture);
+        config.dropzone.classList.toggle('has-texture', hasUpload);
+        config.dropzone.classList.toggle('is-disabled', !canInteract);
+        config.dropzone.setAttribute('aria-disabled', String(!canInteract));
+        config.dropzone.tabIndex = canInteract ? 0 : -1;
     }
     if (dom.btnToggleGizmo) {
-        dom.btnToggleGizmo.disabled = !hasTexture;
+        dom.btnToggleGizmo.disabled = !hasUpload;
     }
 }
 

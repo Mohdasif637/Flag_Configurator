@@ -8,6 +8,8 @@ import { getCurrencySymbol, updateContentWithTranslations } from '../ui/preferen
 import { showToast } from '../ui/toast.js';
 import { loadScript } from '../utils/helpers.js';
 import { normalizeHex } from '../models/materials.js';
+import { targetCenter as defaultTargetCenter, cameraDistance as defaultCameraDistance } from '../core/camera.js';
+import { syncControlAvailability } from '../ui/uiController.js';
 
 let pdfLibrariesLoading = false;
 let pdfLibrariesPromise = null;
@@ -99,8 +101,11 @@ function hexToRgb(hex) {
  * @param {THREE.Vector3} targetCenter - Active 3D focus center.
  * @param {number} cameraDistance - Distance for snapshot capture.
  */
-export async function generatePdfProof(targetCenter, cameraDistance = 5.5) {
+export async function generatePdfProof(targetCenterOverride, cameraDistanceOverride) {
     if (!state.ready || state.isExporting) return;
+
+    const targetCenter = (targetCenterOverride instanceof THREE.Vector3) ? targetCenterOverride : defaultTargetCenter;
+    const cameraDistance = (typeof cameraDistanceOverride === 'number') ? cameraDistanceOverride : defaultCameraDistance;
 
     if (sideConfigs.graphic.gizmoActive) {
         saveCurrentGraphicToCache();
@@ -113,6 +118,7 @@ export async function generatePdfProof(targetCenter, cameraDistance = 5.5) {
     }
 
     state.isExporting = true;
+    syncControlAvailability();
     const origBtnMarkup = dom.generatePdf ? dom.generatePdf.innerHTML : '';
     if (dom.generatePdf) {
         dom.generatePdf.textContent = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('actions.saving') : 'Saving...';
@@ -306,5 +312,6 @@ export async function generatePdfProof(targetCenter, cameraDistance = 5.5) {
         if (dom.generatePdf) dom.generatePdf.innerHTML = origBtnMarkup;
         updateContentWithTranslations();
         state.isExporting = false;
+        syncControlAvailability();
     }
 }

@@ -7,6 +7,8 @@ import { state } from '../state/configState.js';
 import { sideConfigs } from '../graphics/graphicConfig.js';
 import { renderer } from './scene.js';
 import { eventBus } from '../state/eventBus.js';
+import { cancelCameraSequence } from './cameraTransitions.js';
+import { modelRoot, characterModel } from '../models/flagModel.js';
 
 export const camera = new THREE.PerspectiveCamera(45, getViewportAspect(dom.canvasContainer), 0.1, 100);
 
@@ -26,7 +28,7 @@ export const cameraTargets = {
     right: new THREE.Vector3(cameraDistance, targetCenter.y, 0)
 };
 
-export const controls = new OrbitControls(camera, dom.canvasContainer);
+export const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
@@ -131,11 +133,11 @@ export function handleDoubleTapZoom(event) {
 
             raycaster.setFromCamera(raycastPointer, camera);
             const targets = [];
-            const modelRoot = window.__FLAG_MODEL_ROOT__;
-            const characterModel = window.__CHARACTER_MODEL__;
+            const root = modelRoot || window.__FLAG_MODEL_ROOT__;
+            const charModel = characterModel || window.__CHARACTER_MODEL__;
 
-            if (modelRoot) targets.push(modelRoot);
-            if (characterModel && characterModel.visible) targets.push(characterModel);
+            if (root) targets.push(root);
+            if (charModel && charModel.visible) targets.push(charModel);
 
             const intersects = raycaster.intersectObjects(targets, true);
             let hitPoint = null;
@@ -253,13 +255,14 @@ export function zoomOutSmoothly() {
  * Initializes camera control listeners and double-tap zoom detection.
  */
 export function initCameraControls() {
-    if (dom.canvasContainer) {
-        dom.canvasContainer.addEventListener('pointerdown', handleDoubleTapZoom);
+    if (renderer && renderer.domElement) {
+        renderer.domElement.addEventListener('pointerdown', handleDoubleTapZoom);
     }
 
     const onUserAdjust = () => {
         if (state.isInAR || !state.ready || state.isExporting) return;
         setActiveCameraView(null);
+        cancelCameraSequence();
     };
     controls.addEventListener('start', onUserAdjust);
     if (dom.canvasContainer) {

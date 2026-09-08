@@ -26,6 +26,11 @@ export let accumulatedTime = 0;
 let lastRenderTime = performance.now();
 let autoPauseTimeout = null;
 
+export function setAnimationPlaying(playing) {
+    isPlaying = Boolean(playing);
+    syncPlayPauseButton();
+}
+
 /**
  * Toggles the flag cloth vertex animation playback.
  */

@@ -6,8 +6,14 @@ import { dom, mobileViewportMediaQuery } from '../ui/domElements.js';
 import { configState, state } from '../state/configState.js';
 import { sideConfigs } from '../graphics/graphicConfig.js';
 import { getNormalizedRotationAngle } from '../utils/mathUtils.js';
+import { modelRoot, characterModel, showCharacter } from '../models/flagModel.js';
 
 export let currentCameraSequenceId = 0;
+
+export function cancelCameraSequence() {
+    currentCameraSequenceId++;
+}
+
 export const turntableSpeed = THREE.MathUtils.degToRad(26);
 export let turntableAccumulatedAngle = 0;
 export let turntableAutoStopEnabled = true;
@@ -50,8 +56,8 @@ export function toggleTurntable() {
  * @param {boolean} [moveCamera=true] - Whether to immediately focus active view onto new targets.
  */
 export function updateDynamicCameraTargets(moveCamera = true) {
-    const modelRoot = window.__FLAG_MODEL_ROOT__;
-    if (!modelRoot) return;
+    const root = modelRoot || window.__FLAG_MODEL_ROOT__;
+    if (!root) return;
 
     const transformsToRestore = [];
     const saveAndNormalize = (obj) => {
@@ -66,12 +72,12 @@ export function updateDynamicCameraTargets(moveCamera = true) {
         obj.updateMatrixWorld(true);
     };
 
-    saveAndNormalize(modelRoot);
+    saveAndNormalize(root);
 
-    const characterModel = window.__CHARACTER_MODEL__;
-    const showCharacter = window.__SHOW_CHARACTER__;
-    if (characterModel && showCharacter) {
-        saveAndNormalize(characterModel);
+    const charModel = characterModel || window.__CHARACTER_MODEL__;
+    const isCharVisible = (typeof showCharacter === 'boolean') ? showCharacter : Boolean(window.__SHOW_CHARACTER__);
+    if (charModel && isCharVisible) {
+        saveAndNormalize(charModel);
     }
 
     const currentSceneRotation = sceneRoot.rotation.clone();

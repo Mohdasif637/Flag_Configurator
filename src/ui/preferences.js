@@ -131,17 +131,16 @@ export function updateContentWithTranslations() {
  * Sets the active language and updates translations across the app.
  * @param {'en'|'nl'} lang
  */
-export function setLanguage(lang) {
-    if (lang === currentLanguage) return;
+export async function setLanguage(lang) {
     currentLanguage = lang;
     localStorage.setItem('pref-language', lang);
-    if (window.i18next && window.i18next.changeLanguage) {
-        window.i18next.changeLanguage(lang, () => {
-            syncPreferenceMenuUi();
-            updateContentWithTranslations();
-            eventBus.emit('preference:changed', { language: currentLanguage, currency: currentCurrency });
-        });
+    syncPreferenceMenuUi();
+    if (window.i18next && window.i18next.isInitialized) {
+        await window.i18next.changeLanguage(lang);
+        syncPreferenceMenuUi();
+        updateContentWithTranslations();
     }
+    eventBus.emit('preference:changed', { language: currentLanguage, currency: currentCurrency });
 }
 
 /**
@@ -149,7 +148,6 @@ export function setLanguage(lang) {
  * @param {'USD'|'EUR'} currency
  */
 export function setCurrency(currency) {
-    if (currency === currentCurrency) return;
     currentCurrency = currency;
     localStorage.setItem('pref-currency', currency);
     syncPreferenceMenuUi();

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { dom, mobileViewportMediaQuery } from './domElements.js';
 import { configState, state } from '../state/configState.js';
-import { sideConfigs } from '../graphics/graphicConfig.js';
+import { sideConfigs, syncSideUi } from '../graphics/graphicConfig.js';
 import { formatSelectionName } from '../utils/helpers.js';
 import { getClampedPixelRatio } from '../utils/mathUtils.js';
 import { renderer, scene, lightingGroup, markSceneDirty } from '../core/scene.js';
@@ -11,19 +11,21 @@ import {
     focusCameraView,
     stopTurntableRotation,
     toggleTurntable,
+    syncTurntableButton,
     runPrintingCameraSequence,
     runDirectionCameraSequence
 } from '../core/cameraTransitions.js';
 import { toggleAnimation, syncPlayPauseButton } from '../core/renderLoop.js';
-import { applyConfigurationToScene, toggleCharacterReference } from '../models/flagModel.js';
+import { applyConfigurationToScene, toggleCharacterReference, updateTemplateDownloadLink, showCharacter } from '../models/flagModel.js';
 import { discardGizmoChanges, updateGizmoOverlay } from '../graphics/gizmo.js';
 import { isEnvPanelOpen, setEnvPanelOpen, environmentTexture } from '../core/environment.js';
 import { getPocketColorPickr, queuePocketColorPickerLayout, restorePocketColorPickerNativeLayout } from './colorPicker.js';
-import { currentLanguage, currentCurrency, syncPreferenceMenuUi, setPreferenceDropdownOpen, updateContentWithTranslations } from './preferences.js';
+import { currentLanguage, currentCurrency, syncPreferenceMenuUi, setPreferenceDropdownOpen, updateContentWithTranslations, setLanguage, setCurrency } from './preferences.js';
 import { updateDynamicPrices } from '../state/pricing.js';
 import { generatePdfProof } from '../features/pdfExport.js';
 import { shareCurrentDesign } from '../features/shareExport.js';
 import { showToast } from './toast.js';
+import { syncARVisibility } from '../features/arManager.js';
 
 /**
  * Initializes the carousel controls, active option cards, and category change handlers.
@@ -160,75 +162,31 @@ export function syncControlAvailability() {
     if (dom.envToggle) dom.envToggle.disabled = !environmentEnabled;
     if (dom.envExposure) dom.envExposure.disabled = !environmentEnabled;
     if (dom.envRotate) dom.envRotate.disabled = !environmentEnabled;
+    if (dom.envReset) dom.envReset.disabled = !environmentEnabled;
+
+    if (!environmentEnabled) setEnvPanelOpen(false);
+
+    const pickr = getPocketColorPickr();
+    if (pickr) {
+        if (baseEnabled) {
+            pickr.enable();
+        } else {
+            pickr.hide();
+            pickr.disable();
+        }
+    }
+
+    syncARVisibility();
+    syncTurntableButton();
+    syncCharButton();
+    syncSideUi('graphic');
 }
 
-/**
- * Updates the template download button href, download attribute, and filename label.
- */
-export function updateTemplateDownloadLink() {
-    const downloadBtn = dom.templateDownloadBtn || document.getElementById('template-download-btn');
-    const filenameDisplay = dom.templateFilename || document.getElementById('template-filename');
-    if (!downloadBtn) return;
-
-    const sizeMapping = {
-        'Feather Flag Convex XS': 'xs',
-        'Feather Flag Convex S': 'S',
-        'Feather Flag Convex M': 'M',
-        'Feather Flag Convex M-Extra Wide': 'M-Wide',
-        'Feather Flag Convex L': 'l'
-    };
-    const sizeKey = sizeMapping[configState.size] || configState.size.split(' ').pop();
-
-    const sizeDimensions = {
-        'xs': { file: 'xs-60x180cm', display: 'XS' },
-        'S': { file: 's-60x240cm', display: 'S' },
-        'M': { file: 'm-70x330cm', display: 'M' },
-        'M-Wide': { file: 'm-wide-90x300cm', display: 'M - Extra Wide' },
-        'l': { file: 'l-75x380cm', display: 'L' }
-    };
-    const sizeInfo = sizeDimensions[sizeKey] || { file: 'l-75x380cm', display: sizeKey.toUpperCase() };
-
-    let fileSuffix = '';
-    if (configState.printing === 'Double Sided') {
-        fileSuffix = '-double-sided';
-    } else {
-        const dirSuffix = configState.direction.toLowerCase() === 'left' ? '-left' : '-right';
-        fileSuffix = `-single-sided${dirSuffix}`;
-    }
-
-    const filename = `featherflag-convex-${sizeInfo.file}${fileSuffix}.pdf`;
-    const downloadUrl = `./assets/templates/${filename}`;
-
-    let sizeText = configState.size;
-    if (window.i18next && window.i18next.isInitialized) {
-        sizeText = window.i18next.t(`selections.size.${configState.size}`);
-    }
-    const sizePart = sizeText.replace(/\s+/g, '-');
-
-    let printingText = configState.printing;
-    if (window.i18next && window.i18next.isInitialized) {
-        printingText = window.i18next.t(`selections.printing.${configState.printing}`);
-    }
-    const printingPart = printingText.replace(/\s+/g, '-');
-
-    let directionPart = '';
-    if (configState.printing !== 'Double Sided') {
-        let directionText = configState.direction;
-        if (window.i18next && window.i18next.isInitialized) {
-            directionText = window.i18next.t(`selections.direction.${configState.direction}`);
-        }
-        directionPart = '-' + directionText.replace(/\s+/g, '-');
-    }
-
-    let displayName = `${sizePart}-${printingPart}${directionPart}`;
-    displayName = displayName.replace(/\s+/g, '-');
-
-    downloadBtn.href = downloadUrl;
-    downloadBtn.setAttribute('download', filename);
-    downloadBtn.removeAttribute('target');
-    downloadBtn.removeAttribute('rel');
-    if (filenameDisplay) {
-        filenameDisplay.textContent = displayName;
+export function syncCharButton() {
+    if (dom.charToggle) {
+        dom.charToggle.classList.toggle('is-active', showCharacter);
+        dom.charToggle.setAttribute('aria-pressed', String(showCharacter));
+        dom.charToggle.title = showCharacter ? 'Hide Height Reference' : 'Show Height Reference';
     }
 }
 
@@ -337,6 +295,14 @@ export function setLoadingState(visible, messageKeyOrText = '') {
             dom.loadingOverlay.style.opacity = '0';
             setTimeout(() => {
                 dom.loadingOverlay.classList.remove('is-visible');
+                const uiContainer = document.getElementById('ui-container');
+                const overlay = document.getElementById('nav-coaching-overlay');
+                const isOverlayVisible = overlay && !overlay.hasAttribute('hidden');
+                const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
+                const isWelcomeVisible = isOverlayVisible && welcomeScreen && !welcomeScreen.hasAttribute('hidden');
+                if (uiContainer && !isWelcomeVisible) {
+                    uiContainer.classList.remove('is-blurred');
+                }
             }, 500);
         }, 300);
     }
@@ -525,14 +491,9 @@ export function bindUIEvents() {
         langItems.forEach((item) => {
             item.addEventListener('click', async () => {
                 const lang = item.dataset.value;
-                localStorage.setItem('pref-language', lang);
-                syncPreferenceMenuUi();
-                if (window.i18next && window.i18next.isInitialized) {
-                    await window.i18next.changeLanguage(lang);
-                    updateContentWithTranslations();
-                    updateDynamicPrices();
-                    updateTemplateDownloadLink();
-                }
+                await setLanguage(lang);
+                updateDynamicPrices();
+                updateTemplateDownloadLink();
             });
         });
     }
@@ -542,8 +503,7 @@ export function bindUIEvents() {
         currencyItems.forEach((item) => {
             item.addEventListener('click', () => {
                 const curr = item.dataset.value;
-                localStorage.setItem('pref-currency', curr);
-                syncPreferenceMenuUi();
+                setCurrency(curr);
                 updateDynamicPrices();
             });
         });

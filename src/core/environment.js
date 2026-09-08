@@ -4,6 +4,7 @@ import { environmentLoader } from '../models/loaders.js';
 import { dom } from '../ui/domElements.js';
 import { showToast } from '../ui/toast.js';
 import { eventBus } from '../state/eventBus.js';
+import { state } from '../state/configState.js';
 
 export let environmentTexture = null;
 let envPanelShouldBeOpen = false;
@@ -21,12 +22,16 @@ export function loadEnvironment() {
                 texture.mapping = THREE.EquirectangularReflectionMapping;
                 environmentTexture = texture;
                 scene.environment = texture;
+                state.environmentLoaded = true;
+                state.environmentResolved = true;
                 markSceneDirty();
                 eventBus.emit('environment:loaded', texture);
                 resolve(texture);
             },
             undefined,
             () => {
+                state.environmentLoaded = false;
+                state.environmentResolved = true;
                 scene.environment = null;
                 showToast('Environment unavailable', 'Studio lighting could not be loaded. Continuing with the default background.', 'error', 4500);
                 eventBus.emit('environment:failed');
