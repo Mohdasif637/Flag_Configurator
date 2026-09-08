@@ -1,0 +1,259 @@
+/* ---------------------------------
+   Camera Controls HUD Console
+--------------------------------- */
+#camera-wrapper {
+    position: absolute;
+    top: auto;
+    right: 20px;
+    bottom: 20px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    transform: scale(0.85);
+    transform-origin: bottom right;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+#camera-wrapper:has(#env-panel.is-open),
+#camera-wrapper.has-env-open {
+    z-index: 30;
+}
+
+body:has(#loading-overlay.is-visible) #camera-wrapper {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+body:has(#loading-overlay.is-visible) .top-right-bar {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+body:has(#loading-overlay.is-visible) .preferences-container {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+#camera-actions {
+    order: 1;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, 48px);
+    grid-template-rows: repeat(2, 48px);
+    grid-template-areas:
+        "char env"
+        "turntable play";
+    align-items: center;
+    justify-content: end;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+#char-toggle {
+    grid-area: char;
+}
+
+#env-toggle {
+    grid-area: env;
+}
+
+#turntable-toggle {
+    grid-area: turntable;
+}
+
+#play-pause {
+    grid-area: play;
+    position: relative;
+}
+
+#camera-controls {
+    order: 2;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+    grid-template-areas:
+        ". back ."
+        "left home right"
+        ". front .";
+    gap: 8px;
+    justify-content: end;
+    align-items: center;
+    justify-items: center;
+}
+
+#cam-back {
+    grid-area: back;
+}
+
+#cam-front {
+    grid-area: front;
+}
+
+#cam-left {
+    grid-area: left;
+}
+
+#cam-right {
+    grid-area: right;
+}
+
+#cam-home {
+    grid-area: home;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+#cam-home svg {
+    display: block;
+    width: 23px;
+    height: 23px;
+}
+
+#camera-controls button,
+#camera-actions button {
+    position: relative;
+    z-index: 1;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    color: #ffffff;
+    background: rgba(10, 16, 26, 0.75);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#camera-controls button {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+#camera-actions button:hover,
+#camera-controls button:hover {
+    background: rgba(10, 16, 26, 0.9);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+#camera-controls button:focus-visible,
+#camera-actions button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+#turntable-toggle,
+#env-toggle,
+#char-toggle,
+#play-pause,
+#camera-controls button {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+#turntable-toggle::before,
+#env-toggle::before,
+#char-toggle::before,
+#play-pause::before,
+#camera-controls button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.25s ease, box-shadow 0.2s ease;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 rgba(0, 0, 0, 0);
+}
+
+#turntable-toggle.is-active::before,
+#env-toggle.is-active::before,
+#char-toggle.is-active::before,
+#play-pause.is-active::before,
+#camera-controls button.is-active::before {
+    opacity: 1;
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.5) !important;
+    /* Apply mechanical switch inset shadow permanently when active */
+}
+
+#turntable-toggle.is-active,
+#env-toggle.is-active,
+#char-toggle.is-active,
+#play-pause.is-active,
+#camera-controls button.is-active {
+    background: transparent !important;
+    /* Make parent background transparent so ::before is fully visible */
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: scale(0.98) !important;
+    /* Keep permanently scaled down to show it is pressed in */
+    box-shadow: 0 0 7px var(--accent-glow) !important;
+}
+
+#turntable-toggle.is-active:hover,
+#env-toggle.is-active:hover,
+#char-toggle.is-active:hover,
+#play-pause.is-active:hover,
+#camera-controls button.is-active:hover {
+    transform: scale(0.98) !important;
+    /* Keep static when hovered while active */
+    box-shadow: 0 0 7px var(--accent-glow) !important;
+}
+
+.btn-icon {
+    flex: 0 0 auto;
+}
+
+.control-icon {
+    display: block;
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    -webkit-user-select: none;
+    user-select: none;
+    pointer-events: none;
+}
+
+.camera-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+#play-pause .is-play {
+    display: none;
+}
+
+#play-pause.is-paused .is-play {
+    display: inline-flex;
+}
+
+#play-pause.is-paused .is-pause {
+    display: none;
+}

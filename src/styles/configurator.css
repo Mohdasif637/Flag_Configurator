@@ -1,0 +1,449 @@
+/* ---------------------------------
+   Custom Scrollbar (Auto Hide/Unhide)
+--------------------------------- */
+@property --panel-scrollbar-thumb {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: transparent;
+}
+
+#ui-shell::-webkit-scrollbar {
+    width: 5px;
+}
+
+#ui-shell::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#ui-shell::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--panel-scrollbar-thumb);
+    border: none;
+}
+
+#ui-shell:hover,
+#ui-shell:focus-within,
+#ui-shell:active {
+    --panel-scrollbar-thumb: #e09233;
+}
+
+#ui-shell::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/* ---------------------------------
+   Configurator Sections Layout
+--------------------------------- */
+.config-section {
+    margin-bottom: 12px;
+    padding-top: 12px;
+    border-top: 2px solid var(--line);
+}
+
+#section-size.config-section {
+    border-top: none;
+    padding-top: 0;
+}
+
+#section-base.config-section {
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--line);
+}
+
+.section-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    gap: 8px;
+}
+
+.section-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--primary);
+    margin-top: 4px;
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.section-title-row .section-title {
+    margin: 0;
+}
+
+/* Material Difference Tooltip */
+.tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.info-tooltip-btn {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    min-height: 20px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--card-border);
+    color: var(--text-contrast);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.2s ease;
+}
+
+.info-tooltip-btn::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+}
+
+.info-tooltip-btn:hover,
+.info-tooltip-btn[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: scale(1.1);
+}
+
+.info-tooltip-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.info-tooltip-popover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    max-width: calc(100vw - 24px);
+    z-index: 10000;
+    background: rgba(15, 23, 42, 0.96);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    color: var(--text-contrast);
+    pointer-events: auto;
+    animation: tooltipFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.info-tooltip-popover[hidden] {
+    display: none !important;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.tooltip-header {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tooltip-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tooltip-item-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 2px;
+}
+
+.tooltip-item-desc {
+    font-size: 11px;
+    color: #cbd5e1;
+    line-height: 1.35;
+}
+
+.selection-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 600;
+    font-size: 13px;
+    gap: 6px;
+    color: var(--text-contrast);
+}
+
+.selection-price {
+    font-family: 'Outfit', sans-serif;
+    color: var(--accent);
+    font-size: 13.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ---------------------------------
+   Carousel Layout
+--------------------------------- */
+.carousel-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.carousel-track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: 6px 4px;
+    margin: 0 -4px;
+    box-sizing: border-box;
+    /* Room for active card scale transitions */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.carousel-track::-webkit-scrollbar {
+    display: none;
+}
+
+/* Glassmorphic Selection Cards */
+.config-card {
+    flex: 0 0 auto;
+    width: clamp(56px, 20vw, 76px);
+    aspect-ratio: 1 / 1;
+    scroll-snap-align: start;
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1.4px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-contrast);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+}
+
+.config-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 80%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.config-card:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--card-border-hover) !important;
+    cursor: pointer !important;
+    transform: translateY(-2px);
+}
+
+.config-card:hover::before {
+    opacity: 1;
+}
+
+.config-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.config-card.is-active {
+    background-color: rgba(245, 158, 11, 0.16) !important;
+    border: 2.8px solid var(--accent) !important;
+    box-shadow: none !important;
+}
+
+.config-card.is-active:hover {
+    border: 2.8px solid var(--accent) !important;
+}
+
+button.config-card[data-category="base"].is-active {
+    transform: translateY(-4px);
+}
+
+.card-icon {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-contrast);
+    transition: color 0.2s ease;
+}
+
+.card-icon.is-small {
+    font-size: 0.8rem;
+}
+
+.config-card.is-active .card-icon,
+.config-card.is-active .card-text-wrap {
+    color: var(--accent);
+    font-weight: 800;
+    text-shadow: 0 0 6px rgba(245, 158, 11, 0.35);
+}
+
+.card-thumb {
+    width: 105%;
+    height: 105%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
+    -webkit-user-select: none;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Segmented Printing Track */
+.carousel-track.wrap-track.printing-track {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: calc(100% + 8px);
+    margin: 0 -4px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.printing-track .config-card {
+    flex: 1;
+    width: 100%;
+    min-height: 48px;
+    padding: 6px 3px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.card-text-wrap {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-contrast);
+    white-space: normal;
+    text-align: center;
+    word-break: break-word;
+    hyphens: auto;
+}
+
+/* Floating Arrows (Frosted Glass) */
+.carousel-arrow {
+    position: absolute;
+    z-index: 2;
+    background: rgba(43, 51, 60, 0.9);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1.5px solid var(--card-border);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: var(--text-contrast);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.carousel-arrow:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #080d16;
+    cursor: pointer !important;
+    transform: scale(1.1);
+}
+
+.carousel-arrow:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.carousel-wrapper:hover .carousel-arrow:not(.is-hidden) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.carousel-arrow.is-hidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.left-arrow {
+    left: -16px;
+}
+
+.right-arrow {
+    right: -16px;
+}
+
+.carousel-track.wrap-track {
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 10px;
+    width: calc(100% + 8px);
+    margin: 0 -4px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.carousel-track.wrap-track .config-card {
+    flex: 1;
+    aspect-ratio: auto;
+    padding: 12px 0;
+}
+
+.color-picker-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--card-border);
+    background: var(--surface);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    color: var(--text-contrast);
+}
+
+.color-picker-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--card-border-hover) !important;
+    cursor: pointer !important;
+}
+

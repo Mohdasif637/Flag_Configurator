@@ -1,0 +1,156 @@
+/* ---------------------------------
+   Buttons
+--------------------------------- */
+button,
+.guide-btn {
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    outline: none;
+}
+
+.guide-btn,
+.primary-btn,
+.secondary-btn,
+.danger-btn,
+.upload-card {
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.guide-btn:hover,
+.guide-btn:focus-visible,
+.primary-btn:hover,
+.primary-btn:focus-visible,
+.secondary-btn:hover,
+.secondary-btn:focus-visible,
+.danger-btn:hover,
+.danger-btn:focus-visible,
+.upload-card:hover,
+.upload-card:focus-visible {
+    transform: translateY(-2px);
+}
+
+button:disabled,
+input:disabled,
+.upload-card.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.guide-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 14px;
+    margin-top: 20px;
+    margin-bottom: var(--space-4);
+    box-sizing: border-box;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(34, 156, 115, 0.788) 0%, #059668b1 100%);
+    border: 1px solid var(--card-border);
+    color: var(--text-contrast);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.guide-btn:hover {
+    background: linear-gradient(135deg, rgba(34, 156, 115, 0.9) 0%, #059668 100%);
+    border-color: var(--card-border-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.secondary-btn,
+.danger-btn,
+.primary-btn {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 16px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 700;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.secondary-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--card-border);
+    color: var(--text-contrast);
+    cursor: pointer;
+}
+
+.secondary-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--card-border-hover) !important;
+    color: #ffffff;
+    cursor: pointer !important;
+}
+
+.danger-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1.5px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    cursor: pointer;
+}
+
+.danger-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--danger);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+    cursor: pointer;
+}
+
+.primary-btn {
+    background: linear-gradient(135deg, rgba(34, 156, 115, 0.788) 0%, #059668b1 100%);
+    border: 1.5px solid var(--card-border);
+    color: #fff;
+    box-shadow: 0 2px 7px var(--primary-glow);
+    cursor: pointer;
+}
+
+.primary-btn:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    cursor: pointer;
+}
+
+.action-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.action-row {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+}
+
+.action-row button {
+    flex: 1;
+    font-size: 11px;
+    padding: 10px 6px;
+    gap: 4px;
+    border: 1.5px solid var(--card-border);
+    cursor: pointer;
+}
+
+.action-row button:hover {
+    border-color: var(--card-border-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+
+.action-stack button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}

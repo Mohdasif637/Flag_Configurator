@@ -1,0 +1,130 @@
+/* ---------------------------------
+   Upload Component
+--------------------------------- */
+.upload-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 0 var(--space-3);
+    height: 70px;
+    box-sizing: border-box;
+    border: 1.5px dashed var(--card-border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-card:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--card-border-hover) !important;
+    cursor: pointer !important;
+}
+
+.upload-card.is-loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.upload-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: rgba(16, 185, 129, 0.15);
+    pointer-events: none;
+    z-index: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+}
+
+.upload-card.is-dragover {
+    border-color: var(--primary);
+    background: rgba(16, 185, 129, 0.04);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.08);
+}
+
+.upload-card-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.upload-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    color: var(--text);
+}
+
+.upload-subtitle {
+    font-size: 11.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.upload-thumb-frame {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #0b0f19;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.upload-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.expandable-section {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    margin-top: 0;
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), margin-top 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+}
+
+.expandable-section.is-visible {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-top: 12px;
+}
+
+.expandable-content {
+    min-height: 0;
+    overflow: hidden;
+    transform: translateY(-10px);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.expandable-section.is-visible .expandable-content {
+    transform: translateY(0);
+    overflow: visible;
+}
+
+.upload-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.upload-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}

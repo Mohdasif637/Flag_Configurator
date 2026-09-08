@@ -1,0 +1,82 @@
+/* ---------------------------------
+   Canvas & Loading Overlay
+--------------------------------- */
+#canvas-container {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+}
+
+body:has(#loading-overlay.is-visible) #canvas-container {
+    background: #e3e3e3;
+}
+
+#canvas-container canvas {
+    display: block;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(6, 10, 18, 0.45);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#loading-overlay {
+    background: #e3e3e3;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+.overlay.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.loading-card {
+    min-width: 240px;
+    padding: var(--space-5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    background: rgba(10, 17, 28, 0.8);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.loading-card p {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.loading-progress-bar-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    margin-top: var(--space-4);
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.1s ease-out;
+}

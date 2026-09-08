@@ -1,0 +1,149 @@
+/* ---------------------------------
+   Floating Top-Right Bar & Preferences
+--------------------------------- */
+.top-right-bar {
+    position: absolute;
+    top: 12px;
+    right: 20px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.top-right-bar:has(.pref-dropdown.is-open) {
+    z-index: 40;
+}
+
+.preferences-container {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: 5;
+    display: inline-block;
+}
+
+.pref-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(10, 16, 26, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 99px;
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease, transform 0.2s ease;
+}
+
+.pref-btn:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(10, 16, 26, 0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    color: #ffffff;
+}
+
+.pref-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.pref-btn[aria-expanded="true"] .pref-chevron {
+    transform: rotate(180deg);
+}
+
+.pref-chevron {
+    transition: transform 0.2s ease;
+}
+
+.pref-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    display: flex;
+    gap: 10px;
+    padding: 10px 10px;
+    background: rgba(10, 16, 26, 0.95);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pref-dropdown.is-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.pref-menu-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: max-content;
+}
+
+.pref-menu-title {
+    color: rgba(255, 255, 255, 0.4);
+    font-family: 'Outfit', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pref-menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pref-menu-item {
+    color: rgba(255, 255, 255, 0.7);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+}
+
+.pref-menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+}
+
+.pref-menu-item.is-active {
+    background: rgba(0, 102, 204, 0.2);
+    border: 1px solid rgba(0, 102, 204, 0.4);
+    color: #38bdf8;
+    font-weight: 600;
+}
+
+.pref-menu-divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(255, 255, 255, 0.08);
+}
+
