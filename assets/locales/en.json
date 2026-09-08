@@ -62,7 +62,14 @@
     "remove": "Remove",
     "scale": "Scale",
     "pan_x": "Pan X",
-    "pan_y": "Pan Y"
+    "pan_y": "Pan Y",
+    "pan_x_short": "X",
+    "pan_y_short": "Y",
+    "adjust": "Adjust on Flag",
+    "adjust_active": "Editing Active",
+    "center": "Center",
+    "fit": "Fit",
+    "rotate": "Rotate"
   },
   "pole_cover": {
     "picker_title": "Choose pocket color"

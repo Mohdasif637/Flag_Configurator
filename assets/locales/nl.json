@@ -62,7 +62,14 @@
     "remove": "Verwijderen",
     "scale": "Schaal",
     "pan_x": "Verschuif X",
-    "pan_y": "Verschuif Y"
+    "pan_y": "Verschuif Y",
+    "pan_x_short": "X",
+    "pan_y_short": "Y",
+    "adjust": "Aanpassen op vlag",
+    "adjust_active": "Bewerken actief",
+    "center": "Centreren",
+    "fit": "Passend maken",
+    "rotate": "Draaien"
   },
   "pole_cover": {
     "picker_title": "Kies mastband kleur"

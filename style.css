@@ -638,30 +638,292 @@ body:has(#loading-overlay.is-visible) #canvas-container {
 /* ---------------------------------
    Form Controls & Sliders
 --------------------------------- */
-.transform-controls {
-    padding: 16px;
+/* ---------------------------------
+   Interactive 2D Graphic Transform Gizmo Target
+--------------------------------- */
+.moveable-proxy-target {
+    position: absolute;
+    box-sizing: border-box;
+    transform-origin: center center;
+    pointer-events: auto;
+    touch-action: none;
+    border: 1.5px dashed rgba(56, 189, 248, 0.5);
+    background: rgba(56, 189, 248, 0.05);
+    z-index: 10;
+}
+
+/* ---------------------------------
+   Under-Upload-Card Panel Controls
+--------------------------------- */
+.transform-panel-controls {
+    padding: 12px;
     border: 1px solid var(--card-border);
     border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.03);
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.transform-controls label {
+.gizmo-toggle-btn {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    margin-bottom: 12px;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-contrast);
+    cursor: pointer;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    background: rgba(56, 189, 248, 0.08);
+    color: #38bdf8;
+    transition: all 0.2s ease;
 }
 
-.transform-controls label:last-child {
-    margin-bottom: 0;
+.gizmo-toggle-btn:hover {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: #38bdf8;
+    color: #ffffff;
 }
 
-.transform-controls input[type="range"],
+.gizmo-toggle-btn.is-active {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(56, 189, 248, 0.15));
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+/* Moveable Rotation Handle & Stalk Customizations */
+.moveable-control-box .moveable-rotation {
+    top: -20px !important;
+    height: 20px !important;
+}
+
+.moveable-control-box .moveable-rotation .moveable-rotation-line {
+    height: 20px !important;
+    background: #38bdf8 !important;
+    width: 1.5px !important;
+}
+
+.moveable-control-box .moveable-rotation .moveable-rotation-control {
+    top: 0px !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: -9px 0 0 -9px !important;
+    border-radius: 50% !important;
+    background-color: #0284c7 !important;
+    border: 2px solid #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67'/%3E%3C/svg%3E") !important;
+    background-size: 11px 11px !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    box-shadow: 0 0 10px rgba(2, 132, 199, 0.7) !important;
+    cursor: grab !important;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.moveable-control-box .moveable-rotation .moveable-rotation-control:hover {
+    background-color: #0ea5e9 !important;
+    transform: scale(1.15) !important;
+}
+
+/* ---------------------------------
+   Floating Transform Toolbar at Bottom Center of 3D Canvas
+--------------------------------- */
+.gizmo-floating-bar {
+    position: fixed;
+    bottom: 10px;
+    left: calc(min(345px, calc(100vw - 40px)) + 18px);
+    transform: none;
+    z-index: 25;
+    pointer-events: auto;
+    user-select: none;
+    animation: floatingBarFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes floatingBarFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.floating-bar-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    padding: 5px 6px;
+    border-radius: var(--radius-sm, 10px);
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+}
+
+.floating-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.floating-bar-row .floating-badge {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 5px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 10px;
+    color: var(--text-muted, #94a3b8);
+    cursor: ew-resize;
+    touch-action: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.floating-badge:hover {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: #e2e8f0;
+}
+
+.floating-badge.is-scrubbing {
+    background: rgba(56, 189, 248, 0.22);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.floating-badge .badge-label {
+    font-weight: 700;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    opacity: 0.75;
+}
+
+.floating-badge .badge-val-display {
+    color: #ffffff;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 22px;
+    text-align: right;
+    font-size: 10px;
+}
+
+.floating-badge .badge-val-input {
+    width: 32px;
+    padding: 1px 2px;
+    margin: 0;
+    border: 1px solid #38bdf8;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.95);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    text-align: right;
+    outline: none;
+}
+
+.floating-bar-divider {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.12);
+    margin: 0 1px;
+}
+
+.floating-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
+    color: #cbd5e1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.floating-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+.floating-icon-btn:active {
+    transform: scale(0.95);
+}
+
+.floating-confirm-actions {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.floating-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.floating-action-btn.is-accept {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.floating-action-btn.is-accept:hover {
+    background: #22c55e;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.55);
+    transform: scale(1.06);
+}
+
+.floating-action-btn.is-accept:active {
+    transform: scale(0.94);
+}
+
+.floating-action-btn.is-reject {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.floating-action-btn.is-reject:hover {
+    background: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
+    transform: scale(1.06);
+}
+
+.floating-action-btn.is-reject:active {
+    transform: scale(0.94);
+}
+
 #env-panel input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
@@ -673,7 +935,6 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     transition: background 0.2s ease;
 }
 
-.transform-controls input[type="range"]::-webkit-slider-thumb,
 #env-panel input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -686,7 +947,6 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     transition: transform 0.15s ease, background 0.15s ease;
 }
 
-.transform-controls input[type="range"]::-webkit-slider-thumb:hover,
 #env-panel input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.25);
     background: #34d399;
@@ -2196,6 +2456,15 @@ button.config-card[data-category="base"].is-active {
         padding-top: 10px;
         padding-bottom: 8px;
     }
+
+    /* In tablet mode, align toolbar to the left near the sidebar, bottom matched */
+    .gizmo-floating-bar {
+        position: fixed;
+        left: calc(min(300px, calc(100vw - 40px)) + 18px);
+        transform: none;
+        bottom: 10px;
+        z-index: 25;
+    }
 }
 
 @media (max-width: 768px) {
@@ -2211,6 +2480,17 @@ button.config-card[data-category="base"].is-active {
     #canvas-container {
         position: relative;
         height: 52%;
+    }
+
+    /* In portrait mobile, place toolbar at the bottom of the 52% canvas container and align to left edge */
+    .gizmo-floating-bar {
+        position: absolute;
+        bottom: 12px;
+        left: 10px;
+        right: auto;
+        transform: none;
+        max-width: calc(100% - 20px);
+        z-index: 50;
     }
 
     #ui-container {
@@ -2874,5 +3154,42 @@ button.config-card[data-category="base"].is-active {
 
     #env-panel {
         bottom: 108px;
+    }
+}
+
+/* ---------------------------------
+   Landscape Mobile Media Layout
+   Arranges canvas & sidebar side-by-side with toolbar docked beside sidebar
+--------------------------------- */
+@media (max-width: 768px) and (orientation: landscape),
+       (max-height: 520px) and (orientation: landscape) {
+    #canvas-container {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+    }
+
+    #ui-container {
+        top: 10px;
+        bottom: 10px;
+        left: 6px;
+        width: min(280px, 42vw);
+        max-height: calc(100% - 20px);
+        position: absolute;
+    }
+
+    #ui-bg,
+    #ui-header-wrapper,
+    #ui-panel {
+        width: min(275px, calc(42vw - 12px));
+    }
+
+    .gizmo-floating-bar {
+        position: fixed;
+        left: calc(min(280px, 42vw) + 18px);
+        bottom: 10px;
+        right: auto;
+        transform: none;
+        z-index: 50;
     }
 }
