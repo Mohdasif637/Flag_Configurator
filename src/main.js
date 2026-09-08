@@ -46,6 +46,7 @@ if (typeof window !== 'undefined') {
  */
 async function bootstrap() {
     initCameraControls();
+    handleResize();
     initGraphicManager();
     bindGizmoControls();
     bindUIEvents();
@@ -108,6 +109,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     await initI18n();
     await checkAndLoadSharedDesign();
     initConfiguratorUI();
-    await bootstrap();
+    bootstrap();
     handleResize();
 });
