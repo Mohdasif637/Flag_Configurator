@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@lottiefiles/dotlottie-web": "^0.32.0",
     "@simonwep/pickr": "^1.9.1",
     "i18next": "^23.11.5",
     "moveable": "^0.53.0",

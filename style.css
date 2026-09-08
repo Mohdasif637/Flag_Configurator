@@ -2631,28 +2631,27 @@ button.config-card[data-category="base"].is-active {
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        /* Align coaching cards to top edge */
-        padding: 0 16px 16px 16px;
-        /* Align top card border with top edge */
+        padding: 10px 16px;
         box-sizing: border-box;
     }
 
     .nav-coaching-card {
         width: 100%;
-        background: rgba(69, 69, 69, 0.85);
+        max-width: 420px;
+        background: rgba(40, 44, 52, 0.88);
         -webkit-backdrop-filter: blur(20px);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 20px;
-        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 14px 18px;
         box-sizing: border-box;
         text-align: center;
         color: #fff;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         pointer-events: auto;
         /* Allow clicks on buttons/actions */
         position: relative;
@@ -2666,7 +2665,7 @@ button.config-card[data-category="base"].is-active {
 
     .nav-coaching-title {
         font-family: 'Outfit', sans-serif;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 700;
         margin: 0;
         color: var(--text, #fff);
@@ -2675,22 +2674,22 @@ button.config-card[data-category="base"].is-active {
     .nav-coaching-desc {
         font-family: 'Inter', sans-serif;
         font-size: 12px;
-        line-height: 1.45;
+        line-height: 1.4;
         margin: 0;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.75);
     }
 
     .nav-coaching-actions {
         display: flex;
         width: 100%;
-        gap: 10px;
-        margin-top: 6px;
+        gap: 8px;
+        margin-top: 4px;
     }
 
     .nav-btn {
         flex: 1;
-        padding: 10px 16px;
-        border-radius: 12px;
+        padding: 8px 14px;
+        border-radius: 10px;
         font-size: 12px;
         font-weight: 600;
         border: none;

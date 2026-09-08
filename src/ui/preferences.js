@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { dom } from './domElements.js';
 import { formatSelectionName } from '../utils/helpers.js';
 import { eventBus } from '../state/eventBus.js';
+import { sideConfigs } from '../graphics/graphicConfig.js';
 
 if (typeof window !== 'undefined' && !window.i18next) {
     window.i18next = i18next;
@@ -123,6 +124,12 @@ export function updateContentWithTranslations() {
             }
         }
     });
+
+    const uploadConfig = sideConfigs?.graphic;
+    if (uploadConfig && !uploadConfig.uploadedTexture && window.i18next && window.i18next.isInitialized) {
+        if (uploadConfig.titleElement) uploadConfig.titleElement.textContent = window.i18next.t('upload.title');
+        if (uploadConfig.subtitleElement) uploadConfig.subtitleElement.textContent = window.i18next.t('upload.subtitle');
+    }
 
     eventBus.emit('i18n:updated');
 }

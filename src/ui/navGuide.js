@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { DotLottie } from '@lottiefiles/dotlottie-web';
 import { camera, controls } from '../core/camera.js';
 import { focusCameraView, stopTurntableRotation } from '../core/cameraTransitions.js';
 import {
@@ -25,9 +24,6 @@ export const navGuideState = {
     gestureStarted: false
 };
 
-let preloadedLottieBuffer = null;
-let isLottiePreloading = false;
-
 const svgRotate = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <path d="M 16 22 Q 41 14, 66 22" class="gesture-trail" />
     <g class="gesture-finger rotate-animation">
@@ -48,7 +44,7 @@ const svgPan = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true
     </g>
 </svg>`;
 
-const svgZoom = `<canvas id="dotlottie-canvas" style="width: 120px; height: 120px; display: block;"></canvas>`;
+const svgZoom = `<img src="icons/pinch.svg" class="gesture-svg" alt="Pinch to zoom" aria-hidden="true">`;
 
 const svgDoubleTap = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <circle cx="40" cy="30" r="12" class="gesture-ripple ripple-1" />
@@ -61,25 +57,6 @@ const svgDoubleTap = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden
     </g>
 </svg>`;
 
-export function preloadLottieAnimation() {
-    if (preloadedLottieBuffer || isLottiePreloading) return;
-    isLottiePreloading = true;
-    
-    const lottieUrl = 'https://lottie.host/57373add-d2b2-40e1-8f5a-ce8c39890929/yacSXj2kVC.lottie';
-    fetch(lottieUrl)
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.arrayBuffer();
-        })
-        .then(buffer => {
-            preloadedLottieBuffer = buffer;
-        })
-        .catch(err => {
-            console.warn('Failed to prefetch pinch dotLottie animation:', err);
-            isLottiePreloading = false;
-        });
-}
-
 /**
  * Initializes the mobile 3D navigation coaching tour.
  */
@@ -87,8 +64,6 @@ export function initNavCoachingGuide() {
     const isMobile = mobileViewportMediaQuery.matches || window.innerWidth <= 768;
     const isAlreadyDone = localStorage.getItem('flag_configurator_nav_guide_done') === 'true';
     if (!isMobile || isAlreadyDone) return;
-
-    preloadLottieAnimation();
 
     const overlay = document.getElementById('nav-coaching-overlay');
     if (overlay) overlay.removeAttribute('hidden');
@@ -180,24 +155,7 @@ function updateNavGuideUI() {
     if (svgContainer) {
         if (step === 1) svgContainer.innerHTML = svgRotate;
         else if (step === 2) svgContainer.innerHTML = svgPan;
-        else if (step === 3) {
-            svgContainer.innerHTML = svgZoom;
-            try {
-                const config = {
-                    autoplay: true,
-                    loop: true,
-                    canvas: document.getElementById('dotlottie-canvas')
-                };
-                if (preloadedLottieBuffer) {
-                    config.data = preloadedLottieBuffer;
-                } else {
-                    config.src = 'https://lottie.host/57373add-d2b2-40e1-8f5a-ce8c39890929/yacSXj2kVC.lottie';
-                }
-                new DotLottie(config);
-            } catch (err) {
-                console.error('Failed to initialize pinch dotLottie animation:', err);
-            }
-        }
+        else if (step === 3) svgContainer.innerHTML = svgZoom;
         else if (step === 4) svgContainer.innerHTML = svgDoubleTap;
     }
 
