@@ -268,9 +268,6 @@ export function initMoveable() {
                     updateTextureTransforms('graphic');
                 }
             }
-            if (dom.moveableTarget) dom.moveableTarget.style.pointerEvents = 'none';
-            const controlBox = document.querySelector('.moveable-control-box');
-            if (controlBox) controlBox.style.pointerEvents = 'none';
             controls.enabled = true;
             controls.enableRotate = false;
             controls.enableZoom = true;
@@ -283,13 +280,6 @@ export function initMoveable() {
         if (!e.touches || e.touches.length < 2) {
             if (isMultiTouchActive) {
                 isMultiTouchActive = false;
-                setTimeout(() => {
-                    if (!sideConfigs.graphic.gizmoActive) return;
-                    if (dom.moveableTarget) dom.moveableTarget.style.pointerEvents = 'auto';
-                    const controlBox = document.querySelector('.moveable-control-box');
-                    if (controlBox) controlBox.style.pointerEvents = 'auto';
-                    if (moveableInstance) moveableInstance.updateRect();
-                }, 50);
             }
         }
     }, { passive: true });
@@ -298,10 +288,6 @@ export function initMoveable() {
         if (!sideConfigs.graphic.gizmoActive) return;
         if (!e.touches || e.touches.length < 2) {
             isMultiTouchActive = false;
-            if (dom.moveableTarget) dom.moveableTarget.style.pointerEvents = 'auto';
-            const controlBox = document.querySelector('.moveable-control-box');
-            if (controlBox) controlBox.style.pointerEvents = 'auto';
-            if (moveableInstance) moveableInstance.updateRect();
         }
     }, { passive: true });
 }

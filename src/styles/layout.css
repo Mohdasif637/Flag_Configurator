@@ -4,49 +4,48 @@
 #ui-container {
     position: absolute;
     top: 10px;
-    left: 6px;
+    right: 10px;
+    left: auto;
     z-index: 3;
     max-height: calc(100% - 20px);
-    width: min(345px, calc(100vw - 40px));
+    width: min(340px, calc(100vw - 40px));
     display: flex;
+    background: #ffffff;
+    border-radius: var(--panel-radius, 8.4px);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    overflow: hidden;
 }
 
 #ui-bg {
     position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(340px, calc(100vw - 52px));
-    border-radius: var(--radius-lg);
-    background: #2b333c;
-    border: 1px solid var(--card-border);
-    box-shadow: none;
-    -webkit-backdrop-filter: blur(24px);
-    backdrop-filter: blur(24px);
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    background: #ffffff;
     z-index: -1;
     pointer-events: none;
 }
 
 #ui-shell {
     flex: 1;
+    width: 100%;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
-    direction: rtl;
-    --panel-scrollbar-thumb: transparent;
-    border-radius: var(--radius-lg);
+    background: #ffffff;
+    border-radius: inherit;
     outline: none;
     -webkit-tap-highlight-color: transparent;
-    transition: --panel-scrollbar-thumb 0.28s ease;
 }
 
 #ui-header-wrapper {
-    direction: ltr;
     position: sticky;
     top: 0;
     z-index: 10;
-    width: min(340px, calc(100vw - 52px));
+    width: 100%;
     padding: 22px var(--space-4) 14px;
     box-sizing: border-box;
 }
@@ -55,11 +54,9 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: #242c35;
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    border-bottom: 2px solid var(--line);
+    background: #ffffff;
+    border-radius: var(--panel-radius, 8.4px) var(--panel-radius, 8.4px) 0 0;
+    border-bottom: 1px solid var(--line);
     z-index: -1;
 }
 
@@ -70,9 +67,8 @@
 
 #ui-panel {
     position: relative;
-    direction: ltr;
     height: fit-content;
-    width: min(340px, calc(100vw - 52px));
+    width: 100%;
     padding: 10px var(--space-4) var(--space-4);
     box-sizing: border-box;
 }
@@ -81,15 +77,15 @@
     position: absolute;
     top: 0;
     right: 0;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-    color: #080d16;
+    background: var(--secondary);
+    color: #ffffff;
     padding: 5px 14px;
-    border-top-right-radius: var(--radius-lg);
+    border-top-right-radius: var(--panel-radius, 8.4px);
     border-bottom-left-radius: var(--radius-md);
     font-family: 'Outfit', sans-serif;
     font-weight: 800;
     font-size: 1.1rem;
-    box-shadow: 0 2px 6px var(--accent-glow);
+    box-shadow: none;
     z-index: 10;
 }
 

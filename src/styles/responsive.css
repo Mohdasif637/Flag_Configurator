@@ -1,49 +1,21 @@
 /* ---------------------------------
    Media Queries & Responsive Layout
 --------------------------------- */
-@media (min-width: 769px) and (max-width: 1100px) {
-    #ui-container {
-        width: min(300px, calc(100vw - 40px));
-        top: 10px;
-        bottom: auto;
-        max-height: calc(100% - 20px);
-        left: 6px;
-    }
 
-    #ui-bg,
-    #ui-header-wrapper,
-    #ui-panel {
-        width: min(295px, calc(100vw - 52px));
-    }
-
-    #ui-header-wrapper {
-        padding-top: 10px;
-        padding-bottom: 8px;
-    }
-
-    /* In tablet mode, align toolbar to the left near the sidebar, bottom matched */
-    .gizmo-floating-bar {
-        position: fixed;
-        left: calc(min(300px, calc(100vw - 40px)) + 18px);
-        transform: none;
-        bottom: 10px;
-        z-index: 25;
-    }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 768px) and (orientation: portrait) {
     body {
         overflow: hidden;
     }
 
     body:has(#loading-overlay.is-visible) {
-        background: #808285;
+        background: #f5f5f5;
         transition: none;
     }
 
     #canvas-container {
         position: relative;
         height: 52%;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
     }
 
     /* In portrait mobile, place toolbar at the bottom of the 52% canvas container and align to left edge */
@@ -63,14 +35,19 @@
         width: 100%;
         max-height: 48%;
         position: absolute;
+        border-radius: var(--panel-radius, 8.4px) var(--panel-radius, 8.4px) 0 0;
+        border-bottom: none;
+        border-left: none;
+        border-right: none;
+        box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.15);
     }
 
     #ui-container::after {
         content: "";
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.8);
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        background: rgba(255, 255, 255, 0.85);
+        border-radius: var(--panel-radius, 8.4px) var(--panel-radius, 8.4px) 0 0;
         z-index: 9999;
         pointer-events: none;
         opacity: 0;
@@ -87,15 +64,16 @@
 
     #ui-bg {
         width: 100%;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        border-radius: var(--panel-radius, 8.4px) var(--panel-radius, 8.4px) 0 0;
         border-bottom: none;
         border-left: none;
         border-right: none;
+        box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.15);
     }
 
     #ui-shell {
-        background-color: transparent;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        background-color: #ffffff;
+        border-radius: var(--panel-radius, 8.4px) var(--panel-radius, 8.4px) 0 0;
     }
 
     #ui-header-wrapper {
@@ -106,7 +84,7 @@
     }
 
     #ui-header-wrapper::before {
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        border-radius: var(--panel-radius, 8.4px) var(--panel-radius, 8.4px) 0 0;
     }
 
     #ui-panel {
@@ -127,6 +105,8 @@
     #camera-wrapper {
         bottom: calc(48% + 12px);
         right: 12px;
+        left: auto;
+        align-items: flex-end;
         transform: scale(0.75);
         transform-origin: bottom right;
     }
@@ -179,6 +159,17 @@
         margin-left: auto;
     }
 
+    .pref-dropdown {
+        right: 0;
+        left: auto;
+    }
+
+    #env-panel {
+        right: 0;
+        left: auto;
+        transform-origin: bottom right;
+    }
+
     .info-tooltip-popover {
         width: min(280px, calc(100vw - 32px));
     }
@@ -202,16 +193,16 @@
     .nav-coaching-card {
         width: 100%;
         max-width: 420px;
-        background: rgba(40, 44, 52, 0.88);
-        -webkit-backdrop-filter: blur(20px);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 16px;
+        background: #ffffff;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-md);
         padding: 14px 18px;
         box-sizing: border-box;
         text-align: center;
-        color: #fff;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        color: var(--text);
+        box-shadow: none;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -232,7 +223,7 @@
         font-size: 14px;
         font-weight: 700;
         margin: 0;
-        color: var(--text, #fff);
+        color: var(--text);
     }
 
     .nav-coaching-desc {
@@ -240,7 +231,7 @@
         font-size: 12px;
         line-height: 1.4;
         margin: 0;
-        color: rgba(255, 255, 255, 0.75);
+        color: #4b5563;
     }
 
     .nav-coaching-actions {
@@ -253,7 +244,7 @@
     .nav-btn {
         flex: 1;
         padding: 8px 14px;
-        border-radius: 10px;
+        border-radius: var(--radius-sm);
         font-size: 12px;
         font-weight: 600;
         border: none;
@@ -262,14 +253,14 @@
     }
 
     .nav-btn.primary {
-        background: var(--accent, #f59e0b);
-        color: #080d16;
+        background: var(--primary);
+        color: #ffffff;
     }
 
     .nav-btn.secondary {
-        background: rgba(255, 255, 255, 0.08);
-        color: #fff;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--card-border);
     }
 
     .nav-btn:active {
@@ -284,7 +275,7 @@
         align-items: center;
         font-size: 10px;
         font-weight: 600;
-        color: rgba(255, 255, 255, 0.4);
+        color: var(--muted);
         margin-bottom: 2px;
     }
 
@@ -297,12 +288,12 @@
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.2);
+        background: #d1d5db;
         transition: all 0.2s ease;
     }
 
     .nav-dot.active {
-        background: var(--accent, #f59e0b);
+        background: var(--secondary);
         transform: scale(1.2);
     }
 
@@ -341,13 +332,13 @@
 
     .gesture-screen {
         fill: none;
-        stroke: rgba(255, 255, 255, 0.1);
+        stroke: #e5e7eb;
         stroke-width: 1.5;
     }
 
     .gesture-trail {
         fill: none;
-        stroke: var(--accent, #f59e0b);
+        stroke: var(--secondary);
         stroke-width: 2;
         stroke-linecap: round;
         stroke-dasharray: 40;
@@ -356,20 +347,20 @@
     }
 
     .gesture-touch-point {
-        fill: var(--accent, #f59e0b);
-        filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+        fill: var(--secondary);
+        filter: none;
     }
 
     .gesture-hand {
         fill: #ffffff;
-        stroke: #080d16;
+        stroke: #111111;
         stroke-width: 0.75;
         stroke-linejoin: round;
     }
 
     .gesture-ripple {
         fill: none;
-        stroke: var(--accent, #f59e0b);
+        stroke: var(--secondary);
         stroke-width: 1.5;
         border-radius: 50%;
         transform-origin: 40px 30px;
@@ -586,9 +577,9 @@
     .nav-step-success {
         position: absolute;
         inset: 0;
-        background: rgba(69, 69, 69, 0.85);
-        -webkit-backdrop-filter: blur(8px);
-        backdrop-filter: blur(8px);
+        background: rgba(255, 255, 255, 0.95);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -620,7 +611,7 @@
         stroke-width: 2.5;
         stroke: #10b981;
         stroke-miterlimit: 10;
-        box-shadow: inset 0px 0px 0px #10b981;
+        background: transparent;
         animation: fillCheckmark .4s ease-in-out .4s forwards, scaleCheckmark .3s ease-in-out .9s both;
     }
 
@@ -649,7 +640,7 @@
 
     @keyframes fillCheckmark {
         100% {
-            box-shadow: inset 0px 0px 0px 30px rgba(16, 185, 129, 0.1);
+            background-color: rgba(16, 185, 129, 0.1);
         }
     }
 
@@ -668,7 +659,7 @@
     .nav-link-btn {
         background: none;
         border: none;
-        color: rgba(255, 255, 255, 0.4);
+        color: var(--muted);
         font-size: 11px;
         font-weight: 600;
         text-decoration: underline;
@@ -679,80 +670,6 @@
 
     .nav-link-btn:hover,
     .nav-link-btn:active {
-        color: rgba(255, 255, 255, 0.88);
+        color: var(--text);
     }
-}
-
-/* ---------------------------------
-   Landscape Mobile & Compact Height HUD Console
-   Arranges camera actions & controls side-by-side to guarantee
-   ample clearance below the AR badge and Language pill
---------------------------------- */
-@media (min-width: 769px) and (max-width: 1100px) and (max-height: 600px),
-       (max-height: 520px) {
-    #camera-wrapper {
-        flex-direction: row;
-        align-items: flex-end;
-        gap: 10px;
-        bottom: max(10px, env(safe-area-inset-bottom, 10px));
-        right: max(14px, env(safe-area-inset-right, 14px));
-        transform: scale(0.74);
-        transform-origin: bottom right;
-    }
-
-    #camera-actions {
-        order: 1;
-        margin-bottom: 0;
-    }
-
-    #camera-controls {
-        order: 2;
-    }
-
-    .top-right-bar {
-        top: max(8px, env(safe-area-inset-top, 8px));
-        right: max(14px, env(safe-area-inset-right, 14px));
-        gap: 6px;
-    }
-
-    #env-panel {
-        bottom: 108px;
-    }
-}
-
-/* ---------------------------------
-   Landscape Mobile Media Layout
-   Arranges canvas & sidebar side-by-side with toolbar docked beside sidebar
---------------------------------- */
-@media (max-width: 768px) and (orientation: landscape),
-       (max-height: 520px) and (orientation: landscape) {
-    #canvas-container {
-        position: absolute;
-        inset: 0;
-        height: 100%;
-    }
-
-    #ui-container {
-        top: 10px;
-        bottom: 10px;
-        left: 6px;
-        width: min(280px, 42vw);
-        max-height: calc(100% - 20px);
-        position: absolute;
-    }
-
-    #ui-bg,
-    #ui-header-wrapper,
-    #ui-panel {
-        width: min(275px, calc(42vw - 12px));
-    }
-
-    .gizmo-floating-bar {
-        position: fixed;
-        left: calc(min(280px, 42vw) + 18px);
-        bottom: 10px;
-        right: auto;
-        transform: none;
-        z-index: 50;
-    }
-}
+}

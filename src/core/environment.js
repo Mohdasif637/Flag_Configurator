@@ -63,60 +63,24 @@ export function setEnvPanelOpen(open) {
     if (dom.cameraWrapper) {
         if (open) {
             dom.cameraWrapper.classList.add('has-env-open');
-        } else {
-            envPanelHideTimer = window.setTimeout(() => {
-                if (!envPanelShouldBeOpen && dom.cameraWrapper) {
-                    dom.cameraWrapper.classList.remove('has-env-open');
-                }
-            }, 200);
         }
     }
 
-    dom.envPanel.classList.toggle('is-open', open);
-}
-
-/**
- * Initializes DOM listeners for environment exposure, rotation, and reset controls.
- */
-export function initEnvironmentControls() {
-    if (dom.envToggle) {
-        dom.envToggle.addEventListener('click', () => {
-            if (dom.envToggle.disabled) return;
-            setEnvPanelOpen(!isEnvPanelOpen());
+    if (open) {
+        dom.envPanel.hidden = false;
+        window.requestAnimationFrame(() => {
+            if (envPanelShouldBeOpen) dom.envPanel.classList.add('is-open');
         });
+        return;
     }
 
-    document.addEventListener('click', (event) => {
-        if (dom.cameraWrapper && !dom.cameraWrapper.contains(event.target) && isEnvPanelOpen()) {
-            setEnvPanelOpen(false);
+    dom.envPanel.classList.remove('is-open');
+    envPanelHideTimer = window.setTimeout(() => {
+        if (!isEnvPanelOpen()) {
+            dom.envPanel.hidden = true;
+            if (dom.cameraWrapper) {
+                dom.cameraWrapper.classList.remove('has-env-open');
+            }
         }
-    });
-
-    if (dom.envExposure) {
-        dom.envExposure.addEventListener('input', (event) => {
-            renderer.toneMappingExposure = Number.parseFloat(event.target.value);
-            markSceneDirty();
-        });
-    }
-
-    if (dom.envRotate) {
-        dom.envRotate.addEventListener('input', (event) => {
-            if (!environmentTexture) return;
-            const radians = Number.parseFloat(event.target.value);
-            scene.environmentRotation.y = radians;
-            lightingGroup.rotation.y = radians;
-            markSceneDirty();
-        });
-    }
-
-    if (dom.envReset) {
-        dom.envReset.addEventListener('click', () => {
-            if (dom.envExposure) dom.envExposure.value = '1';
-            if (dom.envRotate) dom.envRotate.value = '0';
-            renderer.toneMappingExposure = 1;
-            scene.environmentRotation.y = 0;
-            lightingGroup.rotation.y = 0;
-            markSceneDirty();
-        });
-    }
+    }, 340);
 }

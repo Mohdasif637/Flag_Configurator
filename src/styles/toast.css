@@ -18,13 +18,14 @@
     max-height: fit-content;
     min-width: 150px;
     max-width: fit-content;
-    padding: 3px 6px 3px 10px;
-    border-radius: 10px;
-    background: rgba(18, 27, 22, 0.5);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    padding: 6px 8px 6px 12px;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    color: var(--text);
+    border: 1px solid var(--card-border);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
     opacity: 0;
     transform: translate3d(0, calc(-100% - 18px), 0);
     transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1), transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
@@ -55,18 +56,33 @@
 }
 
 .toast.is-success {
-    background-color: #2a8a6882;
-    border-color: rgb(79, 191, 141);
+    background-color: #ffffff;
+    border-color: #16a34a;
+    border-left: 3px solid #16a34a;
+}
+
+.toast.is-success .toast-title {
+    color: #16a34a;
 }
 
 .toast.is-error {
-    background-color: rgba(227, 109, 97, 0.34);
-    border-color: rgba(227, 109, 97, 0.34);
+    background-color: #ffffff;
+    border-color: #ef4444;
+    border-left: 3px solid #ef4444;
+}
+
+.toast.is-error .toast-title {
+    color: #ef4444;
 }
 
 .toast.is-info {
-    background-color: rgba(157, 114, 4, 0.32);
-    border-color: rgba(223, 141, 67, 0.32);
+    background-color: #ffffff;
+    border-color: var(--secondary);
+    border-left: 3px solid var(--secondary);
+}
+
+.toast.is-info .toast-title {
+    color: var(--secondary);
 }
 
 .toast-body {
@@ -79,13 +95,14 @@
     margin-bottom: 1px;
     font-size: 13px;
     font-weight: 700;
+    color: var(--text);
 }
 
 .toast-copy {
     display: block;
     font-size: 12px;
     line-height: 1.35;
-    color: rgba(255, 255, 255, 0.88);
+    color: #4b5563;
 }
 
 .toast-close-btn {
@@ -101,15 +118,15 @@
     background: transparent;
     border: none;
     border-radius: 4px;
-    color: rgba(255, 255, 255, 0.65);
+    color: #9ca3af;
     cursor: pointer;
     touch-action: manipulation;
     transition: color 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
 }
 
 .toast-close-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    background: var(--surface-hover);
+    color: var(--text);
     transform: scale(1.15);
 }
 
@@ -117,7 +134,7 @@
     transform: scale(0.9);
 }
 
+.toast-close-btn:focus,
 .toast-close-btn:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
+    outline: none;
 }

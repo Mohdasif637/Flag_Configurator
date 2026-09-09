@@ -19,10 +19,10 @@
     position: static !important;
     inset: auto !important;
     transform: none;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    border-radius: 99px !important;
+    background: #ffffff !important;
+    color: var(--text) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-md) !important;
     -webkit-appearance: none !important;
     appearance: none !important;
     font-family: 'Outfit', sans-serif !important;
@@ -30,12 +30,9 @@
     font-weight: 800 !important;
     letter-spacing: 0.08em !important;
     cursor: pointer !important;
-    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
-    animation: arPrimaryPulse 2.8s ease-in-out infinite !important;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease !important;
+    box-shadow: var(--subtle-shadow) !important;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease !important;
     z-index: 1 !important;
-    -webkit-backdrop-filter: blur(8px) !important;
-    backdrop-filter: blur(8px) !important;
 }
 
 #ARButton .ar-icon,
@@ -44,28 +41,39 @@
     height: 16px !important;
     display: block !important;
     flex: 0 0 auto !important;
+    filter: brightness(0);
 }
 
 #ARButton .ar-badge-label {
     display: inline-block !important;
     line-height: 1 !important;
     font-weight: 800 !important;
-    color: #ffffff !important;
+    color: var(--text) !important;
 }
 
 #ARButton:not(.is-ar-disabled):hover {
     transform: translateY(-1px) scale(1.04) !important;
-    border-color: rgba(255, 255, 255, 0.5) !important;
-    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+    background: var(--surface-strong) !important;
+    border-color: var(--card-border-hover) !important;
+    box-shadow: var(--subtle-shadow) !important;
 }
 
 #ARButton:not(.is-ar-disabled):active {
-    transform: translateY(0) scale(0.96) !important;
+    transform: translateY(1px) scale(0.96) !important;
+    background: var(--pressed-bg-solid) !important;
+    background: var(--pressed-bg) !important;
+    border-color: var(--pressed-border) !important;
+    box-shadow: var(--pressed-shadow) !important;
+    transition: transform 0.08s ease-out, background 0.08s ease-out;
 }
 
+#ARButton:not(.is-ar-disabled):active .ar-badge-label {
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+#ARButton:focus,
 #ARButton:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
+    outline: none !important;
 }
 
 #ARButton:disabled {
@@ -73,40 +81,45 @@
 }
 
 #ARButton.is-ar-disabled {
-    opacity: 0.45 !important;
+    opacity: 0.65 !important;
     animation: none !important;
     cursor: not-allowed !important;
     pointer-events: auto !important;
-    filter: grayscale(0.6);
-    background: rgba(10, 16, 26, 0.75) !important;
-    border-color: var(--card-border) !important;
-    color: #94a3b8 !important;
+    filter: none !important;
+    background: #e5e7eb !important;
+    border-color: #d1d5db !important;
+    color: #9ca3af !important;
     box-shadow: none !important;
 }
 
-@keyframes arPrimaryPulse {
-
-    0%,
-    100% {
-        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35), 0 0 0 0 rgba(16, 185, 129, 0.4);
-    }
-
-    50% {
-        box-shadow: 0 4px 18px rgba(16, 185, 129, 0.65), 0 0 0 5px rgba(16, 185, 129, 0.18);
-    }
+#ARButton.is-ar-disabled .ar-icon,
+#ARButton.is-ar-disabled .control-icon {
+    filter: brightness(0) opacity(0.35) !important;
 }
 
-@keyframes arBreathGlow {
+#ARButton.is-ar-disabled .ar-badge-label {
+    color: #9ca3af !important;
+}
 
+@keyframes arPrimaryPulse {
     0%,
     100% {
-        box-shadow: 0 0 7px rgba(16, 185, 129, 0.35);
         transform: scale(1);
     }
 
     50% {
-        box-shadow: 0 0 22px rgba(16, 185, 129, 0.85), 0 0 8px rgba(16, 185, 129, 0.4);
-        transform: scale(1.06);
+        transform: scale(1.03);
+    }
+}
+
+@keyframes arBreathGlow {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.04);
     }
 }
 
@@ -121,7 +134,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(8, 13, 22, 0.35);
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -137,15 +150,15 @@
 }
 
 .ar-coaching-card {
-    background: rgba(10, 16, 26, 0.372);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
     padding: 30px 24px;
     width: 290px;
     max-width: 85%;
     text-align: center;
-    color: #fff;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    color: var(--text);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -173,13 +186,13 @@
 
 .grid-ellipse {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.15);
+    stroke: #e5e7eb;
     stroke-width: 1.5;
     stroke-dasharray: 4, 4;
 }
 
 .grid-line {
-    stroke: rgba(255, 255, 255, 0.08);
+    stroke: #f3f4f6;
     stroke-width: 1;
     stroke-dasharray: 2, 2;
 }
@@ -193,23 +206,23 @@
 
 .phone-body {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.85);
+    stroke: #111111;
     stroke-width: 2;
 }
 
 .phone-screen {
-    fill: rgba(255, 255, 255, 0.04);
-    stroke: rgba(255, 255, 255, 0.2);
+    fill: #f9fafb;
+    stroke: #e5e7eb;
     stroke-width: 1;
 }
 
 .phone-notch {
-    fill: rgba(255, 255, 255, 0.85);
+    fill: #111111;
 }
 
 .hand-finger {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.7);
+    stroke: #111111;
     stroke-width: 2;
     stroke-linecap: round;
 }
@@ -224,7 +237,7 @@
     font-size: 18px;
     font-weight: 700;
     margin: 0;
-    color: var(--text, #fff);
+    color: var(--text);
 }
 
 #ar-coaching-desc {
@@ -232,7 +245,7 @@
     font-size: 13px;
     line-height: 1.5;
     margin: 0;
-    color: rgba(255, 255, 255, 0.7);
+    color: #4b5563;
 }
 
 @keyframes scanDeviceMove {
@@ -272,18 +285,16 @@
     left: 50%;
     transform: translateX(-50%);
     padding: 10px 24px;
-    background-color: rgba(10, 16, 26, 0.6);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 99px;
+    background-color: #111111;
+    color: #ffffff;
+    border: 1px solid #111111;
+    border-radius: var(--radius-md);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     pointer-events: auto;
     display: none;
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
     z-index: 20;
 }
 

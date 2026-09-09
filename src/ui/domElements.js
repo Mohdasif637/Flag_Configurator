@@ -51,4 +51,4 @@ export const dom = {
     cameraButtons: Array.from(document.querySelectorAll('#camera-controls button'))
 };
 
-export const mobileViewportMediaQuery = window.matchMedia('(max-width: 768px)');
+export const mobileViewportMediaQuery = window.matchMedia('(max-width: 768px) and (orientation: portrait)');

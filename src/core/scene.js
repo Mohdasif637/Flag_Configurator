@@ -3,7 +3,7 @@ import { dom, mobileViewportMediaQuery } from '../ui/domElements.js';
 import { getViewportAspect, getClampedPixelRatio } from '../utils/mathUtils.js';
 
 export const scene = new THREE.Scene();
-export const defaultBackground = new THREE.Color('#e3e3e3');
+export const defaultBackground = new THREE.Color('#f5f5f5');
 scene.background = defaultBackground;
 
 export const sceneRoot = new THREE.Group();

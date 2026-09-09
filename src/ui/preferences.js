@@ -54,6 +54,7 @@ export function setPreferenceDropdownOpen(open) {
     if (!dom.prefDropdown || !dom.prefBtn) return;
     dom.prefDropdown.classList.toggle('is-open', open);
     dom.prefBtn.setAttribute('aria-expanded', String(open));
+    dom.prefBtn.classList.toggle('is-active', open);
 }
 
 /**

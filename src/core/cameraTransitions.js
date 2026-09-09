@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { scene, sceneRoot, shadowCatcher, reticle, markSceneDirty } from './scene.js';
-import { camera, controls, targetCenter, cameraTargets, cameraDistance, setCameraDistance, setActiveCameraView, getActiveCameraTween, setActiveCameraTween } from './camera.js';
+import { camera, controls, targetCenter, cameraTargets, cameraDistance, setCameraDistance, setActiveCameraView, getActiveCameraTween, setActiveCameraTween, enforceCameraGroundBounds } from './camera.js';
 import { dom, mobileViewportMediaQuery } from '../ui/domElements.js';
 import { configState, state } from '../state/configState.js';
 import { sideConfigs } from '../graphics/graphicConfig.js';
@@ -159,7 +159,7 @@ export function updateDynamicCameraTargets(moveCamera = true) {
         const dyTop = Math.max(box.max.y - targetCenter.y, 0.1);
         const dyBottom = Math.max(targetCenter.y - box.min.y, 0.1);
 
-        const isMobile = mobileViewportMediaQuery.matches || window.innerWidth <= 768;
+        const isMobile = mobileViewportMediaQuery.matches;
         const horizFrac = isMobile ? 0.78 : 0.92;
         const maxHalfHoriz = Math.max(dxLeft, dxRight, size.z / 2);
 
@@ -231,12 +231,14 @@ export function transitionCamera(targetPosition, duration = 800) {
 
             sceneRoot.rotation.y = THREE.MathUtils.lerp(startRotationY, endRotationY, progress);
             camera.position.setFromSpherical(new THREE.Spherical(radius, phi, theta)).add(controls.target);
+            enforceCameraGroundBounds();
             markSceneDirty();
         })
         .onComplete(() => {
             setActiveCameraTween(null);
             controls.enabled = true;
             controls.enableRotate = !sideConfigs.graphic.gizmoActive;
+            enforceCameraGroundBounds();
             controls.update();
             markSceneDirty();
         })

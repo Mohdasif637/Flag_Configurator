@@ -28,23 +28,65 @@ export const cameraTargets = {
     right: new THREE.Vector3(cameraDistance, targetCenter.y, 0)
 };
 
-export const controls = new OrbitControls(camera, renderer.domElement);
+export const controls = new OrbitControls(camera, dom.canvasContainer);
 controls.enableDamping = true;
+controls.zoomToCursor = true;
 controls.mouseButtons = {
     LEFT: THREE.MOUSE.ROTATE,
     MIDDLE: THREE.MOUSE.PAN,
     RIGHT: THREE.MOUSE.PAN
 };
+export const MIN_GROUND_Y = 0.08;
+export const MIN_TARGET_Y = 0.1;
+export const MAX_TARGET_Y = 5.0;
+export const MAX_PAN_XZ = 3.5;
+
+/**
+ * Enforces orbit rotation and pan bounds to prevent viewing the model from underneath the ground plane.
+ */
+export function enforceCameraGroundBounds() {
+    if (!controls) return;
+
+    // 1. Constrain pan target so focus point never sinks underground or flies too high
+    if (controls.target.y < MIN_TARGET_Y) {
+        const delta = MIN_TARGET_Y - controls.target.y;
+        controls.target.y = MIN_TARGET_Y;
+        camera.position.y += delta;
+    } else if (controls.target.y > MAX_TARGET_Y) {
+        const delta = MAX_TARGET_Y - controls.target.y;
+        controls.target.y = MAX_TARGET_Y;
+        camera.position.y += delta;
+    }
+
+    // Keep horizontal pan within reasonable bounds around the flag
+    controls.target.x = Math.max(-MAX_PAN_XZ, Math.min(MAX_PAN_XZ, controls.target.x));
+    controls.target.z = Math.max(-MAX_PAN_XZ, Math.min(MAX_PAN_XZ, controls.target.z));
+
+    // 2. Compute dynamic maxPolarAngle to stop orbit rotation when camera reaches ground level
+    const dist = camera.position.distanceTo(controls.target);
+    if (dist > 0.001) {
+        const ratio = Math.max(-0.999, Math.min(0.999, (MIN_GROUND_Y - controls.target.y) / dist));
+        controls.maxPolarAngle = Math.min(Math.PI - 0.05, Math.acos(ratio));
+    }
+
+    // 3. Absolute ground collision clamp: camera eye can never penetrate the ground plane
+    if (camera.position.y < MIN_GROUND_Y) {
+        camera.position.y = MIN_GROUND_Y;
+    }
+}
+
 controls.minPolarAngle = 0.05;
-controls.maxPolarAngle = Math.PI - 0.05;
+controls.maxPolarAngle = Math.PI / 2;
 controls.target.copy(targetCenter);
 camera.position.copy(cameraHome);
+enforceCameraGroundBounds();
 controls.update();
 controls.saveState();
 
 export let controlsDirty = false;
 controls.addEventListener('change', () => {
     controlsDirty = true;
+    enforceCameraGroundBounds();
 });
 
 export function resetControlsDirty() {
@@ -58,19 +100,18 @@ export function updateCameraViewportOffset() {
     const width = dom.canvasContainer ? dom.canvasContainer.clientWidth : window.innerWidth;
     const height = dom.canvasContainer ? dom.canvasContainer.clientHeight : window.innerHeight;
 
-    const isMobile = mobileViewportMediaQuery.matches || window.innerWidth <= 768;
-    const isMidRange = !isMobile && window.innerWidth >= 769 && window.innerWidth <= 1100;
-    const shiftX = isMidRange ? 250 : 0;
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const isMobilePortrait = (mobileViewportMediaQuery.matches || window.innerWidth <= 768) && !isLandscape;
 
     camera.aspect = width / Math.max(height, 1);
     if (!state.isInAR) {
-        if (isMobile) {
+        if (isMobilePortrait) {
             const xOffset = Math.round(width * 0.10);
             camera.setViewOffset(width, height, xOffset, 0, width, height);
-        } else if (shiftX > 0) {
-            camera.setViewOffset(width, height, -shiftX / 2.5, 0, width, height);
         } else {
-            camera.clearViewOffset();
+            const panelEl = document.getElementById('ui-container');
+            const panelWidth = panelEl ? panelEl.offsetWidth : Math.min(340, width - 40);
+            camera.setViewOffset(width, height, Math.round(panelWidth / 2.2), 0, width, height);
         }
     } else {
         camera.clearViewOffset();
@@ -110,7 +151,7 @@ export function setActiveCameraView(view) {
  */
 export function handleDoubleTapZoom(event) {
     if (state.isInAR || !state.ready || state.isExporting) return;
-    if (event.target && event.target.closest('#gizmo-floating-bar')) return;
+    if (event.target && event.target.closest('#gizmo-floating-bar, #moveable-proxy-target, .moveable-control-box')) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     if (!event.isPrimary) return;
 
@@ -191,9 +232,14 @@ export function zoomInSmoothly(hitPoint) {
     };
 
     const endTarget = hitPoint.clone();
+    endTarget.y = Math.max(MIN_TARGET_Y, Math.min(MAX_TARGET_Y, endTarget.y));
+    endTarget.x = Math.max(-MAX_PAN_XZ, Math.min(MAX_PAN_XZ, endTarget.x));
+    endTarget.z = Math.max(-MAX_PAN_XZ, Math.min(MAX_PAN_XZ, endTarget.z));
+
     const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
     const zoomDistance = 1.5;
     const endCameraPosition = hitPoint.clone().add(direction.multiplyScalar(zoomDistance));
+    endCameraPosition.y = Math.max(MIN_GROUND_Y, endCameraPosition.y);
 
     const startTarget = controls.target.clone();
     const startCameraPosition = camera.position.clone();
@@ -204,11 +250,13 @@ export function zoomInSmoothly(hitPoint) {
         .onUpdate(({ progress }) => {
             controls.target.lerpVectors(startTarget, endTarget, progress);
             camera.position.lerpVectors(startCameraPosition, endCameraPosition, progress);
+            enforceCameraGroundBounds();
         })
         .onComplete(() => {
             activeCameraTween = null;
             controls.enabled = true;
             controls.enableRotate = !sideConfigs.graphic.gizmoActive;
+            enforceCameraGroundBounds();
             controls.update();
         })
         .start();
@@ -240,12 +288,14 @@ export function zoomOutSmoothly() {
         .onUpdate(({ progress }) => {
             controls.target.lerpVectors(startTarget, endTarget, progress);
             camera.position.lerpVectors(startCameraPosition, endCameraPosition, progress);
+            enforceCameraGroundBounds();
         })
         .onComplete(() => {
             setActiveCameraView(preZoomState.activeView);
             activeCameraTween = null;
             controls.enabled = true;
             controls.enableRotate = !sideConfigs.graphic.gizmoActive;
+            enforceCameraGroundBounds();
             controls.update();
         })
         .start();
@@ -255,8 +305,8 @@ export function zoomOutSmoothly() {
  * Initializes camera control listeners and double-tap zoom detection.
  */
 export function initCameraControls() {
-    if (renderer && renderer.domElement) {
-        renderer.domElement.addEventListener('pointerdown', handleDoubleTapZoom);
+    if (dom.canvasContainer) {
+        dom.canvasContainer.addEventListener('pointerdown', handleDoubleTapZoom);
     }
 
     const onUserAdjust = () => {

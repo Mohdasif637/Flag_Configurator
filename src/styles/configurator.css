@@ -1,39 +1,4 @@
 /* ---------------------------------
-   Custom Scrollbar (Auto Hide/Unhide)
---------------------------------- */
-@property --panel-scrollbar-thumb {
-    syntax: "<color>";
-    inherits: true;
-    initial-value: transparent;
-}
-
-#ui-shell::-webkit-scrollbar {
-    width: 5px;
-}
-
-#ui-shell::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-#ui-shell::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: var(--panel-scrollbar-thumb);
-    border: none;
-}
-
-#ui-shell:hover,
-#ui-shell:focus-within,
-#ui-shell:active {
-    --panel-scrollbar-thumb: #e09233;
-}
-
-#ui-shell::-webkit-scrollbar-button {
-    display: none;
-    width: 0;
-    height: 0;
-}
-
-/* ---------------------------------
    Configurator Sections Layout
 --------------------------------- */
 .config-section {
@@ -63,10 +28,10 @@
 
 .section-title {
     font-family: 'Outfit', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--primary);
+    color: var(--secondary);
     margin-top: 4px;
     margin-bottom: 6px;
     font-weight: 700;
@@ -92,13 +57,14 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
     border: 1px solid var(--card-border);
-    color: var(--text-contrast);
+    color: var(--muted);
     cursor: pointer;
     touch-action: manipulation;
     transition: all 0.2s ease;
+    box-shadow: var(--subtle-shadow);
 }
 
 .info-tooltip-btn::before {
@@ -112,15 +78,15 @@
 
 .info-tooltip-btn:hover,
 .info-tooltip-btn[aria-expanded="true"] {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--accent);
-    color: var(--accent);
-    transform: scale(1.1);
+    background: var(--surface-strong);
+    border-color: var(--secondary);
+    color: var(--secondary);
+    transform: scale(1.08);
 }
 
+.info-tooltip-btn:focus,
 .info-tooltip-btn:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: none;
 }
 
 .info-tooltip-popover {
@@ -130,14 +96,12 @@
     width: 280px;
     max-width: calc(100vw - 24px);
     z-index: 10000;
-    background: rgba(15, 23, 42, 0.96);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
+    background: #ffffff;
     border: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
     padding: 12px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
-    color: var(--text-contrast);
+    box-shadow: var(--panel-shadow);
+    color: var(--text);
     pointer-events: auto;
     animation: tooltipFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -149,7 +113,7 @@
 @keyframes tooltipFadeIn {
     from {
         opacity: 0;
-        transform: translateY(-4px) scale(0.97);
+        transform: translateY(-4px) scale(0.98);
     }
 
     to {
@@ -159,15 +123,41 @@
 }
 
 .tooltip-header {
-    font-family: 'Outfit', sans-serif;
-    font-size: 11px;
-    font-weight: 800;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 8px;
     padding-bottom: 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--line);
+}
+
+.tooltip-header h4 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--secondary);
+}
+
+.tooltip-close-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.tooltip-close-btn:hover {
+    color: var(--text);
+    background: var(--surface-hover);
 }
 
 .tooltip-content {
@@ -176,16 +166,22 @@
     gap: 8px;
 }
 
+.tooltip-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .tooltip-item-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
     margin-bottom: 2px;
 }
 
 .tooltip-item-desc {
     font-size: 11px;
-    color: #cbd5e1;
+    color: var(--muted);
     line-height: 1.35;
 }
 
@@ -194,16 +190,16 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
-    font-weight: 600;
-    font-size: 13px;
+    font-weight: 500;
+    font-size: 12px;
     gap: 6px;
-    color: var(--text-contrast);
+    color: var(--text);
 }
 
 .selection-price {
     font-family: 'Outfit', sans-serif;
-    color: var(--accent);
-    font-size: 13.5px;
+    color: var(--secondary);
+    font-size: 12.5px;
     font-weight: 700;
     white-space: nowrap;
     flex-shrink: 0;
@@ -227,7 +223,6 @@
     padding: 6px 4px;
     margin: 0 -4px;
     box-sizing: border-box;
-    /* Room for active card scale transitions */
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -236,70 +231,82 @@
     display: none;
 }
 
-/* Glassmorphic Selection Cards */
+/* Selection Cards */
 .config-card {
     flex: 0 0 auto;
     width: clamp(56px, 20vw, 76px);
     aspect-ratio: 1 / 1;
     scroll-snap-align: start;
-    background-color: rgba(255, 255, 255, 0.04);
-    border: 1.4px solid var(--card-border);
+    background-color: #ffffff;
+    border: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
-    color: var(--text-contrast);
+    color: var(--text);
     cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
+    transition: background-color 0.06s ease, border-color 0.06s ease, transform 0.06s ease, color 0.06s ease, box-shadow 0.06s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
     padding: 0;
-}
-
-.config-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 80%);
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    box-shadow: var(--subtle-shadow);
+    background-clip: padding-box;
 }
 
 .config-card:hover {
-    background-color: rgba(255, 255, 255, 0.08) !important;
+    background-color: var(--surface-strong) !important;
     border-color: var(--card-border-hover) !important;
     cursor: pointer !important;
     transform: translateY(-2px);
 }
 
-.config-card:hover::before {
-    opacity: 1;
+.config-card:not(.is-active):active {
+    transform: translateY(0);
 }
 
+.config-card:focus,
 .config-card:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: none;
 }
 
 .config-card.is-active {
-    background-color: rgba(245, 158, 11, 0.16) !important;
-    border: 2.8px solid var(--accent) !important;
+    background: var(--pressed-bg-solid) !important;
+    background: var(--pressed-bg) !important;
+    border: 1px solid var(--pressed-border) !important;
     box-shadow: none !important;
+    transform: translateY(1px) !important;
+    transition: transform 0.06s ease-out, background 0.06s ease-out, border-color 0.06s ease-out;
+}
+
+.config-card.is-active::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--pressed-shadow);
+    pointer-events: none;
+    z-index: 2;
 }
 
 .config-card.is-active:hover {
-    border: 2.8px solid var(--accent) !important;
+    border: 1px solid var(--pressed-border) !important;
+    background: var(--pressed-bg-solid) !important;
+    background: var(--pressed-bg) !important;
+    box-shadow: none !important;
+    transform: translateY(1px) !important;
 }
 
 button.config-card[data-category="base"].is-active {
-    transform: translateY(-4px);
+    transform: translateY(1px) !important;
 }
 
 .card-icon {
+    position: relative;
+    z-index: 1;
     font-family: 'Outfit', sans-serif;
     font-size: 1.15rem;
     font-weight: 800;
-    color: var(--text-contrast);
+    color: var(--text);
     transition: color 0.2s ease;
 }
 
@@ -307,22 +314,39 @@ button.config-card[data-category="base"].is-active {
     font-size: 0.8rem;
 }
 
-.config-card.is-active .card-icon,
-.config-card.is-active .card-text-wrap {
-    color: var(--accent);
+.config-card.is-active .card-icon {
+    color: #111111;
     font-weight: 800;
-    text-shadow: 0 0 6px rgba(245, 158, 11, 0.35);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.config-card.is-active .card-icon svg {
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.8));
+}
+
+.config-card.is-active .card-text-wrap {
+    color: #111111;
+    font-weight: 600;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .card-thumb {
-    width: 105%;
-    height: 105%;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     display: block;
-    border-radius: inherit;
+    border-radius: calc(var(--radius-sm) - 1px);
     -webkit-user-select: none;
     user-select: none;
     pointer-events: none;
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.config-card.is-active .card-thumb {
+    opacity: 0.92;
+    filter: contrast(0.98) brightness(0.95);
 }
 
 /* Segmented Printing Track */
@@ -351,66 +375,76 @@ button.config-card[data-category="base"].is-active {
 .card-text-wrap {
     font-family: 'Outfit', sans-serif;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 1.2;
-    color: var(--text-contrast);
+    color: var(--text);
     white-space: normal;
     text-align: center;
     word-break: break-word;
     hyphens: auto;
 }
 
-/* Floating Arrows (Frosted Glass) */
+/* Floating Arrows */
 .carousel-arrow {
     position: absolute;
     z-index: 2;
-    background: rgba(43, 51, 60, 0.9);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    border: 1.5px solid var(--card-border);
-    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
     width: 32px;
     height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    color: var(--text-contrast);
+    box-shadow: var(--subtle-shadow);
+    color: var(--text);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .carousel-arrow:hover {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #080d16;
+    background: var(--surface-strong);
+    border-color: var(--secondary);
+    color: var(--secondary);
     cursor: pointer !important;
-    transform: scale(1.1);
+    transform: scale(1.08);
 }
 
+.carousel-arrow:active {
+    background: var(--pressed-bg-solid) !important;
+    background: var(--pressed-bg) !important;
+    border-color: var(--pressed-border) !important;
+    color: var(--text) !important;
+    transform: scale(0.95) translateY(1px) !important;
+    box-shadow: var(--pressed-shadow) !important;
+}
+
+.carousel-arrow:focus,
 .carousel-arrow:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline: none;
 }
 
 .carousel-wrapper:hover .carousel-arrow:not(.is-hidden) {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
 }
 
 .carousel-arrow.is-hidden {
     opacity: 0 !important;
+    visibility: hidden !important;
     pointer-events: none !important;
 }
 
 .left-arrow {
-    left: -16px;
+    left: -10px;
 }
 
 .right-arrow {
-    right: -16px;
+    right: -10px;
 }
 
 .carousel-track.wrap-track {
@@ -433,16 +467,17 @@ button.config-card[data-category="base"].is-active {
     width: 100%;
     padding: 12px;
     border-radius: var(--radius-sm);
-    border: 1.5px solid var(--card-border);
-    background: var(--surface);
+    border: 1px solid var(--card-border);
+    background: #ffffff;
     cursor: pointer;
     font-weight: bold;
     transition: all 0.2s ease;
-    color: var(--text-contrast);
+    color: var(--text);
+    box-shadow: none;
 }
 
 .color-picker-btn:hover {
-    background-color: rgba(255, 255, 255, 0.08) !important;
+    background-color: var(--surface-strong) !important;
     border-color: var(--card-border-hover) !important;
     cursor: pointer !important;
 }

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Timer } from 'three';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { scene, sceneRoot, renderer, isSceneDirty, clearSceneDirty } from './scene.js';
-import { camera, controls, controlsDirty, resetControlsDirty } from './camera.js';
+import { camera, controls, controlsDirty, resetControlsDirty, enforceCameraGroundBounds } from './camera.js';
 import {
     turntableSpeed,
     turntableAccumulatedAngle,
@@ -174,7 +174,9 @@ export function renderFrame(_, frame) {
         }
     });
 
+    enforceCameraGroundBounds();
     const controlsChanged = controls.update() || controlsDirty;
+    enforceCameraGroundBounds();
     resetControlsDirty();
 
     const tweensActive = TWEEN.getAll().length > 0;

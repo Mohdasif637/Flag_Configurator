@@ -61,7 +61,7 @@ const svgDoubleTap = `<svg viewBox="0 0 100 100" class="gesture-svg" aria-hidden
  * Initializes the mobile 3D navigation coaching tour.
  */
 export function initNavCoachingGuide() {
-    const isMobile = mobileViewportMediaQuery.matches || window.innerWidth <= 768;
+    const isMobile = mobileViewportMediaQuery.matches;
     const isAlreadyDone = localStorage.getItem('flag_configurator_nav_guide_done') === 'true';
     if (!isMobile || isAlreadyDone) return;
 

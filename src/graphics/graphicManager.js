@@ -19,7 +19,7 @@ let arSuggestionShown = false;
 
 function getTargetTextureSize() {
     const sizeMapping = {
-        'Feather Flag Convex XS': 3072,
+        'Feather Flag Convex XS': 2048,
         'Feather Flag Convex S': 2560,
         'Feather Flag Convex M': 2048,
         'Feather Flag Convex M-Extra Wide': 2048,
