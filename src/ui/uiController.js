@@ -43,18 +43,74 @@ export function initConfiguratorUI() {
 
         if (track && leftArrow && rightArrow) {
             const scrollAmount = 150;
-            leftArrow.addEventListener('click', () => track.scrollBy({ left: -scrollAmount, behavior: 'smooth' }));
-            rightArrow.addEventListener('click', () => track.scrollBy({ left: scrollAmount, behavior: 'smooth' }));
 
             const updateArrows = () => {
-                const maxScroll = track.scrollWidth - track.clientWidth;
-                leftArrow.classList.toggle('is-hidden', track.scrollLeft <= 5);
-                rightArrow.classList.toggle('is-hidden', maxScroll <= 1 || track.scrollLeft >= maxScroll - 5);
+                const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+                const isAtStart = track.scrollLeft <= 15;
+                const isAtEnd = maxScroll <= 2 || track.scrollLeft >= maxScroll - 15;
+                leftArrow.classList.toggle('is-hidden', isAtStart);
+                rightArrow.classList.toggle('is-hidden', isAtEnd);
             };
 
-            track.addEventListener('scroll', updateArrows);
+            leftArrow.addEventListener('click', () => {
+                if (track.scrollLeft < scrollAmount + 25) {
+                    track.scrollTo({ left: 0, behavior: 'smooth' });
+                    leftArrow.classList.add('is-hidden');
+                } else {
+                    track.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                }
+            });
+
+            rightArrow.addEventListener('click', () => {
+                track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            });
+
+            track.addEventListener('scroll', updateArrows, { passive: true });
             window.addEventListener('resize', updateArrows);
+            updateArrows();
             setTimeout(updateArrows, 100);
+            setTimeout(updateArrows, 500);
+
+            // Desktop mouse drag-to-scroll support
+            let isDown = false;
+            let startX = 0;
+            let scrollStart = 0;
+            let hasDragged = false;
+
+            track.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                isDown = true;
+                startX = e.pageX - track.offsetLeft;
+                scrollStart = track.scrollLeft;
+                hasDragged = false;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                const x = e.pageX - track.offsetLeft;
+                const walk = x - startX;
+                if (Math.abs(walk) > 4) {
+                    hasDragged = true;
+                    track.scrollLeft = scrollStart - walk;
+                    updateArrows();
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isDown) {
+                    isDown = false;
+                    setTimeout(updateArrows, 50);
+                }
+            });
+
+            cards.forEach((card) => {
+                card.addEventListener('click', (e) => {
+                    if (hasDragged) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                    }
+                }, true);
+            });
         }
 
         cards.forEach((card) => {

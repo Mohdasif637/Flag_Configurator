@@ -220,11 +220,19 @@
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
-    padding: 6px 4px;
-    margin: 0 -4px;
+    padding: 6px 8px;
+    margin: 0 -8px;
+    scroll-padding: 0 8px;
     box-sizing: border-box;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.carousel-track:active {
+    cursor: grabbing;
 }
 
 .carousel-track::-webkit-scrollbar {
@@ -440,11 +448,17 @@ button.config-card[data-category="base"].is-active {
 }
 
 .left-arrow {
-    left: -10px;
+    left: -14px;
 }
 
 .right-arrow {
-    right: -10px;
+    right: -14px;
+}
+
+@media (hover: none), (max-width: 768px) {
+    .carousel-arrow {
+        display: none !important;
+    }
 }
 
 .carousel-track.wrap-track {

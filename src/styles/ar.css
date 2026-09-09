@@ -86,7 +86,7 @@
     cursor: not-allowed !important;
     pointer-events: auto !important;
     filter: none !important;
-    background: #e5e7eb !important;
+    background: #9d9d9d !important;
     border-color: #d1d5db !important;
     color: #9ca3af !important;
     box-shadow: none !important;
@@ -94,14 +94,15 @@
 
 #ARButton.is-ar-disabled .ar-icon,
 #ARButton.is-ar-disabled .control-icon {
-    filter: brightness(0) opacity(0.35) !important;
+    filter: brightness(0) opacity(0.65) !important;
 }
 
 #ARButton.is-ar-disabled .ar-badge-label {
-    color: #9ca3af !important;
+    color: #343434 !important;
 }
 
 @keyframes arPrimaryPulse {
+
     0%,
     100% {
         transform: scale(1);
@@ -113,6 +114,7 @@
 }
 
 @keyframes arBreathGlow {
+
     0%,
     100% {
         transform: scale(1);
