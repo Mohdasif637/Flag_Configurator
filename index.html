@@ -4,14 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive 3D Beach Flag Configurator. Customize flag shapes, sizes, bases, graphics, and preview in real-time 3D and Augmented Reality (AR).">
     <title>3D Flag Configurator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    </noscript>
     <link rel="stylesheet" href="src/styles/main.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css">
     <link rel="icon" type="image/svg+xml" href="./icons/env.svg">
 </head>
 
@@ -126,7 +128,7 @@
         </div>
     </div>
 
-    <div id="ui-container" class="is-blurred">
+    <main id="ui-container" class="is-blurred">
         <div id="ui-bg"></div>
         <div id="ui-shell">
             <div id="ui-header-wrapper">
@@ -410,7 +412,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <div id="camera-wrapper">
         <div id="camera-controls">

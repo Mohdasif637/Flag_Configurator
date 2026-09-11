@@ -1,15 +1,11 @@
 import * as THREE from 'three';
-import Pickr from '@simonwep/pickr';
 import { dom, mobileViewportMediaQuery } from './domElements.js';
 import { configState } from '../state/configState.js';
 import { updatePocketMaterialColor, normalizeHex } from '../models/materials.js';
 import { eventBus } from '../state/eventBus.js';
 
-if (typeof window !== 'undefined' && !window.Pickr) {
-    window.Pickr = Pickr;
-}
-
 let pocketColorPickr = null;
+let pickrLoadingPromise = null;
 const pocketColorPickrLayoutState = {
     restoreStyleText: null
 };
@@ -48,64 +44,94 @@ export function syncPocketColorUi(hex) {
 }
 
 /**
- * Initializes the Pickr color picker widget and binds swatch buttons.
+ * Asynchronously loads Pickr and its stylesheet, initializing the singleton instance.
+ * @returns {Promise<Object|null>}
+ */
+export async function ensurePocketColorPickr() {
+    if (pocketColorPickr) return pocketColorPickr;
+    if (pickrLoadingPromise) return pickrLoadingPromise;
+    if (!dom.pocketColorTrigger) return null;
+
+    pickrLoadingPromise = (async () => {
+        try {
+            await import('@simonwep/pickr/dist/themes/nano.min.css');
+            const { default: Pickr } = await import('@simonwep/pickr');
+            window.Pickr = Pickr;
+
+            pocketColorPickr = Pickr.create({
+                el: dom.pocketColorTrigger,
+                container: 'body',
+                theme: 'nano',
+                default: (dom.pocketColor && dom.pocketColor.value) || '#000000',
+                useAsButton: true,
+                autoReposition: true,
+                position: 'bottom-middle',
+                closeOnScroll: false,
+                components: {
+                    preview: true,
+                    opacity: false,
+                    hue: true,
+                    interaction: {
+                        hex: true,
+                        input: true,
+                        save: true
+                    }
+                }
+            });
+
+            pocketColorPickr
+                .on('show', () => {
+                    dom.pocketColorTrigger.setAttribute('aria-expanded', 'true');
+                    if (mobileViewportMediaQuery.matches) {
+                        queuePocketColorPickerLayout();
+                    } else {
+                        restorePocketColorPickerNativeLayout();
+                    }
+                })
+                .on('hide', () => {
+                    dom.pocketColorTrigger.setAttribute('aria-expanded', 'false');
+                    if (!mobileViewportMediaQuery.matches) restorePocketColorPickerNativeLayout();
+                })
+                .on('change', (color) => {
+                    const hex = pickrColorToHex(color);
+                    if (hex) syncPocketColorUi(hex);
+                })
+                .on('save', (color, pickr) => {
+                    const hex = pickrColorToHex(color);
+                    if (hex) syncPocketColorUi(hex);
+                    pickr.hide();
+                });
+
+            return pocketColorPickr;
+        } catch (err) {
+            console.error('Failed to load Pickr:', err);
+            pickrLoadingPromise = null;
+            return null;
+        }
+    })();
+
+    return pickrLoadingPromise;
+}
+
+/**
+ * Initializes the color picker trigger button with lazy loading and binds swatch buttons.
  */
 export function initializePocketColorPicker() {
     if (dom.pocketColor) {
         syncPocketColorUi(dom.pocketColor.value);
     }
 
-    if (!window.Pickr) {
-        if (dom.pocketColorTrigger) dom.pocketColorTrigger.disabled = true;
-        console.warn('Pickr library not found on window object.');
-        return;
-    }
-
-    if (!dom.pocketColorTrigger) return;
-
-    pocketColorPickr = window.Pickr.create({
-        el: dom.pocketColorTrigger,
-        container: 'body',
-        theme: 'nano',
-        default: (dom.pocketColor && dom.pocketColor.value) || '#000000',
-        useAsButton: true,
-        autoReposition: true,
-        position: 'bottom-middle',
-        closeOnScroll: false,
-        components: {
-            preview: true,
-            opacity: false,
-            hue: true,
-            interaction: {
-                hex: true,
-                input: true,
-                save: true
+    if (dom.pocketColorTrigger) {
+        dom.pocketColorTrigger.addEventListener('click', async () => {
+            if (dom.pocketColorTrigger.disabled) return;
+            if (!pocketColorPickr) {
+                const pickr = await ensurePocketColorPickr();
+                if (pickr) {
+                    pickr.show();
+                }
             }
-        }
-    });
-
-    pocketColorPickr
-        .on('show', () => {
-            dom.pocketColorTrigger.setAttribute('aria-expanded', 'true');
-            if (mobileViewportMediaQuery.matches) {
-                queuePocketColorPickerLayout();
-            } else {
-                restorePocketColorPickerNativeLayout();
-            }
-        })
-        .on('hide', () => {
-            dom.pocketColorTrigger.setAttribute('aria-expanded', 'false');
-            if (!mobileViewportMediaQuery.matches) restorePocketColorPickerNativeLayout();
-        })
-        .on('change', (color) => {
-            const hex = pickrColorToHex(color);
-            if (hex) syncPocketColorUi(hex);
-        })
-        .on('save', (color, pickr) => {
-            const hex = pickrColorToHex(color);
-            if (hex) syncPocketColorUi(hex);
-            pickr.hide();
         });
+    }
 
     // Bind swatch buttons
     const swatchBtns = document.querySelectorAll('#section-pole-cover .color-swatch-btn');

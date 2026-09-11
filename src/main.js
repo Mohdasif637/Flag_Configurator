@@ -16,7 +16,8 @@ import {
 import { initGraphicManager } from './graphics/graphicManager.js';
 import { bindGizmoControls } from './graphics/gizmo.js';
 import { initializePocketColorPicker } from './ui/colorPicker.js';
-import { initCameraControls, setActiveCameraView } from './core/camera.js';
+import { renderer, scene } from './core/scene.js';
+import { initCameraControls, setActiveCameraView, camera } from './core/camera.js';
 import {
     startRenderLoop,
     syncPlayPauseButton,
@@ -56,7 +57,6 @@ async function bootstrap() {
     syncPlayPauseButton();
 
     initializeARSupport();
-    startRenderLoop();
 
     try {
         await Promise.all([
@@ -75,6 +75,9 @@ async function bootstrap() {
                 sharedDesignLoadedToastPromise = () => showToast('Shared design loaded', 'The shared custom flag design was loaded successfully.', 'success');
             }
         }
+
+        renderer.render(scene, camera);
+        startRenderLoop();
 
         state.ready = true;
         setLoadingState(false, '');

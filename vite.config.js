@@ -11,7 +11,8 @@ export default defineConfig({
       targets: [
         { src: '3d', dest: '' },
         { src: 'assets', dest: '' },
-        { src: 'icons', dest: '' }
+        { src: 'icons', dest: '' },
+        { src: 'robots.txt', dest: '' }
       ]
     })
   ],
@@ -23,7 +24,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           three: ['three'],
-          vendor: ['moveable', '@simonwep/pickr', 'i18next']
+          vendor: ['i18next']
         }
       }
     }

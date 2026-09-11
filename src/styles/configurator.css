@@ -31,7 +31,7 @@
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--secondary);
+    color: var(--secondary-text, #b45309);
     margin-top: 4px;
     margin-bottom: 6px;
     font-weight: 700;
@@ -203,7 +203,7 @@
 
 .selection-price {
     font-family: 'Outfit', sans-serif;
-    color: var(--secondary);
+    color: var(--secondary-text, #b45309);
     font-size: 12.5px;
     font-weight: 700;
     white-space: nowrap;

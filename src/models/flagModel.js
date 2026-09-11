@@ -844,60 +844,11 @@ export async function applyConfigurationToScene(animateTransition = false, trans
 }
 
 /**
- * Pre-compiles all size shader variants by cycling through sizes with 1x1 scissor renders.
- * Completely eliminates frame stutter on subsequent size swaps.
+ * Warmup all flag sizes.
+ * Kept as a no-op for backward compatibility; non-initial sizes are loaded on-demand.
  */
 export async function silentWarmupAllSizes() {
-    if (!modelRoot || !vatMaterials.length) return;
-
-    const sizeCards = Array.from(document.querySelectorAll('.config-card[data-category="size"]'));
-    const allSizeCodes = sizeCards
-        .map(card => card.dataset.value.split(' ').pop())
-        .filter(Boolean);
-
-    const originalSizeCode = configState.size.split(' ').pop();
-
-    await Promise.all(allSizeCodes.map(code => loadVATData(code)));
-
-    for (const sizeCode of allSizeCodes) {
-        const vatData = vatCache[sizeCode.toLowerCase()];
-        if (!vatData) continue;
-
-        setVatTextures(vatData.positions, vatData.normals);
-        vatMaterials.forEach(mat => {
-            updateVatUniforms(mat, vatData.positions, vatData.normals, vatData.info.frame_count);
-        });
-
-        const sizePrefix = sizeCode.toLowerCase();
-        modelRoot.traverse(child => {
-            const lowerName = (child.name || '').toLowerCase();
-            if (lowerName.includes('_vat') || lowerName.includes('_pocket')) {
-                child.visible = lowerName.includes(`${sizePrefix}_vat`) || lowerName.includes(`${sizePrefix}_pocket`);
-            }
-        });
-        modelRoot.updateMatrixWorld(true);
-
-        renderer.setScissorTest(true);
-        renderer.setScissor(0, 0, 1, 1);
-        renderer.render(scene, camera);
-        renderer.setScissorTest(false);
-
-        await new Promise(resolve => setTimeout(resolve, 0));
-    }
-
-    const originalVatData = vatCache[originalSizeCode.toLowerCase()];
-    if (originalVatData) {
-        setVatTextures(originalVatData.positions, originalVatData.normals);
-        vatMaterials.forEach(mat => {
-            updateVatUniforms(mat, originalVatData.positions, originalVatData.normals, originalVatData.info.frame_count);
-        });
-    }
-
-    if (modelRoot) {
-        modelRoot.userData.lastConfigStr = null;
-    }
-
-    applyConfigurationToScene(false);
+    return Promise.resolve();
 }
 
 /**
@@ -1087,9 +1038,7 @@ export async function loadFlagModels() {
                 applyConfigurationToScene(false);
                 updateDynamicCameraTargets(true);
 
-                silentWarmupAllSizes().then(() => {
-                    resolve(modelRoot);
-                });
+                resolve(modelRoot);
             },
             undefined,
             (err) => reject(err)

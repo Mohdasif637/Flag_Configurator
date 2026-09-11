@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import Moveable from 'moveable';
 import { dom } from '../ui/domElements.js';
 import { camera, controls } from '../core/camera.js';
 import { markSceneDirty } from '../core/scene.js';
@@ -79,23 +78,30 @@ function getActiveFlagUvSpan() {
     return { uSpan: 0.187, vSpan: 0.95 };
 }
 
-export function initMoveable() {
-    if (moveableInstance || !dom.moveableTarget || !dom.canvasContainer) return;
+let moveableLoadingPromise = null;
 
-    moveableInstance = new Moveable(dom.canvasContainer, {
-        target: dom.moveableTarget,
-        draggable: true,
-        resizable: false,
-        scalable: true,
-        rotatable: true,
-        warpable: false,
-        pinchable: false,
-        origin: false,
-        keepRatio: true,
-        throttleDrag: 0,
-        throttleScale: 0,
-        throttleRotate: 0
-    });
+export async function initMoveable() {
+    if (moveableInstance) return moveableInstance;
+    if (moveableLoadingPromise) return moveableLoadingPromise;
+    if (!dom.moveableTarget || !dom.canvasContainer) return null;
+
+    moveableLoadingPromise = (async () => {
+        try {
+            const { default: Moveable } = await import('moveable');
+            moveableInstance = new Moveable(dom.canvasContainer, {
+                target: dom.moveableTarget,
+                draggable: true,
+                resizable: false,
+                scalable: true,
+                rotatable: true,
+                warpable: false,
+                pinchable: false,
+                origin: false,
+                keepRatio: true,
+                throttleDrag: 0,
+                throttleScale: 0,
+                throttleRotate: 0
+            });
 
     moveableInstance.on('dragStart', (e) => {
         const inputEv = e.inputEvent;
@@ -290,9 +296,19 @@ export function initMoveable() {
             isMultiTouchActive = false;
         }
     }, { passive: true });
+
+            return moveableInstance;
+        } catch (err) {
+            console.error('Failed to load Moveable.js:', err);
+            moveableLoadingPromise = null;
+            return null;
+        }
+    })();
+
+    return moveableLoadingPromise;
 }
 
-export function setGizmoActive(active) {
+export async function setGizmoActive(active) {
     const config = sideConfigs.graphic;
     if (active && !config.uploadedTexture) return;
 
@@ -346,8 +362,9 @@ export function setGizmoActive(active) {
         }
 
         if (!moveableInstance) {
-            initMoveable();
-        } else {
+            await initMoveable();
+        }
+        if (moveableInstance) {
             moveableInstance.target = dom.moveableTarget;
         }
 
