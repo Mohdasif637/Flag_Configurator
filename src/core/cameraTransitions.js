@@ -14,40 +14,6 @@ export function cancelCameraSequence() {
     currentCameraSequenceId++;
 }
 
-export const turntableSpeed = THREE.MathUtils.degToRad(26);
-export let turntableAccumulatedAngle = 0;
-export let turntableAutoStopEnabled = true;
-
-export function setTurntableAccumulatedAngle(val) {
-    turntableAccumulatedAngle = val;
-}
-
-export function setTurntableAutoStop(val) {
-    turntableAutoStopEnabled = val;
-}
-
-
-export function syncTurntableButton() {
-    if (dom.turntableToggle) {
-        dom.turntableToggle.classList.toggle('is-active', state.turntableEnabled);
-        dom.turntableToggle.setAttribute('aria-pressed', String(state.turntableEnabled));
-        dom.turntableToggle.title = state.turntableEnabled ? 'Stop Turntable' : 'Start Turntable';
-    }
-}
-
-export function stopTurntableRotation() {
-    if (!state.turntableEnabled) return;
-    state.turntableEnabled = false;
-    turntableAutoStopEnabled = false;
-    syncTurntableButton();
-}
-
-export function toggleTurntable() {
-    if (dom.turntableToggle && dom.turntableToggle.disabled) return;
-    state.turntableEnabled = !state.turntableEnabled;
-    turntableAutoStopEnabled = false;
-    syncTurntableButton();
-}
 
 /**
  * Recalculates dynamic framing bounding box around active flag and reference models
@@ -183,7 +149,16 @@ export function updateDynamicCameraTargets(moveCamera = true) {
 
             const activeView = dom.cameraButtons.find(b => b.classList.contains('is-active'))?.dataset.view;
             if (activeView) {
-                focusCameraView(activeView);
+                if (!state.ready) {
+                    const targetPosition = cameraTargets[activeView] || cameraTargets.home;
+                    camera.position.copy(targetPosition);
+                    controls.target.copy(targetCenter);
+                    controls.update();
+                    sceneRoot.rotation.set(0, 0, 0);
+                    setActiveCameraView(activeView);
+                } else {
+                    focusCameraView(activeView);
+                }
             }
         }
     }

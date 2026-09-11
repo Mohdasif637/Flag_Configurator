@@ -46,8 +46,16 @@
     top: 0;
     z-index: 10;
     width: 100%;
-    padding: 22px var(--space-4) 14px;
+    padding: 12px var(--space-4) 10px;
     box-sizing: border-box;
+}
+
+#ui-header-wrapper h2 {
+    padding-right: 70px;
+}
+
+#ui-header-wrapper .panel-copy {
+    margin-top: 4px;
 }
 
 #ui-header-wrapper::before {
@@ -78,13 +86,13 @@
     top: 0;
     right: 0;
     background: var(--secondary);
-    color: #ffffff;
-    padding: 5px 14px;
+    color: #000000;
+    padding: 4px 10px;
     border-top-right-radius: var(--panel-radius, 8.4px);
-    border-bottom-left-radius: var(--radius-md);
+    border-bottom-left-radius: 6px;
     font-family: 'Outfit', sans-serif;
-    font-weight: 800;
-    font-size: 1.1rem;
+    font-weight: 500;
+    font-size: 0.88rem;
     box-shadow: none;
     z-index: 10;
 }

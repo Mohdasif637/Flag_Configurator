@@ -54,4 +54,10 @@
     --space-3: 16px;
     --space-4: 20px;
     --space-5: 24px;
+
+    /* Universal Button Motion & Press Tokens */
+    --btn-transition: transform 0.06s ease, background-color 0.06s ease, border-color 0.06s ease, box-shadow 0.06s ease, color 0.06s ease;
+    --btn-transition-active: transform 0.06s ease-out, background 0.06s ease-out;
+    --btn-hover-transform: scale(1.06);
+    --btn-active-transform: scale(0.95) translateY(1px);
 }

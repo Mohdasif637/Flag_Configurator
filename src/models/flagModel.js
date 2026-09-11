@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { scene, sceneRoot, renderer, markSceneDirty } from '../core/scene.js';
 import { camera, controls, targetCenter, cameraTargets, cameraDistance, updateCameraViewportOffset } from '../core/camera.js';
-import { updateDynamicCameraTargets, focusCameraView, currentCameraSequenceId, stopTurntableRotation } from '../core/cameraTransitions.js';
+import { updateDynamicCameraTargets, focusCameraView, currentCameraSequenceId } from '../core/cameraTransitions.js';
+import { stopInitialAutoRotation } from '../core/renderLoop.js';
 import { modelLoader } from './loaders.js';
 import { loadVATData, vatCache, vatMaterials, updateVatUniforms, setVatTextures } from './vatLoader.js';
 import { injectVATShader, injectDepthVATShader } from './flagShader.js';
@@ -1473,7 +1474,7 @@ export function toggleCharacterReference() {
         characterLoading = false;
     }
 
-    stopTurntableRotation();
+    stopInitialAutoRotation();
     focusCameraView('front');
 
     if (!characterModel) {

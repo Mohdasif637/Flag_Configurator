@@ -121,6 +121,7 @@
     }
 
     #toast-region {
+        top: auto;
         right: 12px;
         left: 12px;
         bottom: 12px;
@@ -157,6 +158,10 @@
 
     .preferences-container {
         margin-left: auto;
+    }
+
+    .pref-btn {
+        width: 72px;
     }
 
     .pref-dropdown {

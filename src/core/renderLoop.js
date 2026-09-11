@@ -1,17 +1,8 @@
 import * as THREE from 'three';
 import { Timer } from 'three';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
-import { scene, sceneRoot, renderer, isSceneDirty, clearSceneDirty } from './scene.js';
-import { camera, controls, controlsDirty, resetControlsDirty, enforceCameraGroundBounds } from './camera.js';
-import {
-    turntableSpeed,
-    turntableAccumulatedAngle,
-    setTurntableAccumulatedAngle,
-    turntableAutoStopEnabled,
-    setTurntableAutoStop,
-    syncTurntableButton,
-    focusCameraView
-} from './cameraTransitions.js';
+import { scene, sceneRoot, renderer, isSceneDirty, clearSceneDirty, markSceneDirty } from './scene.js';
+import { camera, controls, controlsDirty, resetControlsDirty, enforceCameraGroundBounds, getActiveCameraTween, setActiveCameraTween } from './camera.js';
 import { state } from '../state/configState.js';
 import { dom } from '../ui/domElements.js';
 import { sideConfigs } from '../graphics/graphicConfig.js';
@@ -26,6 +17,49 @@ export let accumulatedTime = 0;
 let lastRenderTime = performance.now();
 let autoPauseTimeout = null;
 
+export const INITIAL_ROTATION_SPEED = THREE.MathUtils.degToRad(26);
+export const TOTAL_ROTATION_CYCLES = 5;
+const TOTAL_ROTATION_ANGLE = Math.PI * 2 * TOTAL_ROTATION_CYCLES;
+
+let initialRotationAngle = 0;
+let initialRotationActive = false;
+let initialRotationDone = false;
+
+/**
+ * Starts the 5-cycle continuous initial auto-rotation inspection.
+ */
+export function startInitialAutoRotation() {
+    if (initialRotationDone || state.isInAR) return;
+
+    const activeTween = getActiveCameraTween();
+    if (activeTween) {
+        activeTween.stop();
+        setActiveCameraTween(null);
+        controls.enabled = true;
+    }
+
+    sceneRoot.rotation.y = 0;
+    initialRotationActive = true;
+    initialRotationAngle = 0;
+}
+
+/**
+ * Immediately cancels and permanently stops the initial auto-rotation.
+ */
+export function stopInitialAutoRotation() {
+    if (!initialRotationActive && initialRotationDone) return;
+    initialRotationActive = false;
+    initialRotationDone = true;
+    markSceneDirty();
+    if (isPlaying) {
+        startVatAnimationTimer();
+    }
+}
+
+export function isInitialRotationActive() {
+    return initialRotationActive;
+}
+
 export function setAnimationPlaying(playing) {
     isPlaying = Boolean(playing);
     syncPlayPauseButton();
@@ -38,12 +72,16 @@ export function toggleAnimation() {
     if (dom.playPause && dom.playPause.disabled) return;
 
     isPlaying = !isPlaying;
-
-    if (!isPlaying && state.turntableEnabled) {
-        state.turntableEnabled = false;
-        syncTurntableButton();
+    if (isPlaying) {
+        startVatAnimationTimer();
+    } else {
+        if (autoPauseTimeout) {
+            window.clearTimeout(autoPauseTimeout);
+            autoPauseTimeout = null;
+        }
     }
     syncPlayPauseButton();
+    markSceneDirty();
 }
 
 /**
@@ -55,16 +93,6 @@ export function syncPlayPauseButton() {
     dom.playPause.classList.toggle('is-active', isPlaying);
     dom.playPause.title = isPlaying ? 'Pause Animation' : 'Play Animation';
     dom.playPause.setAttribute('aria-label', isPlaying ? 'Pause Animation' : 'Play Animation');
-}
-
-/**
- * Starts turntable auto-rotation with automatic stop after full inspection cycle.
- */
-export function startTurntableAutoStart() {
-    state.turntableEnabled = true;
-    setTurntableAutoStop(true);
-    setTurntableAccumulatedAngle(0);
-    syncTurntableButton();
 }
 
 /**
@@ -82,37 +110,23 @@ export function startVatAnimationTimer() {
 }
 
 /**
- * Starts post-guide timers (turntable auto-start and VAT animation auto-pause).
+ * Starts initial auto-rotation inspection (flag animation is synchronized and pauses smoothly on the 5th rotation).
  */
 export function startPostGuideTimers() {
-    if (state.turntableEnabled) {
-        startTurntableAutoStart();
-    }
-    startVatAnimationTimer();
+    startInitialAutoRotation();
 }
 
 /**
  * Displays the WebXR AR supported toast notification if device is capable.
+ * (Disabled per user request to avoid unnecessary notifications)
  */
 export function showArSupportedToastIfSupported() {
-    if (state.arSupported && !state.arSupportedToastShown) {
-        const guideOverlay = document.getElementById('nav-coaching-overlay');
-        const isGuideActiveOrPending = guideOverlay && !guideOverlay.hasAttribute('hidden');
-        if (isGuideActiveOrPending) return;
-
-        if (activeToasts.length > 0 || (dom.toastRegion && dom.toastRegion.children.length > 0)) {
-            window.setTimeout(showArSupportedToastIfSupported, 100);
-            return;
-        }
-
-        state.arSupportedToastShown = true;
-        showToast('AR Supported', 'Ready for AR! Tap the green AR button on the right to place the flag in the real world.', 'success', 5000);
-    }
+    // Disabled: AR notification removed per user request
 }
 
 /**
  * Main animation loop callback invoked by WebXR / requestAnimationFrame.
- * Performs updates to tweens, camera controls, VAT shader uniforms, turntable,
+ * Performs updates to tweens, camera controls, VAT shader uniforms, initial auto-rotation,
  * and executes conditional dirty rendering.
  * 
  * @param {number} _ - WebXR timestamp
@@ -135,30 +149,48 @@ export function renderFrame(_, frame) {
     timer.update();
     const delta = timer.getDelta();
 
-    if (state.turntableEnabled && !state.isInAR) {
-        const step = turntableSpeed * delta;
-        sceneRoot.rotation.y += step;
+    let animDelta = delta;
 
-        if (turntableAutoStopEnabled) {
-            const nextAngle = turntableAccumulatedAngle + Math.abs(step);
-            setTurntableAccumulatedAngle(nextAngle);
-            if (nextAngle >= Math.PI * 8) {
-                state.turntableEnabled = false;
-                syncTurntableButton();
-                setTurntableAutoStop(false);
+    if (initialRotationActive && !state.isInAR) {
+        const remaining = TOTAL_ROTATION_ANGLE - initialRotationAngle;
 
-                const homeBtn = dom.cameraButtons.find(b => b.dataset.view === 'home');
-                if (homeBtn) {
-                    homeBtn.click();
-                } else {
-                    focusCameraView('home');
-                }
+        // Apply smooth deceleration in the final 60 degrees of the 5th rotation
+        const easeOutThreshold = THREE.MathUtils.degToRad(60);
+        let speed = INITIAL_ROTATION_SPEED;
+        let animSpeedFactor = 1.0;
+
+        if (remaining < easeOutThreshold) {
+            const progress = Math.min(1.0, Math.max(0.0, remaining / easeOutThreshold));
+            const smoothFactor = Math.sin(progress * (Math.PI / 2));
+            const easeFactor = 0.12 + 0.88 * smoothFactor;
+            speed = INITIAL_ROTATION_SPEED * easeFactor;
+            animSpeedFactor = easeFactor;
+        }
+
+        const step = speed * delta;
+        animDelta = delta * animSpeedFactor;
+
+        if (remaining <= step) {
+            sceneRoot.rotation.y = 0;
+            initialRotationAngle = TOTAL_ROTATION_ANGLE;
+            initialRotationActive = false;
+            initialRotationDone = true;
+
+            // Seamlessly conclude flag cloth animation at the end of the 5th rotation
+            if (isPlaying) {
+                isPlaying = false;
+                syncPlayPauseButton();
+                showToast('Flag Animation Paused', '', 'info', 3000);
             }
+            markSceneDirty();
+        } else {
+            initialRotationAngle += step;
+            sceneRoot.rotation.y += step;
         }
     }
 
     if (isPlaying) {
-        accumulatedTime += delta;
+        accumulatedTime += animDelta;
     }
 
     vatMaterials.forEach((mat) => {
@@ -180,7 +212,7 @@ export function renderFrame(_, frame) {
     resetControlsDirty();
 
     const tweensActive = TWEEN.getAll().length > 0;
-    const turntableActive = state.turntableEnabled && !state.isInAR;
+    const initialSpinActive = initialRotationActive && !state.isInAR;
     const flagActive = isPlaying;
     const arActive = state.isInAR;
     const gizmoActive = sideConfigs.graphic.gizmoActive && Boolean(sideConfigs.graphic.uploadedTexture);
@@ -192,7 +224,7 @@ export function renderFrame(_, frame) {
     const needsRender = isSceneDirty() ||
                         controlsChanged ||
                         tweensActive ||
-                        turntableActive ||
+                        initialSpinActive ||
                         flagActive ||
                         arActive;
 

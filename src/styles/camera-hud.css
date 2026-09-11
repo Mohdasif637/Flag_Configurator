@@ -4,9 +4,9 @@
 #camera-wrapper {
     position: absolute;
     top: auto;
-    left: 20px;
+    left: 10px;
     right: auto;
-    bottom: 20px;
+    bottom: 10px;
     z-index: 3;
     display: flex;
     flex-direction: column;
@@ -43,32 +43,14 @@ body:has(#loading-overlay.is-visible) .preferences-container {
 #camera-actions {
     order: 1;
     position: relative;
-    display: grid;
-    grid-template-columns: repeat(2, 48px);
-    grid-template-rows: repeat(2, 48px);
-    grid-template-areas:
-        "char env"
-        "turntable play";
+    display: flex;
     align-items: center;
-    justify-content: end;
+    justify-content: flex-start;
     gap: 8px;
     margin-bottom: 12px;
 }
 
-#char-toggle {
-    grid-area: char;
-}
-
-#env-toggle {
-    grid-area: env;
-}
-
-#turntable-toggle {
-    grid-area: turntable;
-}
-
 #play-pause {
-    grid-area: play;
     position: relative;
 }
 
@@ -136,7 +118,7 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     background: #ffffff;
     box-shadow: var(--subtle-shadow);
     cursor: pointer;
-    transition: transform 0.06s ease, background-color 0.06s ease, border-color 0.06s ease, box-shadow 0.06s ease, color 0.06s ease;
+    transition: var(--btn-transition);
 }
 
 #camera-controls button {
@@ -149,22 +131,19 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     background: var(--surface-strong);
     border-color: var(--card-border-hover);
     color: var(--text);
-    transform: scale(1.06);
+    transform: var(--btn-hover-transform);
     box-shadow: var(--subtle-shadow);
 }
 
-#camera-actions button:active {
-    transform: scale(0.95) translateY(1px) !important;
+#camera-actions button:active,
+#camera-controls button:active {
+    transform: var(--btn-active-transform) !important;
     background: var(--pressed-bg-solid) !important;
     background: var(--pressed-bg) !important;
     border-color: var(--pressed-border) !important;
     box-shadow: var(--pressed-shadow) !important;
     color: #111111 !important;
-    transition: transform 0.06s ease-out, background 0.06s ease-out;
-}
-
-#camera-controls button:not(.is-active):active {
-    transform: scale(1.0);
+    transition: var(--btn-transition-active) !important;
 }
 
 #camera-controls button:focus,
@@ -174,7 +153,6 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     outline: none;
 }
 
-#turntable-toggle,
 #env-toggle,
 #char-toggle,
 #play-pause,
@@ -184,7 +162,6 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     z-index: 1;
 }
 
-#turntable-toggle.is-active,
 #env-toggle.is-active,
 #char-toggle.is-active,
 #play-pause.is-active,
@@ -193,13 +170,12 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     background: var(--pressed-bg) !important;
     color: #111111 !important;
     border: 1px solid var(--pressed-border) !important;
-    transform: scale(0.95) translateY(1px) !important;
+    transform: var(--btn-active-transform) !important;
     box-shadow: var(--pressed-shadow) !important;
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-    transition: transform 0.08s ease-out, background 0.08s ease-out;
+    transition: var(--btn-transition-active);
 }
 
-#turntable-toggle.is-active:hover,
 #env-toggle.is-active:hover,
 #char-toggle.is-active:hover,
 #play-pause.is-active:hover,
@@ -207,11 +183,10 @@ body:has(#loading-overlay.is-visible) .preferences-container {
     background: var(--pressed-bg-solid) !important;
     background: var(--pressed-bg) !important;
     border: 1px solid var(--pressed-border) !important;
-    transform: scale(0.95) translateY(1px) !important;
+    transform: var(--btn-active-transform) !important;
     box-shadow: var(--pressed-shadow) !important;
 }
 
-#turntable-toggle.is-active .control-icon,
 #env-toggle.is-active .control-icon,
 #char-toggle.is-active .control-icon,
 #camera-actions button:active .control-icon,

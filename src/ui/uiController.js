@@ -9,13 +9,10 @@ import { camera, updateCameraViewportOffset, setActiveCameraView } from '../core
 import {
     updateDynamicCameraTargets,
     focusCameraView,
-    stopTurntableRotation,
-    toggleTurntable,
-    syncTurntableButton,
     runPrintingCameraSequence,
     runDirectionCameraSequence
 } from '../core/cameraTransitions.js';
-import { toggleAnimation, syncPlayPauseButton } from '../core/renderLoop.js';
+import { toggleAnimation, syncPlayPauseButton, stopInitialAutoRotation } from '../core/renderLoop.js';
 import { applyConfigurationToScene, toggleCharacterReference, updateTemplateDownloadLink, showCharacter } from '../models/flagModel.js';
 import { discardGizmoChanges, updateGizmoOverlay } from '../graphics/gizmo.js';
 import { isEnvPanelOpen, setEnvPanelOpen, environmentTexture } from '../core/environment.js';
@@ -76,6 +73,7 @@ export function initConfiguratorUI() {
             let startX = 0;
             let scrollStart = 0;
             let hasDragged = false;
+            let previousActiveCard = null;
 
             track.addEventListener('mousedown', (e) => {
                 if (e.button !== 0) return;
@@ -83,6 +81,7 @@ export function initConfiguratorUI() {
                 startX = e.pageX - track.offsetLeft;
                 scrollStart = track.scrollLeft;
                 hasDragged = false;
+                previousActiveCard = section.querySelector('.config-card.is-active');
             });
 
             window.addEventListener('mousemove', (e) => {
@@ -99,6 +98,10 @@ export function initConfiguratorUI() {
             window.addEventListener('mouseup', () => {
                 if (isDown) {
                     isDown = false;
+                    if (hasDragged && previousActiveCard) {
+                        cards.forEach((c) => c.classList.remove('is-active'));
+                        previousActiveCard.classList.add('is-active');
+                    }
                     setTimeout(updateArrows, 50);
                 }
             });
@@ -123,6 +126,12 @@ export function initConfiguratorUI() {
                 if (nameDisplay) nameDisplay.textContent = formatSelectionName(category, value);
                 if (priceDisplay && card.dataset.price) priceDisplay.textContent = card.dataset.price;
             }
+
+            card.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                cards.forEach((c) => c.classList.remove('is-active'));
+                card.classList.add('is-active');
+            });
 
             card.addEventListener('click', () => {
                 cards.forEach((c) => c.classList.remove('is-active'));
@@ -151,9 +160,7 @@ export function initConfiguratorUI() {
                 if (nameDisplay) nameDisplay.textContent = formatSelectionName(clickedCategory, clickedValue);
                 if (priceDisplay && price) priceDisplay.textContent = price;
 
-                if (clickedCategory === 'size' || clickedCategory === 'printing' || clickedCategory === 'base') {
-                    stopTurntableRotation();
-                }
+                stopInitialAutoRotation();
 
                 let swapDuration = 800;
                 let isBaseSwap = false;
@@ -211,7 +218,6 @@ export function syncControlAvailability() {
     dom.cameraButtons.forEach((button) => {
         button.disabled = !baseEnabled;
     });
-    if (dom.turntableToggle) dom.turntableToggle.disabled = !baseEnabled;
     if (dom.charToggle) dom.charToggle.disabled = !baseEnabled;
 
     const environmentEnabled = baseEnabled && state.environmentLoaded;
@@ -233,7 +239,6 @@ export function syncControlAvailability() {
     }
 
     syncARVisibility();
-    syncTurntableButton();
     syncCharButton();
     syncSideUi('graphic');
 }
@@ -399,7 +404,12 @@ export function handleResize() {
  * environment panel, tooltips, and action buttons.
  */
 export function bindUIEvents() {
-    if (dom.playPause) dom.playPause.addEventListener('click', toggleAnimation);
+    if (dom.playPause) {
+        dom.playPause.addEventListener('click', () => {
+            stopInitialAutoRotation();
+            toggleAnimation();
+        });
+    }
     if (dom.generatePdf) dom.generatePdf.addEventListener('click', generatePdfProof);
     if (dom.shareDesign) dom.shareDesign.addEventListener('click', shareCurrentDesign);
     if (dom.addToCart) {
@@ -407,7 +417,6 @@ export function bindUIEvents() {
             showToast('Coming Soon.....', '', 'info', 2500);
         });
     }
-    if (dom.turntableToggle) dom.turntableToggle.addEventListener('click', toggleTurntable);
     if (dom.templateDownloadBtn) dom.templateDownloadBtn.addEventListener('click', handleTemplateDownload);
 
     // Printing Info Tooltip Popover
@@ -471,42 +480,51 @@ export function bindUIEvents() {
             if (e.pointerType === 'touch') markTouch();
         }, { passive: true });
 
-        dom.printingInfoBtn.addEventListener('click', (event) => {
-            event.stopPropagation();
-            togglePrintingTooltip();
-        });
-
-        let tooltipHoverTimer = null;
-        const cancelTooltipTimer = () => {
-            if (tooltipHoverTimer) {
-                clearTimeout(tooltipHoverTimer);
-                tooltipHoverTimer = null;
+        let tooltipOpenTimer = null;
+        let tooltipCloseTimer = null;
+        const cancelTooltipTimers = () => {
+            if (tooltipOpenTimer) {
+                clearTimeout(tooltipOpenTimer);
+                tooltipOpenTimer = null;
+            }
+            if (tooltipCloseTimer) {
+                clearTimeout(tooltipCloseTimer);
+                tooltipCloseTimer = null;
             }
         };
 
+        dom.printingInfoBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            cancelTooltipTimers();
+            togglePrintingTooltip();
+        });
+
         dom.printingInfoBtn.addEventListener('mouseenter', () => {
             if (Date.now() - lastTouchTime < 800) return;
-            cancelTooltipTimer();
-            togglePrintingTooltip(true);
+            cancelTooltipTimers();
+            // Delay half second (500ms) before showing tooltip on desktop hover
+            tooltipOpenTimer = setTimeout(() => {
+                togglePrintingTooltip(true);
+            }, 500);
         });
 
         dom.printingInfoBtn.addEventListener('mouseleave', () => {
             if (Date.now() - lastTouchTime < 800) return;
-            cancelTooltipTimer();
-            tooltipHoverTimer = setTimeout(() => {
+            cancelTooltipTimers();
+            tooltipCloseTimer = setTimeout(() => {
                 togglePrintingTooltip(false);
             }, 300);
         });
 
         dom.printingInfoPopover.addEventListener('mouseenter', () => {
             if (Date.now() - lastTouchTime < 800) return;
-            cancelTooltipTimer();
+            cancelTooltipTimers();
         });
 
         dom.printingInfoPopover.addEventListener('mouseleave', () => {
             if (Date.now() - lastTouchTime < 800) return;
-            cancelTooltipTimer();
-            tooltipHoverTimer = setTimeout(() => {
+            cancelTooltipTimers();
+            tooltipCloseTimer = setTimeout(() => {
                 togglePrintingTooltip(false);
             }, 300);
         });
@@ -580,6 +598,7 @@ export function bindUIEvents() {
     if (dom.charToggle) {
         dom.charToggle.addEventListener('click', () => {
             if (dom.charToggle.disabled) return;
+            stopInitialAutoRotation();
             if (sideConfigs.graphic.gizmoActive) {
                 discardGizmoChanges(false);
             }
@@ -591,6 +610,7 @@ export function bindUIEvents() {
     if (dom.envToggle) {
         dom.envToggle.addEventListener('click', () => {
             if (dom.envToggle.disabled) return;
+            stopInitialAutoRotation();
             setEnvPanelOpen(!isEnvPanelOpen());
         });
     }
@@ -632,11 +652,11 @@ export function bindUIEvents() {
     // Camera Preset Buttons
     dom.cameraButtons.forEach((button) => {
         button.addEventListener('click', () => {
+            stopInitialAutoRotation();
             if (sideConfigs.graphic.gizmoActive) {
                 discardGizmoChanges(false);
             }
             const view = button.dataset.view;
-            if (view !== 'home') stopTurntableRotation();
             focusCameraView(view);
         });
     });

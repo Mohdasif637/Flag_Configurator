@@ -43,25 +43,27 @@
     border: 1px solid var(--card-border);
     background: var(--surface);
     color: var(--text);
-    transition: all 0.2s ease;
+    transition: var(--btn-transition);
 }
 
-.gizmo-toggle-btn:hover {
-    background: var(--surface-hover);
-    border-color: var(--secondary);
-    color: var(--secondary);
+.gizmo-toggle-btn:not(.is-active):hover {
+    background: var(--surface-strong);
+    border-color: var(--card-border-hover);
+    color: var(--text);
+    transform: var(--btn-hover-transform);
 }
 
 .gizmo-toggle-btn.is-active,
+.gizmo-toggle-btn.is-active:hover,
 .gizmo-toggle-btn:active {
     background: var(--pressed-bg-solid) !important;
     background: var(--pressed-bg) !important;
     border-color: var(--pressed-border) !important;
     color: #111111 !important;
     box-shadow: var(--pressed-shadow) !important;
-    transform: translateY(1px) !important;
+    transform: var(--btn-active-transform) !important;
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-    transition: transform 0.08s ease-out, background 0.08s ease-out;
+    transition: var(--btn-transition-active);
 }
 
 /* Moveable Rotation Handle & Stalk Customizations */

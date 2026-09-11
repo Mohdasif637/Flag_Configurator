@@ -3,12 +3,12 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { scene, sceneRoot, renderer, reticle, defaultBackground, markSceneDirty } from '../core/scene.js';
 import { camera, controls, cameraHome, targetCenter, setActiveCameraView } from '../core/camera.js';
-import { syncTurntableButton } from '../core/cameraTransitions.js';
 import { dom, mobileViewportMediaQuery } from '../ui/domElements.js';
 import { state } from '../state/configState.js';
 import { showToast } from '../ui/toast.js';
 import { modelRoot, characterModel, showCharacter } from '../models/flagModel.js';
 import { syncControlAvailability, handleResize } from '../ui/uiController.js';
+import { stopInitialAutoRotation } from '../core/renderLoop.js';
 
 let hitTestSource = null;
 let hitTestSourceRequested = false;
@@ -167,7 +167,6 @@ export function capturePreviewState() {
     const activeViewButton = dom.cameraButtons.find((button) => button.classList.contains('is-active'));
     return {
         activeView: activeViewButton?.dataset.view ?? null,
-        turntableEnabled: state.turntableEnabled,
         cameraPosition: camera.position.clone(),
         cameraQuaternion: camera.quaternion.clone(),
         cameraZoom: camera.zoom,
@@ -183,7 +182,6 @@ export function capturePreviewState() {
 export function restorePreviewState(previewState = null) {
     const snapshot = previewState ?? {
         activeView: 'home',
-        turntableEnabled: true,
         cameraPosition: cameraHome.clone(),
         cameraQuaternion: new THREE.Quaternion(),
         cameraZoom: 1,
@@ -210,8 +208,6 @@ export function restorePreviewState(previewState = null) {
     controls.target.copy(snapshot.controlsTarget);
     controls.update();
     controls.saveState();
-    state.turntableEnabled = snapshot.turntableEnabled;
-    syncTurntableButton();
     setActiveCameraView(snapshot.activeView);
 }
 
@@ -235,6 +231,7 @@ function onARSessionStart() {
     document.body.classList.add('is-in-ar');
     controls.enabled = false;
     reticle.visible = false;
+    stopInitialAutoRotation();
     window.clearTimeout(postArRestoreTimer);
     previewStateBeforeAR = capturePreviewState();
 

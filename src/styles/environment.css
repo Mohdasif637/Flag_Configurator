@@ -6,7 +6,7 @@
     left: 0;
     right: auto;
     top: auto;
-    bottom: 112px;
+    bottom: calc(100% + 8px);
     z-index: 35;
     width: 175px;
     max-width: calc(100vw - 32px);

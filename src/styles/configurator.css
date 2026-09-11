@@ -63,7 +63,7 @@
     color: var(--muted);
     cursor: pointer;
     touch-action: manipulation;
-    transition: all 0.2s ease;
+    transition: var(--btn-transition);
     box-shadow: var(--subtle-shadow);
 }
 
@@ -81,7 +81,12 @@
     background: var(--surface-strong);
     border-color: var(--secondary);
     color: var(--secondary);
-    transform: scale(1.08);
+    transform: var(--btn-hover-transform);
+}
+
+.info-tooltip-btn:active {
+    transform: var(--btn-active-transform) !important;
+    transition: var(--btn-transition-active);
 }
 
 .info-tooltip-btn:focus,
@@ -250,7 +255,7 @@
     border-radius: var(--radius-sm);
     color: var(--text);
     cursor: pointer;
-    transition: background-color 0.06s ease, border-color 0.06s ease, transform 0.06s ease, color 0.06s ease, box-shadow 0.06s ease;
+    transition: var(--btn-transition);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -261,15 +266,18 @@
     background-clip: padding-box;
 }
 
-.config-card:hover {
+.config-card:not(.is-active):hover {
     background-color: var(--surface-strong) !important;
     border-color: var(--card-border-hover) !important;
     cursor: pointer !important;
-    transform: translateY(-2px);
+    transform: var(--btn-hover-transform);
+    box-shadow: var(--subtle-shadow);
+    z-index: 2;
 }
 
-.config-card:not(.is-active):active {
-    transform: translateY(0);
+.config-card:active {
+    transform: var(--btn-active-transform) !important;
+    transition: var(--btn-transition-active);
 }
 
 .config-card:focus,
@@ -277,13 +285,15 @@
     outline: none;
 }
 
-.config-card.is-active {
+.config-card.is-active,
+.config-card.is-active:hover,
+.config-card.is-active:active {
     background: var(--pressed-bg-solid) !important;
     background: var(--pressed-bg) !important;
     border: 1px solid var(--pressed-border) !important;
     box-shadow: none !important;
-    transform: translateY(1px) !important;
-    transition: transform 0.06s ease-out, background 0.06s ease-out, border-color 0.06s ease-out;
+    transform: var(--btn-active-transform) !important;
+    transition: var(--btn-transition-active);
 }
 
 .config-card.is-active::after {
@@ -296,16 +306,8 @@
     z-index: 2;
 }
 
-.config-card.is-active:hover {
-    border: 1px solid var(--pressed-border) !important;
-    background: var(--pressed-bg-solid) !important;
-    background: var(--pressed-bg) !important;
-    box-shadow: none !important;
-    transform: translateY(1px) !important;
-}
-
 button.config-card[data-category="base"].is-active {
-    transform: translateY(1px) !important;
+    transform: var(--btn-active-transform) !important;
 }
 
 .card-icon {

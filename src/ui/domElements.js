@@ -22,7 +22,6 @@ export const dom = {
     addToCart: document.getElementById('add-to-cart'),
     cameraWrapper: document.getElementById('camera-wrapper'),
     cameraActions: document.getElementById('camera-actions'),
-    turntableToggle: document.getElementById('turntable-toggle'),
     charToggle: document.getElementById('char-toggle'),
     envToggle: document.getElementById('env-toggle'),
     envPanel: document.getElementById('env-panel'),

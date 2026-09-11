@@ -20,8 +20,7 @@ import { initCameraControls, setActiveCameraView } from './core/camera.js';
 import {
     startRenderLoop,
     syncPlayPauseButton,
-    startPostGuideTimers,
-    showArSupportedToastIfSupported
+    startPostGuideTimers
 } from './core/renderLoop.js';
 import { initializeARSupport, syncARVisibility } from './features/arManager.js';
 import { loadEnvironment } from './core/environment.js';
@@ -84,17 +83,14 @@ async function bootstrap() {
         initNavCoachingGuide();
         syncARVisibility();
 
-        await showToast('Preview ready', 'Pick a size and layout, upload your design, tweak the preview, and save.', 'success');
-
-        if (sharedDesignLoadedToastPromise) {
-            await sharedDesignLoadedToastPromise();
-        }
-
         const guideOverlay = document.getElementById('nav-coaching-overlay');
         const isGuideActiveOrPending = guideOverlay && !guideOverlay.hasAttribute('hidden');
         if (!isGuideActiveOrPending) {
             startPostGuideTimers();
-            showArSupportedToastIfSupported();
+        }
+
+        if (sharedDesignLoadedToastPromise) {
+            sharedDesignLoadedToastPromise();
         }
     } catch (error) {
         console.error('Failed to load 3D scene assets:', error);

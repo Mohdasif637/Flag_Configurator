@@ -15,12 +15,19 @@
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    transition: var(--btn-transition);
 }
 
 .upload-card:hover {
     background-color: var(--surface-hover) !important;
     border-color: var(--card-border-hover) !important;
     cursor: pointer !important;
+    transform: var(--btn-hover-transform);
+}
+
+.upload-card:active {
+    transform: var(--btn-active-transform) !important;
+    transition: var(--btn-transition-active);
 }
 
 .upload-card.is-loading {

@@ -1,11 +1,10 @@
 import * as THREE from 'three';
 import { camera, controls } from '../core/camera.js';
-import { focusCameraView, stopTurntableRotation } from '../core/cameraTransitions.js';
+import { focusCameraView } from '../core/cameraTransitions.js';
 import {
     startPostGuideTimers,
-    showArSupportedToastIfSupported,
-    startTurntableAutoStart,
-    startVatAnimationTimer,
+    startInitialAutoRotation,
+    stopInitialAutoRotation,
     setAnimationPlaying
 } from '../core/renderLoop.js';
 import { mobileViewportMediaQuery } from './domElements.js';
@@ -78,7 +77,7 @@ export function initNavCoachingGuide() {
         document.getElementById('canvas-coaching-overlay')?.removeAttribute('hidden');
 
         focusCameraView('front');
-        stopTurntableRotation();
+        stopInitialAutoRotation();
         
         setAnimationPlaying(false);
 
@@ -97,7 +96,6 @@ export function initNavCoachingGuide() {
         if (container) container.classList.remove('is-blurred');
 
         startPostGuideTimers();
-        showArSupportedToastIfSupported();
     };
 
     document.getElementById('nav-guide-skip-btn')?.addEventListener('click', skipGuide);
@@ -242,13 +240,10 @@ export function completeNavGuideStep() {
                 if (uiContainer) uiContainer.classList.remove('is-blurred');
 
                 focusCameraView('home');
-                startTurntableAutoStart();
+                startInitialAutoRotation();
                 setAnimationPlaying(true);
 
-                showToast('Guide Completed', 'You are ready to explore the flag configurator!', 'success').then(() => {
-                    showArSupportedToastIfSupported();
-                    startVatAnimationTimer();
-                });
+                showToast('Guide Completed', 'You are ready to explore the flag configurator!', 'success');
             }
         }, 1200);
     }, 1000);

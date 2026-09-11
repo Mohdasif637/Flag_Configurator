@@ -35,6 +35,12 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     backdrop-filter: none;
 }
 
+@media (min-width: 769px) {
+    #loading-overlay {
+        right: calc(min(340px, calc(100vw - 40px)) + 10px);
+    }
+}
+
 .overlay.is-visible {
     opacity: 1;
     visibility: visible;

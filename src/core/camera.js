@@ -8,6 +8,7 @@ import { sideConfigs } from '../graphics/graphicConfig.js';
 import { renderer } from './scene.js';
 import { eventBus } from '../state/eventBus.js';
 import { cancelCameraSequence } from './cameraTransitions.js';
+import { stopInitialAutoRotation } from './renderLoop.js';
 import { modelRoot, characterModel } from '../models/flagModel.js';
 
 export const camera = new THREE.PerspectiveCamera(45, getViewportAspect(dom.canvasContainer), 0.1, 100);
@@ -262,7 +263,7 @@ export function zoomInSmoothly(hitPoint) {
         .start();
 
     setActiveCameraView(null);
-    state.turntableEnabled = false;
+    stopInitialAutoRotation();
 }
 
 export function zoomOutSmoothly() {
@@ -313,9 +314,11 @@ export function initCameraControls() {
         if (state.isInAR || !state.ready || state.isExporting) return;
         setActiveCameraView(null);
         cancelCameraSequence();
+        stopInitialAutoRotation();
     };
     controls.addEventListener('start', onUserAdjust);
     if (dom.canvasContainer) {
         dom.canvasContainer.addEventListener('wheel', onUserAdjust, { passive: true });
+        dom.canvasContainer.addEventListener('pointerdown', () => stopInitialAutoRotation(), { passive: true });
     }
 }

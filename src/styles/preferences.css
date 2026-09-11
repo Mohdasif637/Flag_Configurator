@@ -3,8 +3,8 @@
 --------------------------------- */
 .top-right-bar {
     position: absolute;
-    top: 12px;
-    left: 20px;
+    top: 10px;
+    left: 10px;
     right: auto;
     z-index: 20;
     display: flex;
@@ -26,10 +26,15 @@
 }
 
 .pref-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    justify-content: center;
+    gap: 4px;
+    width: 60px;
+    height: 34px;
+    min-height: 34px;
+    box-sizing: border-box;
+    padding: 0 6px;
     background: #ffffff;
     border: 1px solid var(--card-border);
     border-radius: var(--radius-md);
@@ -38,16 +43,29 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.05em;
+    white-space: nowrap;
     cursor: pointer;
     box-shadow: var(--subtle-shadow);
-    transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    transition: var(--btn-transition);
 }
 
-.pref-btn:hover {
+#pref-btn-text {
+    white-space: nowrap;
+    display: inline-block;
+}
+
+@media (max-width: 768px) {
+    .pref-btn {
+        width: 72px;
+    }
+}
+
+.pref-btn:not([aria-expanded="true"]):not(.is-active):hover {
     border-color: var(--card-border-hover);
     background: var(--surface-strong);
     box-shadow: var(--subtle-shadow);
     color: var(--text);
+    transform: var(--btn-hover-transform);
 }
 
 .pref-btn:focus,
@@ -68,9 +86,9 @@
     background: var(--pressed-bg) !important;
     border-color: var(--pressed-border) !important;
     box-shadow: var(--pressed-shadow) !important;
-    transform: translateY(1px) !important;
+    transform: var(--btn-active-transform) !important;
     color: #111111 !important;
-    transition: transform 0.08s ease-out, background 0.08s ease-out;
+    transition: var(--btn-transition-active);
 }
 
 .pref-btn[aria-expanded="true"] .pref-lang-text,

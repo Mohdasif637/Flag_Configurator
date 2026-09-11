@@ -8,14 +8,16 @@
 }
 
 #ARButton {
+    width: 60px !important;
     height: 34px !important;
     min-height: 34px !important;
-    padding: 0 12px 0 9px !important;
+    box-sizing: border-box !important;
+    padding: 0 6px !important;
     margin: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
     position: static !important;
     inset: auto !important;
     transform: none;
@@ -31,7 +33,7 @@
     letter-spacing: 0.08em !important;
     cursor: pointer !important;
     box-shadow: var(--subtle-shadow) !important;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease !important;
+    transition: var(--btn-transition) !important;
     z-index: 1 !important;
 }
 
@@ -52,19 +54,19 @@
 }
 
 #ARButton:not(.is-ar-disabled):hover {
-    transform: translateY(-1px) scale(1.04) !important;
+    transform: var(--btn-hover-transform) !important;
     background: var(--surface-strong) !important;
     border-color: var(--card-border-hover) !important;
     box-shadow: var(--subtle-shadow) !important;
 }
 
 #ARButton:not(.is-ar-disabled):active {
-    transform: translateY(1px) scale(0.96) !important;
+    transform: var(--btn-active-transform) !important;
     background: var(--pressed-bg-solid) !important;
     background: var(--pressed-bg) !important;
     border-color: var(--pressed-border) !important;
     box-shadow: var(--pressed-shadow) !important;
-    transition: transform 0.08s ease-out, background 0.08s ease-out;
+    transition: var(--btn-transition-active) !important;
 }
 
 #ARButton:not(.is-ar-disabled):active .ar-badge-label {
@@ -81,6 +83,10 @@
 }
 
 #ARButton.is-ar-disabled {
+    width: 60px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    box-sizing: border-box !important;
     opacity: 0.65 !important;
     animation: none !important;
     cursor: not-allowed !important;

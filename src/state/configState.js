@@ -17,8 +17,7 @@ export const state = {
     ready: false,
     isInAR: false,
     arPlaced: false,
-    activeView: 'home',
-    turntableEnabled: true
+    activeView: 'home'
 };
 
 /**
