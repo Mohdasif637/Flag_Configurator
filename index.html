@@ -75,12 +75,12 @@
                     <div class="floating-badge" id="badge-scale" data-prop="scale" title="Slide horizontally to scrub | Click to type">
                         <span class="badge-label">S</span>
                         <span class="badge-val-display" id="badge-scale-val">100%</span>
-                        <input type="text" class="badge-val-input" inputmode="decimal" hidden>
+                        <input type="text" class="badge-val-input" inputmode="decimal" hidden aria-label="Scale percentage">
                     </div>
                     <div class="floating-badge" id="badge-rotation" data-prop="rotation" title="Slide horizontally to scrub | Click to type">
                         <span class="badge-label">R</span>
                         <span class="badge-val-display" id="badge-rotation-val">0°</span>
-                        <input type="text" class="badge-val-input" inputmode="decimal" hidden>
+                        <input type="text" class="badge-val-input" inputmode="decimal" hidden aria-label="Rotation degrees">
                     </div>
 
                     <div class="floating-bar-divider"></div>
@@ -107,12 +107,12 @@
                     <div class="floating-badge" id="badge-panX" data-prop="panX" title="Slide horizontally to scrub | Click to type">
                         <span class="badge-label">X</span>
                         <span class="badge-val-display" id="badge-panX-val">0.00</span>
-                        <input type="text" class="badge-val-input" inputmode="decimal" hidden>
+                        <input type="text" class="badge-val-input" inputmode="decimal" hidden aria-label="Pan X offset">
                     </div>
                     <div class="floating-badge" id="badge-panY" data-prop="panY" title="Slide horizontally to scrub | Click to type">
                         <span class="badge-label">Y</span>
                         <span class="badge-val-display" id="badge-panY-val">0.00</span>
-                        <input type="text" class="badge-val-input" inputmode="decimal" hidden>
+                        <input type="text" class="badge-val-input" inputmode="decimal" hidden aria-label="Pan Y offset">
                     </div>
 
                     <div class="floating-bar-divider"></div>
@@ -274,8 +274,11 @@
                     </div>
                     <div id="graphic-dropzone" class="upload-card" role="button" tabindex="0" aria-label="Upload graphic">
                         <div class="upload-progress"></div>
+                        <label for="graphic-upload" class="visually-hidden" data-i18n="upload.title">Drop graphic here</label>
                         <input type="file" id="graphic-upload" class="visually-hidden"
-                            accept="image/png, image/jpeg, image/webp, application/pdf">
+                            accept="image/png, image/jpeg, image/webp, application/pdf"
+                            aria-label="Upload graphic"
+                            data-i18n="[aria-label]upload.title">
                         <div id="graphic-thumb-frame" class="upload-thumb-frame" hidden>
                             <img id="graphic-thumb" class="upload-thumb" alt="Graphic preview">
                         </div>
@@ -355,14 +358,14 @@
                                 <div class="card-icon is-small" data-i18n="cards.none">None</div>
                             </button>
                             <button class="config-card" data-category="base" data-value="Luxury cross base"
-                                data-price="">
+                                data-price="" aria-label="Luxury cross base">
                                 <img class="card-thumb" src="assets/base_thumbs/luxury_cross_base.webp" alt="Luxury cross base" draggable="false">
                             </button>
-                            <button class="config-card" data-category="base" data-value="Cross base-grey" data-price="">
+                            <button class="config-card" data-category="base" data-value="Cross base-grey" data-price="" aria-label="Cross base grey">
                                 <img class="card-thumb" src="assets/base_thumbs/cross_base_grey.webp" alt="Cross base grey" draggable="false">
                             </button>
                             <button class="config-card" data-category="base" data-value="Cross base-black"
-                                data-price="">
+                                data-price="" aria-label="Cross base black">
                                 <img class="card-thumb" src="assets/base_thumbs/cross_base_black.webp" alt="Cross base black" draggable="false">
                             </button>
                         </div>
@@ -438,8 +441,8 @@
                     <span data-i18n="env_panel.title">Environment</span>
                     <button type="button" id="env-reset" title="Reset Environment" data-i18n="[title]env_panel.reset;env_panel.reset">Reset</button>
                 </div>
-                <label><span data-i18n="env_panel.brightness">Brightness</span> <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1"></label>
-                <label><span data-i18n="env_panel.rotate">Rotate Light</span> <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0"></label>
+                <label><span data-i18n="env_panel.brightness">Brightness</span> <input type="range" id="env-exposure" min="0.1" max="3" step="0.1" value="1" aria-label="Environment Brightness" data-i18n="[aria-label]env_panel.brightness"></label>
+                <label><span data-i18n="env_panel.rotate">Rotate Light</span> <input type="range" id="env-rotate" min="0" max="6.28" step="0.1" value="0" aria-label="Rotate Light" data-i18n="[aria-label]env_panel.rotate"></label>
             </div>
         </div>
     </div>
