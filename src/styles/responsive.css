@@ -92,6 +92,20 @@
         top: 25%;
     }
 
+    #ui-actions-wrapper {
+        position: static;
+        flex-shrink: 0;
+        width: 100%;
+        padding: 8px var(--space-4) 10px;
+        box-sizing: border-box;
+        background: #ffffff;
+        border-top: 1px solid var(--line);
+    }
+
+    #ui-actions-wrapper::before {
+        display: none;
+    }
+
     h2 {
         font-size: 19px;
     }
@@ -206,7 +220,7 @@
         box-sizing: border-box;
         text-align: center;
         color: var(--text);
-        box-shadow: none;
+        box-shadow: var(--panel-shadow);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -604,7 +618,7 @@
         font-family: 'Outfit', sans-serif;
         font-size: 16px;
         font-weight: 700;
-        color: #10b981;
+        color: var(--secondary);
     }
 
     .success-checkmark {
@@ -613,7 +627,7 @@
         border-radius: 50%;
         display: block;
         stroke-width: 2.5;
-        stroke: #10b981;
+        stroke: var(--secondary);
         stroke-miterlimit: 10;
         background: transparent;
         animation: fillCheckmark .4s ease-in-out .4s forwards, scaleCheckmark .3s ease-in-out .9s both;
@@ -624,7 +638,7 @@
         stroke-dashoffset: 166;
         stroke-width: 2.5;
         stroke-miterlimit: 10;
-        stroke: #10b981;
+        stroke: var(--secondary);
         fill: none;
         animation: strokeCheckmark .6s cubic-bezier(0.650, 0.000, 0.450, 1.000) forwards;
     }
@@ -644,7 +658,7 @@
 
     @keyframes fillCheckmark {
         100% {
-            background-color: rgba(16, 185, 129, 0.1);
+            background-color: rgba(0, 99, 59, 0.1);
         }
     }
 

@@ -15,7 +15,7 @@ import {
 } from './ui/uiController.js';
 import { initGraphicManager } from './graphics/graphicManager.js';
 import { bindGizmoControls } from './graphics/gizmo.js';
-import { initializePocketColorPicker } from './ui/colorPicker.js';
+import { initializePocketColorPicker, warmupPocketColorPickr } from './ui/colorPicker.js';
 import { renderer, scene } from './core/scene.js';
 import { initCameraControls, setActiveCameraView, camera } from './core/camera.js';
 import {
@@ -45,6 +45,7 @@ if (typeof window !== 'undefined') {
  * Initializes controls, listeners, 3D assets, and starts rendering.
  */
 async function bootstrap() {
+    setLoadingState(true, 'toasts.loading_3d');
     initCameraControls();
     handleResize();
     initGraphicManager();
@@ -52,7 +53,6 @@ async function bootstrap() {
     bindUIEvents();
     initializePocketColorPicker();
     syncControlAvailability();
-    setLoadingState(true, 'toasts.loading_3d');
     setActiveCameraView('home');
     syncPlayPauseButton();
 
@@ -80,7 +80,7 @@ async function bootstrap() {
         startRenderLoop();
 
         state.ready = true;
-        setLoadingState(false, '');
+        await setLoadingState(false, '');
         syncControlAvailability();
 
         initNavCoachingGuide();
@@ -91,6 +91,8 @@ async function bootstrap() {
         if (!isGuideActiveOrPending) {
             startPostGuideTimers();
         }
+
+        warmupPocketColorPickr(2500);
 
         if (sharedDesignLoadedToastPromise) {
             sharedDesignLoadedToastPromise();

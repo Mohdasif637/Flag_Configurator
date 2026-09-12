@@ -19,6 +19,9 @@ export let cameraDistance = 5.5;
 
 export function setCameraDistance(dist) {
     cameraDistance = dist;
+    if (controls) {
+        controls.maxDistance = Math.max(6.5, Math.min(10.5, dist * 1.45));
+    }
 }
 
 export const cameraTargets = {
@@ -78,6 +81,8 @@ export function enforceCameraGroundBounds() {
 
 controls.minPolarAngle = 0.05;
 controls.maxPolarAngle = Math.PI / 2;
+controls.minDistance = 1.6;
+controls.maxDistance = 8.5;
 controls.target.copy(targetCenter);
 camera.position.copy(cameraHome);
 enforceCameraGroundBounds();
@@ -238,7 +243,7 @@ export function zoomInSmoothly(hitPoint) {
     endTarget.z = Math.max(-MAX_PAN_XZ, Math.min(MAX_PAN_XZ, endTarget.z));
 
     const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-    const zoomDistance = 1.5;
+    const zoomDistance = 1.6;
     const endCameraPosition = hitPoint.clone().add(direction.multiplyScalar(zoomDistance));
     endCameraPosition.y = Math.max(MIN_GROUND_Y, endCameraPosition.y);
 

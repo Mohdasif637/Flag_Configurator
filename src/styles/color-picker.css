@@ -29,8 +29,16 @@
     box-shadow: var(--subtle-shadow);
 }
 
-.color-picker-trigger:active {
+.color-picker-trigger:active,
+.color-picker-trigger.is-active,
+.color-picker-trigger.is-active:hover {
+    background: var(--pressed-bg-solid) !important;
+    background: var(--pressed-bg) !important;
+    border-color: var(--pressed-border) !important;
+    color: #111111 !important;
+    box-shadow: var(--pressed-shadow) !important;
     transform: var(--btn-active-transform) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
     transition: var(--btn-transition-active);
 }
 
@@ -85,7 +93,7 @@
     background: #ffffff !important;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-    box-shadow: none !important;
+    box-shadow: var(--panel-shadow) !important;
 }
 
 .pcr-app .pcr-interaction input,

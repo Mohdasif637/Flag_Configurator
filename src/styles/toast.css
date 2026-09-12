@@ -74,32 +74,36 @@
 
 .toast.is-success {
     background-color: #ffffff;
-    border-color: #16a34a;
-    border-left: 3px solid #16a34a;
+    border-color: var(--secondary, #00633b);
+    border-left: 3px solid var(--secondary, #00633b);
 }
 
 .toast.is-success .toast-title {
-    color: #15803d;
+    color: var(--secondary, #00633b);
 }
 
-.toast.is-error {
-    background-color: #ffffff;
-    border-color: #ef4444;
-    border-left: 3px solid #ef4444;
-}
-
-.toast.is-error .toast-title {
-    color: #ef4444;
-}
-
+.toast.is-warning,
 .toast.is-info {
     background-color: #ffffff;
-    border-color: var(--secondary);
-    border-left: 3px solid var(--secondary);
+    border-color: #d97706;
+    border-left: 3px solid #d97706;
 }
 
+.toast.is-warning .toast-title,
 .toast.is-info .toast-title {
-    color: var(--secondary-text, #b45309);
+    color: #b45309;
+}
+
+.toast.is-error,
+.toast.is-danger {
+    background-color: #ffffff;
+    border-color: #dc2626;
+    border-left: 3px solid #dc2626;
+}
+
+.toast.is-error .toast-title,
+.toast.is-danger .toast-title {
+    color: #b91c1c;
 }
 
 .toast-body {

@@ -253,8 +253,9 @@ export function showToast(title, message, tone = 'info', duration = 3200) {
         const priorNodes = Array.from(dom.toastRegion.children);
         const priorRects = priorNodes.map((node) => node.getBoundingClientRect());
 
+        const resolvedTone = (tone === 'info') ? 'warning' : tone;
         const toast = document.createElement('div');
-        toast.className = `toast is-${tone}`;
+        toast.className = `toast is-${resolvedTone}`;
 
         const bodyNode = document.createElement('div');
         bodyNode.className = 'toast-body';

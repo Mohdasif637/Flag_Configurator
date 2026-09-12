@@ -245,8 +245,6 @@ function onARSessionStart() {
     if (coachingOverlay) {
         coachingOverlay.classList.add('is-visible');
     }
-
-    showToast('AR mode active', 'Move your device to find a surface, then tap to place. Drag to rotate.', 'info', 10000);
 }
 
 function onARSessionEnd() {
@@ -337,6 +335,4 @@ function placeModelFromReticle() {
 
     const lookDirection = new THREE.Vector3().subVectors(cameraPosition, placementPosition);
     sceneRoot.rotation.set(0, Math.atan2(lookDirection.x, lookDirection.z), 0);
-
-    showToast('Object placed', 'Tap again on another surface if you want to reposition the flag.', 'success', 3200);
 }

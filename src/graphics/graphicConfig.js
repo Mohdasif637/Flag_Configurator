@@ -72,7 +72,11 @@ export function syncSideUi(side = 'graphic') {
 
     if (config.input) config.input.disabled = !canInteract;
     if (config.resetButton) config.resetButton.disabled = !canInteract || !hasUpload;
-    if (config.clearButton) config.clearButton.disabled = !canInteract || !hasUpload;
+    if (config.clearButton) {
+        config.clearButton.disabled = !canInteract || !hasUpload;
+        config.clearButton.hidden = !hasUpload;
+        config.clearButton.classList.toggle('is-visible', hasUpload);
+    }
 
     if (config.actionsWrapper) config.actionsWrapper.classList.toggle('is-visible', hasUpload);
     if (config.transformsWrapper) config.transformsWrapper.classList.toggle('is-visible', hasUpload);
@@ -114,7 +118,8 @@ export function loadGraphicFromCache() {
         config.rotation = cached.rotation !== undefined ? Number(cached.rotation) : 0.0;
         if (config.thumb) config.thumb.src = cached.previewUrl;
         if (config.titleElement) {
-            config.titleElement.textContent = truncateFileName(cached.fileName, config.titleElement);
+            config.titleElement.textContent = cached.fileName;
+            config.titleElement.title = cached.fileName;
         }
     } else {
         config.uploadedTexture = null;

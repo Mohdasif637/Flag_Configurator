@@ -165,16 +165,7 @@ export function initConfiguratorUI() {
                 let swapDuration = 800;
                 let isBaseSwap = false;
                 if (sizeChanged) {
-                    const primaryView = (configState.printing === 'Double Sided')
-                        ? 'front'
-                        : ((configState.direction === 'Left') ? 'back' : 'front');
-                    const primaryBtn = dom.cameraButtons.find((b) => b.dataset.view === primaryView);
-                    if (primaryBtn && !primaryBtn.classList.contains('is-active')) {
-                        setActiveCameraView(primaryView);
-                        swapDuration = 570;
-                    } else {
-                        setActiveCameraView(primaryView);
-                    }
+                    swapDuration = 800;
                 } else if (baseChanged) {
                     if (clickedValue === 'No base') {
                         setActiveCameraView('home');
@@ -323,50 +314,59 @@ function showTemplateUnavailableToast() {
  * @param {string} [messageKeyOrText]
  */
 export function setLoadingState(visible, messageKeyOrText = '') {
-    if (visible) {
-        dom.loadingOverlay.classList.add('is-visible');
-        dom.loadingOverlay.style.opacity = '1';
+    return new Promise((resolve) => {
+        if (visible) {
+            const isAlreadyVisible = dom.loadingOverlay.classList.contains('is-visible');
+            dom.loadingOverlay.classList.add('is-visible');
+            dom.loadingOverlay.style.opacity = '1';
 
-        const progressBar = document.getElementById('loading-progress-bar');
-        if (progressBar) {
-            progressBar.style.transition = 'none';
-            progressBar.style.width = '0%';
-            progressBar.offsetHeight; // Force reflow
-            progressBar.style.transition = 'width 4.0s cubic-bezier(0.08, 0.82, 0.17, 1.0)';
-            progressBar.style.width = '80%';
-        }
-
-        if (messageKeyOrText && messageKeyOrText.includes('toasts.')) {
-            dom.loadingText.setAttribute('data-i18n', messageKeyOrText);
-            if (window.i18next && window.i18next.isInitialized) {
-                dom.loadingText.textContent = window.i18next.t(messageKeyOrText);
+            const progressBar = document.getElementById('loading-progress-bar');
+            if (progressBar && !isAlreadyVisible) {
+                progressBar.style.transition = 'none';
+                progressBar.style.animation = 'none';
+                progressBar.style.width = '0%';
+                progressBar.offsetHeight; // Force reflow
+                progressBar.style.animation = 'sleekProgressGrow 4.0s cubic-bezier(0.08, 0.82, 0.17, 1.0) forwards';
             }
-        } else if (messageKeyOrText) {
-            dom.loadingText.removeAttribute('data-i18n');
-            dom.loadingText.textContent = messageKeyOrText;
-        }
-    } else {
-        const progressBar = document.getElementById('loading-progress-bar');
-        if (progressBar) {
-            progressBar.style.transition = 'width 0.25s ease-out';
-            progressBar.style.width = '100%';
-        }
 
-        setTimeout(() => {
-            dom.loadingOverlay.style.opacity = '0';
-            setTimeout(() => {
-                dom.loadingOverlay.classList.remove('is-visible');
-                const uiContainer = document.getElementById('ui-container');
-                const overlay = document.getElementById('nav-coaching-overlay');
-                const isOverlayVisible = overlay && !overlay.hasAttribute('hidden');
-                const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
-                const isWelcomeVisible = isOverlayVisible && welcomeScreen && !welcomeScreen.hasAttribute('hidden');
-                if (uiContainer && !isWelcomeVisible) {
-                    uiContainer.classList.remove('is-blurred');
+            if (messageKeyOrText && messageKeyOrText.includes('toasts.')) {
+                dom.loadingText.setAttribute('data-i18n', messageKeyOrText);
+                if (window.i18next && window.i18next.isInitialized) {
+                    dom.loadingText.textContent = window.i18next.t(messageKeyOrText);
                 }
-            }, 500);
-        }, 300);
-    }
+            } else if (messageKeyOrText) {
+                dom.loadingText.removeAttribute('data-i18n');
+                dom.loadingText.textContent = messageKeyOrText;
+            }
+            resolve();
+        } else {
+            const progressBar = document.getElementById('loading-progress-bar');
+            if (progressBar) {
+                const currentWidth = window.getComputedStyle(progressBar).width;
+                progressBar.style.animation = 'none';
+                progressBar.style.width = currentWidth;
+                progressBar.offsetHeight; // Force reflow
+                progressBar.style.transition = 'width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                progressBar.style.width = '100%';
+            }
+
+            setTimeout(() => {
+                dom.loadingOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    dom.loadingOverlay.classList.remove('is-visible');
+                    const uiContainer = document.getElementById('ui-container');
+                    const overlay = document.getElementById('nav-coaching-overlay');
+                    const isOverlayVisible = overlay && !overlay.hasAttribute('hidden');
+                    const welcomeScreen = document.getElementById('nav-coaching-step-welcome');
+                    const isWelcomeVisible = isOverlayVisible && welcomeScreen && !welcomeScreen.hasAttribute('hidden');
+                    if (uiContainer && !isWelcomeVisible) {
+                        uiContainer.classList.remove('is-blurred');
+                    }
+                    resolve();
+                }, 500);
+            }, 320);
+        }
+    });
 }
 
 /**
@@ -414,7 +414,7 @@ export function bindUIEvents() {
     if (dom.shareDesign) dom.shareDesign.addEventListener('click', shareCurrentDesign);
     if (dom.addToCart) {
         dom.addToCart.addEventListener('click', () => {
-            showToast('Coming Soon.....', '', 'info', 2500);
+            showToast('Coming Soon.....', '', 'warning', 2500);
         });
     }
     if (dom.templateDownloadBtn) dom.templateDownloadBtn.addEventListener('click', handleTemplateDownload);

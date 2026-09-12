@@ -1,13 +1,15 @@
 import * as THREE from 'three';
 import { dom } from '../ui/domElements.js';
 import { camera, controls } from '../core/camera.js';
-import { markSceneDirty } from '../core/scene.js';
+import { markSceneDirty, sceneRoot } from '../core/scene.js';
 import { configState, state } from '../state/configState.js';
 import { sideConfigs, saveCurrentGraphicToCache } from './graphicConfig.js';
 import { updateTextureTransforms } from './textureCompositor.js';
 import { showToast } from '../ui/toast.js';
 import { eventBus } from '../state/eventBus.js';
 import { modelRoot } from '../models/flagModel.js';
+import { stopInitialAutoRotation } from '../core/renderLoop.js';
+import { focusCameraView } from '../core/cameraTransitions.js';
 
 let moveableInstance = null;
 let isMoveableInteracting = false;
@@ -341,6 +343,13 @@ export async function setGizmoActive(active) {
         }
         markSceneDirty();
     } else {
+        stopInitialAutoRotation();
+        sceneRoot.rotation.y = 0;
+        markSceneDirty();
+
+        const targetView = (configState.direction === 'Left') ? 'back' : 'front';
+        focusCameraView(targetView, 600, false);
+
         controls.enabled = true;
         controls.enableRotate = false;
         controls.enableZoom = true;
@@ -388,7 +397,7 @@ export function discardGizmoChanges(silent = false) {
     setGizmoActive(false);
     gizmoSessionSnapshot = null;
     if (!silent) {
-        showToast('Changes Discarded', 'Reverted back to previous position.', 'info', 1500);
+        showToast('Changes Discarded', 'Reverted back to previous position.', 'warning', 1500);
     }
 }
 
@@ -709,7 +718,18 @@ export function bindGizmoControls() {
             config.panY = 0.0;
             updateTextureTransforms('graphic');
             updateGizmoOverlay();
-            showToast('Position Centered', 'Graphic centered on the flag.', 'info', 1500);
+        });
+    }
+
+    if (dom.btnTransformReset) {
+        dom.btnTransformReset.addEventListener('click', () => {
+            const config = sideConfigs.graphic;
+            config.panX = 0.0;
+            config.panY = 0.0;
+            config.scale = 1.0;
+            config.rotation = 0.0;
+            updateTextureTransforms('graphic');
+            updateGizmoOverlay();
         });
     }
 
@@ -718,7 +738,6 @@ export function bindGizmoControls() {
             saveCurrentGraphicToCache();
             gizmoSessionSnapshot = null;
             setGizmoActive(false);
-            showToast('Changes Saved', 'Graphic transform changes applied.', 'success', 1500);
         });
     }
 

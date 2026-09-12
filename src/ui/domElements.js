@@ -45,6 +45,7 @@ export const dom = {
     badgePanXVal: document.getElementById('badge-panX-val'),
     badgePanYVal: document.getElementById('badge-panY-val'),
     btnTransformCenter: document.getElementById('btn-transform-center'),
+    btnTransformReset: document.getElementById('btn-transform-reset'),
     gizmoBtnAccept: document.getElementById('gizmo-btn-accept'),
     gizmoBtnReject: document.getElementById('gizmo-btn-reject'),
     cameraButtons: Array.from(document.querySelectorAll('#camera-controls button'))

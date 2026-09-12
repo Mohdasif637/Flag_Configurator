@@ -158,19 +158,21 @@
 }
 
 .ar-coaching-card {
-    background: #ffffff;
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius-lg);
-    padding: 30px 24px;
-    width: 290px;
-    max-width: 85%;
+    background: rgba(255, 255, 255, 0.25);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    width: 160px;
+    max-width: 80%;
     text-align: center;
     color: var(--text);
-    box-shadow: none;
+    box-shadow: var(--panel-shadow);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     transform: scale(0.9);
     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -180,8 +182,8 @@
 }
 
 .ar-coaching-animation {
-    width: 140px;
-    height: 140px;
+    width: 70px;
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -242,7 +244,7 @@
 
 #ar-coaching-title {
     font-family: 'Outfit', sans-serif;
-    font-size: 18px;
+    font-size: 13px;
     font-weight: 700;
     margin: 0;
     color: var(--text);
@@ -250,10 +252,10 @@
 
 #ar-coaching-desc {
     font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: 11px;
+    line-height: 1.35;
     margin: 0;
-    color: #4b5563;
+    color: var(--muted);
 }
 
 @keyframes scanDeviceMove {

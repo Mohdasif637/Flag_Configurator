@@ -95,11 +95,11 @@
     "air_desc": "110g geperforeerd mesh-doek voor winderige locaties. De gaatjesstructuur vermindert windbelasting en verlengt de levensduur."
   },
   "actions": {
-    "save": "Ontwerp Opslaan",
+    "save": "Opslaan",
     "saving": "Opslaan...",
-    "share": "Ontwerp Delen",
+    "share": "Delen",
     "sharing": "Delen...",
-    "add_to_cart": "IN WINKELWAGEN"
+    "add_to_cart": "In winkelwagen"
   },
   "hud": {
     "back": "Achter",

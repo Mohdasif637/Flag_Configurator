@@ -9,7 +9,6 @@ import { sideConfigs } from '../graphics/graphicConfig.js';
 import { vatMaterials } from '../models/vatLoader.js';
 import { updateARHitTesting } from '../features/arManager.js';
 import { updateGizmoOverlay, isGizmoInteracting } from '../graphics/gizmo.js';
-import { showToast, activeToasts } from '../ui/toast.js';
 
 export const timer = new Timer();
 export let isPlaying = true;
@@ -38,9 +37,12 @@ export function startInitialAutoRotation() {
         controls.enabled = true;
     }
 
+    timer.reset();
+    lastRenderTime = performance.now();
     sceneRoot.rotation.y = 0;
     initialRotationActive = true;
     initialRotationAngle = 0;
+    markSceneDirty();
 }
 
 /**
@@ -104,7 +106,6 @@ export function startVatAnimationTimer() {
         if (isPlaying) {
             isPlaying = false;
             syncPlayPauseButton();
-            showToast('Flag Animation Paused', '', 'info', 3000);
         }
     }, 60000);
 }
@@ -147,7 +148,7 @@ export function renderFrame(_, frame) {
     if (state.isInAR) updateARHitTesting(frame);
 
     timer.update();
-    const delta = timer.getDelta();
+    const delta = Math.min(timer.getDelta(), 0.1);
 
     let animDelta = delta;
 
@@ -180,7 +181,6 @@ export function renderFrame(_, frame) {
             if (isPlaying) {
                 isPlaying = false;
                 syncPlayPauseButton();
-                showToast('Flag Animation Paused', '', 'info', 3000);
             }
             markSceneDirty();
         } else {
@@ -238,6 +238,8 @@ export function renderFrame(_, frame) {
  * Starts the continuous rendering loop through Three.js WebXR animation loop.
  */
 export function startRenderLoop() {
+    lastRenderTime = performance.now();
+    timer.reset();
     renderer.setAnimationLoop(renderFrame);
 }
 

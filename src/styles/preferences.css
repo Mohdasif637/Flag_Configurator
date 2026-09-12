@@ -134,7 +134,7 @@
 }
 
 .pref-menu-title {
-    color: var(--muted);
+    color: var(--secondary);
     font-family: 'Outfit', sans-serif;
     font-size: 10px;
     font-weight: 700;

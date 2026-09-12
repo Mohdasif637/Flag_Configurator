@@ -82,7 +82,7 @@ export function clearSceneDirty() {
 export function createReticle() {
     const geometry = new THREE.RingGeometry(0.12, 0.16, 32).rotateX(-Math.PI / 2);
     const material = new THREE.MeshBasicMaterial({
-        color: 0xdf8d43,
+        color: 0x00633b,
         transparent: true,
         opacity: 0.92
     });

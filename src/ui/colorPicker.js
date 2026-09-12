@@ -82,6 +82,7 @@ export async function ensurePocketColorPickr() {
             pocketColorPickr
                 .on('show', () => {
                     dom.pocketColorTrigger.setAttribute('aria-expanded', 'true');
+                    dom.pocketColorTrigger.classList.add('is-active');
                     if (mobileViewportMediaQuery.matches) {
                         queuePocketColorPickerLayout();
                     } else {
@@ -90,6 +91,7 @@ export async function ensurePocketColorPickr() {
                 })
                 .on('hide', () => {
                     dom.pocketColorTrigger.setAttribute('aria-expanded', 'false');
+                    dom.pocketColorTrigger.classList.remove('is-active');
                     if (!mobileViewportMediaQuery.matches) restorePocketColorPickerNativeLayout();
                 })
                 .on('change', (color) => {
@@ -111,6 +113,27 @@ export async function ensurePocketColorPickr() {
     })();
 
     return pickrLoadingPromise;
+}
+
+/**
+ * Warms up Pickr and its stylesheet in the background when the browser is idle.
+ * 
+ * @param {number} [delayMs=2500] - Delay in ms after which background warmup begins.
+ */
+export function warmupPocketColorPickr(delayMs = 2500) {
+    const trigger = () => {
+        if (window.requestIdleCallback) {
+            window.requestIdleCallback(() => ensurePocketColorPickr(), { timeout: 3000 });
+        } else {
+            ensurePocketColorPickr();
+        }
+    };
+
+    if (delayMs > 0) {
+        window.setTimeout(trigger, delayMs);
+    } else {
+        trigger();
+    }
 }
 
 /**

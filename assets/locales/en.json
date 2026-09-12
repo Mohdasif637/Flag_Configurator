@@ -95,11 +95,11 @@
     "air_desc": "110g perforated mesh fabric designed for high wind. Perforations reduce wind resistance and extend flag durability."
   },
   "actions": {
-    "save": "Save Design",
+    "save": "Save",
     "saving": "Saving...",
-    "share": "Share Design",
+    "share": "Share",
     "sharing": "Sharing...",
-    "add_to_cart": "ADD TO CART"
+    "add_to_cart": "Add to cart"
   },
   "hud": {
     "back": "Back",

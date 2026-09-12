@@ -25,11 +25,11 @@
     --primary: #111111;
     --primary-strong: #000000;
     --primary-glow: none;
-    --secondary: #f7901e;
-    --secondary-strong: #e07f15;
-    --secondary-text: #b45309;
-    --accent: #f7901e;
-    --accent-strong: #e07f15;
+    --secondary: #00633b;
+    --secondary-strong: #00633b;
+    --secondary-text: #00633b;
+    --accent: #00633b;
+    --accent-strong: #00633b;
     --accent-glow: none;
     --danger: #ef4444;
     --danger-strong: #dc2626;
@@ -40,10 +40,10 @@
     --surface-dark: #ffffff;
     --surface-dark-strong: #f9fafb;
     --surface-hover: #f3f4f6;
-    --focus: rgba(247, 144, 30, 0.35);
+    --focus: rgba(0, 99, 59, 0.35);
     --card-border: #e5e7eb;
     --card-border-hover: #d1d5db;
-    --card-border-active: #f7901e;
+    --card-border-active: #00633b;
 
     /* Layout Constants (side panel corner radius reduced by 30% from 12px to 8.4px) */
     --panel-radius: 8.4px;
@@ -57,8 +57,8 @@
     --space-5: 24px;
 
     /* Universal Button Motion & Press Tokens */
-    --btn-transition: transform 0.06s ease, background-color 0.06s ease, border-color 0.06s ease, box-shadow 0.06s ease, color 0.06s ease;
+    --btn-transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
     --btn-transition-active: transform 0.06s ease-out, background 0.06s ease-out;
-    --btn-hover-transform: scale(1.06);
+    --btn-hover-transform: scale(1.035) translateY(-1px);
     --btn-active-transform: scale(0.95) translateY(1px);
 }

@@ -5,7 +5,7 @@ import { configState, state } from '../state/configState.js';
 import { sideConfigs, saveCurrentGraphicToCache, syncSideUi } from './graphicConfig.js';
 import { textureLoader } from '../models/loaders.js';
 import { resetTransformInputs, updateTextureTransforms, resetTransforms } from './textureCompositor.js';
-import { setGizmoActive, discardGizmoChanges } from './gizmo.js';
+import { setGizmoActive, discardGizmoChanges, initMoveable } from './gizmo.js';
 import { showToast } from '../ui/toast.js';
 import { truncateFileName } from '../utils/helpers.js';
 import { loadPdfLibraries } from '../features/pdfExport.js';
@@ -77,7 +77,6 @@ export async function handleGraphicFile(side, file) {
     }
 
     if (!state.ready) {
-        showToast('Preview still loading', 'Please wait for the 3D preview to finish loading before uploading graphic.', 'info', 3600);
         return;
     }
 
@@ -107,7 +106,6 @@ export async function handleGraphicFile(side, file) {
     if (isPdf) {
         setUploadProgress(side, 0.16);
         if (typeof window.pdfjsLib === 'undefined') {
-            showToast('Loading PDF System', 'Preparing the PDF processing modules...', 'info', 3000);
             const success = await loadPdfLibraries();
             if (!success) {
                 stopUploadProgressCrawler();
@@ -118,8 +116,6 @@ export async function handleGraphicFile(side, file) {
                 return;
             }
         }
-
-        showToast('Processing PDF', 'Converting PDF artwork to a high-fidelity WebP texture.', 'info', 3000);
 
         try {
             const arrayBuffer = await file.arrayBuffer();
@@ -190,7 +186,6 @@ export async function handleGraphicFile(side, file) {
             return;
         }
     } else if (isImage) {
-        showToast('Processing Image', 'Formatting the image to a high-fidelity WebP texture.', 'info', 1800);
         setUploadProgress(side, 0.20);
         try {
             const loadImageElement = (src) => new Promise((resolve, reject) => {
@@ -306,7 +301,8 @@ export async function handleGraphicFile(side, file) {
 
             syncSideUi(side);
             if (config.titleElement) {
-                config.titleElement.textContent = truncateFileName(config.fileName, config.titleElement);
+                config.titleElement.textContent = config.fileName;
+                config.titleElement.title = config.fileName;
             }
             if (config.input) config.input.value = '';
 
@@ -315,17 +311,6 @@ export async function handleGraphicFile(side, file) {
 
             eventBus.emit('graphic:applied', side);
             setGizmoActive(true);
-
-            showToast('Graphic applied', `${config.label} graphic has been updated successfully.`, 'success');
-
-            if (state.arSupported && !arSuggestionShown) {
-                arSuggestionShown = true;
-                window.setTimeout(() => {
-                    if (!state.isInAR) {
-                        showToast('Curious how it looks in real life?', 'View it in AR.', 'info', 6000);
-                    }
-                }, 10000);
-            }
         },
         undefined,
         () => {
@@ -395,29 +380,76 @@ export function initGraphicManager() {
 
     if (config.input) {
         config.input.addEventListener('change', (e) => {
+            initMoveable();
             const file = e.target.files && e.target.files[0];
             if (file) handleGraphicFile('graphic', file);
         });
     }
 
     if (config.dropzone) {
-        ['dragenter', 'dragover'].forEach(eventName => {
-            config.dropzone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                config.dropzone.classList.add('is-drag-over');
-            });
+        const preloadMoveableOnce = () => {
+            initMoveable();
+        };
+
+        config.dropzone.addEventListener('click', preloadMoveableOnce, { once: true });
+        config.dropzone.addEventListener('dragenter', preloadMoveableOnce, { once: true });
+        config.dropzone.addEventListener('drop', preloadMoveableOnce, { once: true });
+
+        config.dropzone.addEventListener('click', (e) => {
+            if (e.target.closest('#clear-graphic, #graphic-thumb-frame')) return;
+            if (config.clearButton && !config.clearButton.hidden) {
+                const clearRect = config.clearButton.getBoundingClientRect();
+                const dropRect = config.dropzone.getBoundingClientRect();
+                if (e.clientX >= clearRect.left - 14 && e.clientX <= dropRect.right) {
+                    clearGraphic('graphic', true);
+                    return;
+                }
+            }
+            if (config.input) {
+                config.input.click();
+            }
         });
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            config.dropzone.addEventListener(eventName, (e) => {
+        config.dropzone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (e.target.closest('#clear-graphic, #graphic-thumb-frame')) return;
                 e.preventDefault();
-                e.stopPropagation();
+                if (config.input) {
+                    config.input.click();
+                }
+            }
+        });
+
+        let dragCounter = 0;
+
+        config.dropzone.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter++;
+            config.dropzone.classList.add('is-drag-over');
+        });
+
+        config.dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            config.dropzone.classList.add('is-drag-over');
+        });
+
+        config.dropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
                 config.dropzone.classList.remove('is-drag-over');
-            });
+            }
         });
 
         config.dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            config.dropzone.classList.remove('is-drag-over');
             const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
             if (file) handleGraphicFile('graphic', file);
         });
@@ -425,8 +457,16 @@ export function initGraphicManager() {
 
     if (config.clearButton) {
         config.clearButton.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             clearGraphic('graphic', true);
+        });
+        config.clearButton.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+        });
+        config.clearButton.addEventListener('keydown', (e) => {
+            e.stopPropagation();
         });
     }
 

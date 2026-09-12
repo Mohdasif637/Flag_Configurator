@@ -82,5 +82,5 @@ export function setEnvPanelOpen(open) {
                 dom.cameraWrapper.classList.remove('has-env-open');
             }
         }
-    }, 340);
+    }, 200);
 }

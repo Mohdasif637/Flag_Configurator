@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as TWEEN from 'three/addons/libs/tween.module.js';
 import { scene, sceneRoot, renderer, markSceneDirty } from '../core/scene.js';
-import { camera, controls, targetCenter, cameraTargets, cameraDistance, updateCameraViewportOffset } from '../core/camera.js';
+import { camera, controls, targetCenter, cameraTargets, cameraDistance, updateCameraViewportOffset, getActiveCameraTween, setActiveCameraTween, setCameraDistance } from '../core/camera.js';
 import { updateDynamicCameraTargets, focusCameraView, currentCameraSequenceId } from '../core/cameraTransitions.js';
 import { stopInitialAutoRotation } from '../core/renderLoop.js';
 import { modelLoader } from './loaders.js';
@@ -199,7 +199,7 @@ function createFlagMeasurementGroup(bottomY, topY, lineX, text) {
     group.name = 'flag-measurement';
 
     const material = new THREE.MeshBasicMaterial({
-        color: 0x10B981,
+        color: 0x00633b,
         transparent: true,
         opacity: 0.8
     });
@@ -260,7 +260,7 @@ function createFlagMeasurementGroup(bottomY, topY, lineX, text) {
     const r = 24;
     
     ctx.fillStyle = 'rgba(16, 24, 30, 0.85)';
-    ctx.strokeStyle = '#10B981';
+    ctx.strokeStyle = '#00633b';
     ctx.lineWidth = 6;
     
     ctx.beginPath();
@@ -458,11 +458,17 @@ export async function applyConfigurationToScene(animateTransition = false, trans
         applyBaseYOffsetToMeshes();
     }
 
+    const activeCamTween = getActiveCameraTween();
+    if (activeCamTween) {
+        activeCamTween.stop();
+        setActiveCameraTween(null);
+    }
+
     if (modelRoot) {
         if (modelRoot.userData.scaleTween) {
             modelRoot.userData.scaleTween.stop();
             modelRoot.userData.scaleTween = null;
-            controls.enabled = true;
+            if (controls) controls.enabled = true;
         }
         if (modelRoot.userData.poleFadeTween) {
             modelRoot.userData.poleFadeTween.stop();
@@ -654,6 +660,14 @@ export async function applyConfigurationToScene(animateTransition = false, trans
     };
 
     if (animateTransition && !state.isInAR) {
+        const activeCamTween = getActiveCameraTween();
+        if (activeCamTween) {
+            activeCamTween.stop();
+            setActiveCameraTween(null);
+        }
+        const savedMaxDistance = controls ? controls.maxDistance : 10.5;
+        if (controls) controls.enabled = false;
+
         const oldGroup = sceneRoot.getObjectByName('flag-measurement');
         if (oldGroup) {
             sceneRoot.remove(oldGroup);
@@ -716,6 +730,9 @@ export async function applyConfigurationToScene(animateTransition = false, trans
         const intrinsicNewDim = getVisibleMaxDimension();
 
         updateDynamicCameraTargets(false);
+        if (controls) {
+            controls.maxDistance = Math.max(savedMaxDistance, controls.maxDistance);
+        }
         let endCameraPos, endControlsTarget;
         if (isBaseSwap && configState.base !== 'No base') {
             const baseFocus = getBaseFocusTargets();
@@ -818,8 +835,11 @@ export async function applyConfigurationToScene(animateTransition = false, trans
                 sceneRoot.rotation.y = 0;
                 modelRoot.updateMatrixWorld(true);
                 modelRoot.userData.scaleTween = null;
-                controls.enabled = true;
-                controls.update();
+                if (controls) {
+                    setCameraDistance(cameraDistance);
+                    controls.enabled = true;
+                    controls.update();
+                }
                 syncFlagMeasurement();
                 markSceneDirty();
             })
@@ -1097,18 +1117,18 @@ function updateSilhouetteTexture(canvas, ctx, texture, progress) {
     drawHumanSilhouettePath(ctx);
     ctx.fill();
 
-    // 2. Filled progress state (brand emerald #10B981) using clipping
+    // 2. Filled progress state (brand secondary #00633b) using clipping
     ctx.save();
     drawHumanSilhouettePath(ctx);
     ctx.clip();
 
-    ctx.fillStyle = '#10B981';
+    ctx.fillStyle = '#00633b';
     const fillHeight = progress * height;
     ctx.fillRect(0, height - fillHeight, width, fillHeight);
     ctx.restore();
 
-    // 3. Thin outline on top (brand emerald #10B981)
-    ctx.strokeStyle = '#10B981';
+    // 3. Thin outline on top (brand secondary #00633b)
+    ctx.strokeStyle = '#00633b';
     ctx.lineWidth = 6;
     drawHumanSilhouettePath(ctx);
     ctx.stroke();
@@ -1126,7 +1146,7 @@ function createCharacterMeasurement() {
     group.name = 'height-measurement';
 
     const material = new THREE.MeshBasicMaterial({
-        color: 0x10B981,
+        color: 0x00633b,
         transparent: true,
         opacity: 0.8
     });
@@ -1184,7 +1204,7 @@ function createCharacterMeasurement() {
     const r = 24;
 
     ctx.fillStyle = 'rgba(16, 24, 30, 0.85)';
-    ctx.strokeStyle = '#10B981';
+    ctx.strokeStyle = '#00633b';
     ctx.lineWidth = 6;
 
     ctx.beginPath();
@@ -1313,7 +1333,6 @@ export function loadCharacterModel() {
             characterLoading = false;
             markSceneDirty();
 
-            showToast('Reference loaded', '3D character model height reference added.', 'success', 2500);
             syncFlagMeasurement();
 
             const startProgress = currentProgress;

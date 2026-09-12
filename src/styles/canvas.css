@@ -53,7 +53,7 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     border: 1px solid var(--card-border);
     border-radius: var(--radius-lg);
     background: #ffffff;
-    box-shadow: none;
+    box-shadow: var(--panel-shadow);
     text-align: center;
 }
 
@@ -80,7 +80,44 @@ body:has(#loading-overlay.is-visible) #canvas-container {
     height: 100%;
     background: var(--secondary);
     border-radius: 2px;
-    transition: width 0.1s ease-out;
+    position: relative;
+    overflow: hidden;
+    animation: sleekProgressGrow 4.0s cubic-bezier(0.08, 0.82, 0.17, 1.0) forwards;
+}
+
+@keyframes sleekProgressGrow {
+    0% {
+        width: 0%;
+    }
+    100% {
+        width: 80%;
+    }
+}
+
+.loading-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.45) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: translateX(-100%);
+    animation: sleekProgressShimmer 1.4s infinite linear;
+}
+
+@keyframes sleekProgressShimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(250%);
+    }
 }
 
 /* Base Coaching Overlay - Always click-through across all viewports */

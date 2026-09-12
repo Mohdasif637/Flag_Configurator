@@ -31,7 +31,6 @@ export function loadPdfLibraries() {
     }
     
     pdfLibrariesLoading = true;
-    showToast('Loading PDF System', 'Preparing the PDF processing modules...', 'info', 3000);
     
     pdfLibrariesPromise = Promise.all([
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
@@ -51,6 +50,60 @@ export function loadPdfLibraries() {
     });
     
     return pdfLibrariesPromise;
+}
+
+let pdfSaveProgressRatio = 0;
+let pdfSaveCrawlerId = null;
+
+function setPdfSaveProgress(ratio) {
+    if (!dom.generatePdf) return;
+    let bar = dom.generatePdf.querySelector('.btn-progress');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.className = 'btn-progress';
+        dom.generatePdf.appendChild(bar);
+    }
+    pdfSaveProgressRatio = Math.min(Math.max(ratio, 0), 1);
+    bar.style.opacity = '0.85';
+    bar.style.transform = `scaleX(${pdfSaveProgressRatio})`;
+}
+
+function startPdfSaveCrawler(startProgress = 0.15, targetMax = 0.88, creepRate = 0.25) {
+    stopPdfSaveCrawler();
+    setPdfSaveProgress(startProgress);
+    let lastTime = performance.now();
+    const tick = (now) => {
+        const dt = (now - lastTime) / 1000;
+        lastTime = now;
+        if (pdfSaveProgressRatio < targetMax) {
+            const nextVal = pdfSaveProgressRatio + (targetMax - pdfSaveProgressRatio) * (creepRate * dt);
+            setPdfSaveProgress(nextVal);
+            pdfSaveCrawlerId = window.requestAnimationFrame(tick);
+        }
+    };
+    pdfSaveCrawlerId = window.requestAnimationFrame(tick);
+}
+
+function stopPdfSaveCrawler() {
+    if (pdfSaveCrawlerId) {
+        window.cancelAnimationFrame(pdfSaveCrawlerId);
+        pdfSaveCrawlerId = null;
+    }
+}
+
+function finishPdfSaveProgress() {
+    stopPdfSaveCrawler();
+    setPdfSaveProgress(1.0);
+    setTimeout(() => {
+        if (!dom.generatePdf) return;
+        const bar = dom.generatePdf.querySelector('.btn-progress');
+        if (bar) {
+            bar.style.opacity = '0';
+            setTimeout(() => {
+                bar.style.transform = 'scaleX(0)';
+            }, 300);
+        }
+    }, 350);
 }
 
 function getExportRenderer() {
@@ -111,22 +164,31 @@ export async function generatePdfProof(targetCenterOverride, cameraDistanceOverr
         saveCurrentGraphicToCache();
         sideConfigs.graphic.gizmoActive = false;
     }
-    
-    if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF !== 'function') {
-        const success = await loadPdfLibraries();
-        if (!success) return;
-    }
 
     state.isExporting = true;
     syncControlAvailability();
-    const origBtnMarkup = dom.generatePdf ? dom.generatePdf.innerHTML : '';
-    if (dom.generatePdf) {
-        dom.generatePdf.textContent = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('actions.saving') : 'Saving...';
+    startPdfSaveCrawler(0.15, 0.88, 0.25);
+    const saveBtnSpan = dom.generatePdf ? dom.generatePdf.querySelector('span') : null;
+    const origText = saveBtnSpan ? saveBtnSpan.textContent : '';
+    if (saveBtnSpan) {
+        saveBtnSpan.textContent = (window.i18next && window.i18next.isInitialized) ? window.i18next.t('actions.saving') : 'Saving...';
     }
 
-    const slowGenerationTimer = setTimeout(() => {
-        showToast('Saving design', 'Capturing front and back layouts for your design.', 'info', 3000);
-    }, 3000);
+    if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF !== 'function') {
+        const success = await loadPdfLibraries();
+        if (!success) {
+            stopPdfSaveCrawler();
+            if (dom.generatePdf) {
+                const bar = dom.generatePdf.querySelector('.btn-progress');
+                if (bar) bar.style.opacity = '0';
+            }
+            if (saveBtnSpan) saveBtnSpan.textContent = origText;
+            updateContentWithTranslations();
+            state.isExporting = false;
+            syncControlAvailability();
+            return;
+        }
+    }
 
     await new Promise((resolve) => window.requestAnimationFrame(resolve));
 
@@ -303,13 +365,18 @@ export async function generatePdfProof(targetCenterOverride, cameraDistanceOverr
         const configDetails = `${sizePart}-${printingPart}${directionPart}`;
 
         doc.save(`${pdfFilename}_${configDetails}.pdf`);
-        showToast('Design saved', 'Your custom flag design has been saved successfully.', 'success');
+        finishPdfSaveProgress();
+        showToast('Design saved', 'Saved successfully.', 'success');
     } catch (error) {
         console.error('PDF generation failed:', error);
+        stopPdfSaveCrawler();
+        if (dom.generatePdf) {
+            const bar = dom.generatePdf.querySelector('.btn-progress');
+            if (bar) bar.style.opacity = '0';
+        }
         showToast('Save failed', 'Unable to save your design. Please try again.', 'error', 4200);
     } finally {
-        clearTimeout(slowGenerationTimer);
-        if (dom.generatePdf) dom.generatePdf.innerHTML = origBtnMarkup;
+        if (saveBtnSpan) saveBtnSpan.textContent = origText;
         updateContentWithTranslations();
         state.isExporting = false;
         syncControlAvailability();
